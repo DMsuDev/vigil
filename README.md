@@ -1,25 +1,17 @@
 <div align="center">
   <picture>
-    <picture style="display: block;">
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/vigil_logo_light.png">
     <source media="(prefers-color-scheme: light)" srcset="docs/images/vigil_logo_dark.png">
-    <img width="320" src="docs/images/vigil_logo_light.png" alt="VIGIL Logo"">
+    <img width="320" src="docs/images/vigil_logo_light.png" alt="VIGIL Logo">
   </picture>
 
-  <div>
-    <strong>Logging and Crash Diagnostics Library for C++</strong>
-  </div>
-
-  <div>
-    Structured Logging • Crash Handling • Cross-platform
-  </div>
-
-  <br>
+  <p>
+    <strong>Diagnostics and Logging Tools for C++</strong><br>
+    Assertions • Structured Logging • Runtime Diagnostics
+  </p>
 
   <p>
-    <a href="LICENSE">
-      <img src="https://img.shields.io/badge/License-MIT-green?style=flat&logo=open-source-initiative&logoColor=white" alt="License MIT">
-    </a>
+    <img src="https://img.shields.io/badge/License-MIT-green?style=flat&logo=open-source-initiative&logoColor=white" alt="License MIT">
     <img src="https://img.shields.io/badge/Platform-Linux-2d2d2d?style=flat&logo=linux&logoColor=white" alt="Platform Linux">
     <img src="https://img.shields.io/badge/Platform-Windows-0078D6?style=flat&logo=windows&logoColor=white" alt="Platform Windows">
     <img src="https://img.shields.io/badge/Platform-macOS-000000?style=flat&logo=apple&logoColor=white" alt="Platform macOS">
