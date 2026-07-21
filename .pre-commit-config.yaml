@@ -1,0 +1,175 @@
+# =============================================================================
+# Pre-commit hooks configuration
+# https://pre-commit.com
+#
+# Setup:
+#   pip install --user pre-commit
+#   pre-commit install            # installs the git hook (pre-commit)
+#   pre-commit install --hook-type commit-msg  # installs commit-msg hook
+#
+# Run manually:
+#   pre-commit run --all-files    # run every hook on all tracked files
+#   pre-commit run <hook-id>      # run a specific hook only
+#
+# Update all hooks to their latest tagged revisions:
+#   pre-commit autoupdate
+#
+# Notes:
+# - Some hooks only run manually (e.g. gitleaks) to avoid slowing down the pre-commit hook.
+# =============================================================================
+
+default_language_version:
+  python: python3
+
+# ============================================================================
+# GLOBAL EXCLUDES: Never touch vendored, generated, or build artifacts.
+# Paths excluded from ALL hooks unless overridden by individual hook config
+# ============================================================================
+exclude: |
+  (?x)^(
+    vcpkg/.*         |   # vcpkg package manager submodule (large binary cache)
+    third_party/.*   |   # bundled third-party libraries (not our code)
+    vendor/.*        |   # vendored libraries (not our code)
+    build/.*         |   # local CMake build directories (generated)
+    _deps/.*         |   # FetchContent / CPM download cache (generated)
+    \.cache/.*       |   # tool caches (e.g. clangd index)
+    docs/gif/.*      |   # binary GIF assets
+    docs/images/.*   |   # binary image assets
+    docs/assets/.*   |   # binary image assets
+    .*\.png$         |   # PNG images anywhere
+    .*\.jpg$         |   # JPG images anywhere
+    .*\.gif$         |   # GIF images anywhere
+    .*\.zip$         |   # ZIP archives anywhere
+    .*\.tar\.gz$     |   # tar.gz archives anywhere
+    .*\.7z$          |   # 7zip archives anywhere
+    .*\.bin$         |   # binary files anywhere
+  )$
+
+# ============================================================================
+# Pre-commit CI: Automatic hook execution on every PR
+# https://pre-commit.ci
+# ============================================================================
+ci:
+  autofix_commit_msg: "style: auto-fixes from pre-commit [skip ci]"
+  autoupdate_commit_msg: "chore: pre-commit hook autoupdate [skip ci]"
+  autoupdate_schedule: weekly
+  # Important: Don't recurse into vcpkg submodule (very large, slows CI)
+  submodules: false
+
+repos:
+  # ==========================================================================
+  # Basic file hygiene (runs first, catches obvious issues)
+  # ==========================================================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # Remove trailing whitespace on every line
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+
+      # Ensure every file ends with exactly one newline
+      - id: end-of-file-fixer
+
+      # Validate YAML syntax (workflows, pre-commit config, yamlfmt output…)
+      - id: check-yaml
+        args: [--unsafe] # allow custom YAML tags
+
+      # Validate JSON syntax (vcpkg.json, CMakePresets.json, …)
+      - id: check-json
+
+      # Validate XML syntax
+      - id: check-xml
+
+      # Detect leftover Git merge conflict markers
+      - id: check-merge-conflict
+
+      # Prevent accidentally committing files > 1 MB
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+
+      # Warn when filenames differ only in case (breaks macOS ↔ Linux)
+      - id: check-case-conflict
+
+      # Strip UTF-8 BOM (MSVC sometimes adds it; breaks on Linux)
+      - id: fix-byte-order-marker
+
+      # Normalise line endings (LF everywhere; CRLF only in .bat files)
+      - id: mixed-line-ending
+        args: [--fix=lf]
+        exclude: \.bat$      # .bat files MUST keep CRLF
+        always_run: true
+
+      # Catch files that look like private keys
+      - id: detect-private-key
+
+  # ==========================================================================
+  # Documentation & Code Quality
+  # ==========================================================================
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.49.1
+    hooks:
+      - id: markdownlint
+        name: "Docs: markdownlint"
+        args: [--fix]
+        types: [markdown]
+        files: \.md$
+
+  - repo: https://github.com/google/yamlfmt
+    rev: v0.21.0
+    hooks:
+      - id: yamlfmt
+        name: "Config: yamlfmt"
+        files: ^\.github/workflows/.*\.ya?ml$
+        args:
+          - --formatter
+          - indent=2,include_document_start=false,retain_line_breaks=true
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.3
+    hooks:
+      - id: codespell
+        name: "Docs/Code: codespell"
+        args:
+          - --skip=*.lock,*.json,*.es.md,build,_deps
+          - --ignore-words-list=nd,ot,te,ThirdParty,SEH
+        types_or: [markdown, text]
+        files: ^(src/.*|include/.*|cmake/.*|docs/.*|CHANGELOG\.md|README(\..+)?\.md)$
+
+  # ==========================================================================
+  # CI/CD & Security Validation
+  # ==========================================================================
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+        name: "CI: actionlint"
+        files: ^\.github/workflows/.*\.ya?ml$
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+        name: "Security: gitleaks (detect hardcoded secrets)"
+        stages: [manual]
+
+  # ==========================================================================
+  # Commit Message Validation (commit-msg hook)
+  # Run: pre-commit install --hook-type commit-msg
+  # ==========================================================================
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args:
+          - feat
+          - fix
+          - docs
+          - style
+          - refactor
+          - perf
+          - test
+          - build
+          - ci
+          - chore
+          - revert

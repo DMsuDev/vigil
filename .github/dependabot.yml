@@ -1,0 +1,37 @@
+# =============================================================================
+# Dependabot configuration for automated dependency updates
+# See: https://docs.github.com/en/code-security/dependabot
+# =============================================================================
+version: 2
+
+updates:
+  # =========================================================================
+  # GitHub Actions: Keep CI/CD workflows up-to-date
+  # =========================================================================
+  # Group all updates to reduce noise; also, necessary to update action hashes.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+
+    schedule:
+      interval: "monthly"
+
+    # Allow up to 3 opened pull requests for github-actions versions.
+    open-pull-requests-limit: 3
+
+    # Custom branch name for pull requests to avoid conflicts with other Dependabot PRs.
+    pull-request-branch-name:
+      separator: "/"
+
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+
+    groups:
+      # Single PR for all GitHub Actions (less noise)
+      github-actions:
+        patterns:
+          - "*"
+    # Specify labels for Dependabot pull requests that update GitHub Actions.
+    labels:
+      - "dependencies"
+      - "github-actions"

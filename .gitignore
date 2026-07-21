@@ -1,0 +1,234 @@
+# ============================================================================
+# GitIgnore
+# ============================================================================
+
+# ============================================================
+# Build / intermediate files
+# ============================================================
+
+# Cache files
+# files ending in .cache can be ignored
+*.[Cc]ache
+# but keep track of directories ending in .cache
+!*.[Cc]ache/
+
+# fuzzing
+sync_dir*
+
+# Build folders
+[Bb]uild*/
+[Oo]ut-*/
+bld/
+
+# Architectures
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+[Aa][Rr][Mm]64[Ee][Cc]/
+
+# Configurations
+[Dd]ebug*/
+[Rr]elease*/
+
+# Compiler-generated intermediates
+[Oo]bj*/
+[Bb]in/
+
+# MSTest test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+
+# ============================================================================
+# CMake
+# ============================================================================
+
+# CMake build folders
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+install_manifest.txt
+
+# CMake FetchContent dependency cache
+_deps/
+
+# User-local CMake overrides (keep the shared CMakePresets.json in version control)
+CMakeUserPresets.json
+*.cmake.user
+
+# Generated compile database (useful for clangd/IntelliSense, but machine-specific)
+compile_commands.json
+
+# ============================================================================
+# Ninja
+# ============================================================================
+
+.ninja_deps
+.ninja_log
+
+# ============================================================================
+# Package managers
+# ============================================================================
+
+# vcpkg installed tree (reproducible via manifest)
+vcpkg_installed/
+
+# vcpkg buildtrees and packages
+buildtrees/
+packages/
+
+vcpkg-user-config.json
+/vcpkg
+/vcpkg.exe
+
+# ============================================================================
+# Compiler / linker output
+# ============================================================================
+
+*.o
+*.obj
+*.lo
+*.slo
+*.dll
+*.so
+*.so.*
+*.dylib
+*.a
+*.lib
+*.exe
+*.out
+*.ilk
+*.exp
+*.map
+
+# Debug symbols
+*.pdb
+*.ipdb
+*.dSYM/
+*.stackdump
+
+# Precompiled headers
+*.gch
+*.pch
+
+# ============================================================================
+# IDEs / editors
+# ============================================================================
+
+# Visual Studio Code (keep shared settings, ignore the rest)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# CLion / JetBrains Rider
+.idea/
+
+# Visual Studio
+.vs/
+
+# User-specific files (MonoDevelop/Xamarin Studio)
+*.userprefs
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio database files
+*.VC.db
+*.VC.opendb
+
+# Vim / Emacs swap files
+*.swp
+*.swo
+*~
+\#*\#
+.\#*
+
+# ============================================================================
+# Python (build scripts, tooling)
+# ============================================================================
+
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+Pipfile.lock
+
+# ============================================================================
+# Code coverage / profiling
+# ============================================================================
+
+*.gcda
+*.gcno
+*.gcov
+[Cc]overage*/
+lcov.info
+*.profraw
+*.profdata
+callgrind.out.*
+perf.data*
+
+# ============================================================================
+# Sanitizers / fuzzers
+# ============================================================================
+
+*.asan
+*.lsan
+
+# ============================================================================
+# Logs / temp files
+# ============================================================================
+
+*.log
+[Ll]og/
+[Ll]ogs/
+tmp/
+[Tt]emp/
+*.tmp
+
+# ============================================================================
+# OS-specific files
+# ============================================================================
+
+# Windows
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+.directory
+.Trash-*
+
+# ============================================================================
+# Archives / distribution artifacts
+# ============================================================================
+
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# ============================================================================
+# Secrets / local environment
+# ============================================================================
+
+*.env
+.env.local
+!.env.example

@@ -1,0 +1,12 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=@pkgconfig_libdir@
+includedir=@pkgconfig_includedir@
+
+Name: @PROJECT_NAME@
+Description: Diagnostics library for C++.
+URL: https://github.com/DMsuDev/@PROJECT_NAME@
+Version: @PROJECT_VERSION@
+Cflags: -I${includedir}
+Libs: -L${libdir} -lvigil
+Requires: @PKG_CONFIG_REQUIRES@
