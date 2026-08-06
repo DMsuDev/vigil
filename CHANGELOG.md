@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### 🚜 Refactor
+
+- Remove unused header includes ([85aa90c](https://github.com/DMsuDev/Vigil/commit/85aa90c63280745a84f9264e0e62af47caf9f901))
+
+### 🛠️ Build System
+
+- Add internal headers and update fmt dependency handling ([731bdfb](https://github.com/DMsuDev/Vigil/commit/731bdfb8e1cfab78d751e96ca29c5015725330aa))
+
+- Add installation rules for spdlog target ([079900b](https://github.com/DMsuDev/Vigil/commit/079900b5a64368c4113598e20f6030657934a2b9))
+
+- Skip bump version commits in changelog ([0a192db](https://github.com/DMsuDev/Vigil/commit/0a192db2b49455cc319bffe0c842b5a5d63bdf30))
+
+### 🔧 Maintenance
+
+- Remove spdlog installation from dependency setup ([9c19202](https://github.com/DMsuDev/Vigil/commit/9c1920244fc25af37a338eadb10a4866e41e0e82))
+
+### ◀️ Reverts
+
+- Remove spdlog dependency from VigilConfig ([52abc01](https://github.com/DMsuDev/Vigil/commit/52abc01af0b833474f80c58430e0d800a1887b8f))
+
 ## [0.1.1] - 2026-08-06
 
 ### 🐛 Bug Fixes
