@@ -11,173 +11,184 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": true
       }
     },
-
     {
-      "name": "windows-vs",
-      "hidden": true,
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      },
-      "generator": "Visual Studio 18 2026"
-    },
-
-    {
-      "name": "windows-ninja",
-      "hidden": true,
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
-      },
-      "generator": "Ninja",
-      "cacheVariables": {
-        "CMAKE_C_COMPILER": "cl",
-        "CMAKE_CXX_COMPILER": "cl"
-      }
-    },
-
-    {
-      "name": "linux",
-      "hidden": true,
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Linux"
-      },
-      "generator": "Ninja"
-    },
-
-    {
-      "name": "macos",
-      "hidden": true,
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Darwin"
-      },
-      "generator": "Ninja"
-    },
-
-    {
-      "name": "debug",
+      "name": "base-dev",
       "hidden": true,
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
-    },
-
-    {
-      "name": "release",
-      "hidden": true,
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
-    },
-
-    {
-      "name": "library-static",
-      "hidden": true,
-      "cacheVariables": {
-        "VIGIL_BUILD_SHARED": false
-      }
-    },
-
-    {
-      "name": "library-shared",
-      "hidden": true,
-      "cacheVariables": {
-        "VIGIL_BUILD_SHARED": true
-      }
-    },
-
-    {
-      "name": "dev",
-      "hidden": true,
-      "cacheVariables": {
-        "VIGIL_BUILD_TESTS": true,
+        "VIGIL_BUILD_TESTS":    true,
         "VIGIL_BUILD_EXAMPLES": true,
-        "VIGIL_INSTALL": false
+        "VIGIL_INSTALL":        false
       }
     },
-
     {
-      "name": "package",
+      "name": "base-package",
       "hidden": true,
       "cacheVariables": {
-        "VIGIL_BUILD_TESTS": false,
+        "VIGIL_BUILD_TESTS":    false,
         "VIGIL_BUILD_EXAMPLES": false,
-        "VIGIL_INSTALL": true,
+        "VIGIL_INSTALL":        true,
         "VIGIL_USE_SYSTEM_FMT": true
       }
     },
 
     {
-      "name": "default",
-      "displayName": "Default Development",
-      "description": "Debug static build with tests and examples enabled.",
-      "inherits": [
-        "base",
-        "debug",
-        "library-static",
-        "dev"
-      ]
+      "name": "windows-vs",
+      "hidden": true,
+      "generator": "Visual Studio 18 2026",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "windows-ninja",
+      "hidden": true,
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER":   "cl",
+        "CMAKE_CXX_COMPILER": "cl"
+      }
+    },
+    {
+      "name": "linux",
+      "hidden": true,
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "macos",
+      "hidden": true,
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
     },
 
     {
-      "name": "package-static",
-      "displayName": "Package Static",
-      "description": "Release static library installation.",
-      "inherits": [
-        "base",
-        "release",
-        "library-static",
-        "package"
-      ]
+      "name": "windows-dev",
+      "displayName": "Windows — Dev (VS, Debug, Static)",
+      "description": "Development build: tests and examples enabled, no install.",
+      "inherits": [ "base", "windows-vs", "base-dev" ],
+      "cacheVariables": {
+        "VIGIL_BUILD_SHARED": false
+      }
     },
-
     {
-      "name": "package-shared",
-      "displayName": "Package Shared",
-      "description": "Release shared library installation.",
-      "inherits": [
-        "base",
-        "release",
-        "library-shared",
-        "package"
-      ]
+      "name": "windows-package-static",
+      "displayName": "Windows — Package Static (Ninja, Release)",
+      "inherits": [ "base", "windows-ninja", "base-package" ],
+      "cacheVariables": {
+        "VIGIL_BUILD_SHARED": false
+      }
+    },
+    {
+      "name": "windows-package-shared",
+      "displayName": "Windows — Package Shared (Ninja, Release)",
+      "inherits": [ "base", "windows-ninja", "base-package" ],
+      "cacheVariables": {
+        "VIGIL_BUILD_SHARED": true
+      }
+    },
+    {
+      "name": "linux-dev",
+      "displayName": "Linux — Dev (Ninja, Debug, Static)",
+      "description": "Development build: tests and examples enabled, no install.",
+      "inherits": [ "base", "linux", "base-dev" ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE":   "Debug",
+        "VIGIL_BUILD_SHARED": false
+      }
+    },
+    {
+      "name": "linux-package-static",
+      "displayName": "Linux — Package Static (Ninja, Release)",
+      "inherits": [ "base", "linux", "base-package" ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE":   "Release",
+        "VIGIL_BUILD_SHARED": false
+      }
+    },
+    {
+      "name": "linux-package-shared",
+      "displayName": "Linux — Package Shared (Ninja, Release)",
+      "inherits": [ "base", "linux", "base-package" ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE":   "Release",
+        "VIGIL_BUILD_SHARED": true
+      }
+    },
+    {
+      "name": "macos-dev",
+      "displayName": "macOS — Dev (Ninja, Debug, Static)",
+      "description": "Development build: tests and examples enabled, no install.",
+      "inherits": [ "base", "macos", "base-dev" ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE":   "Debug",
+        "VIGIL_BUILD_SHARED": false
+      }
+    },
+    {
+      "name": "macos-package-static",
+      "displayName": "macOS — Package Static (Ninja, Release)",
+      "inherits": [ "base", "macos", "base-package" ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE":   "Release",
+        "VIGIL_BUILD_SHARED": false
+      }
+    },
+    {
+      "name": "macos-package-shared",
+      "displayName": "macOS — Package Shared (Ninja, Release)",
+      "inherits": [ "base", "macos", "base-package" ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE":   "Release",
+        "VIGIL_BUILD_SHARED": true
+      }
     }
   ],
 
   "buildPresets": [
-    {
-      "name": "default",
-      "configurePreset": "default"
-    },
-
-    {
-      "name": "package-static",
-      "configurePreset": "package-static"
-    },
-
-    {
-      "name": "package-shared",
-      "configurePreset": "package-shared"
-    }
+    { "name": "windows-dev",            "configurePreset": "windows-dev",            "configuration": "Debug"   },
+    { "name": "windows-package-static", "configurePreset": "windows-package-static", "configuration": "Release" },
+    { "name": "windows-package-shared", "configurePreset": "windows-package-shared", "configuration": "Release" },
+    { "name": "linux-dev",              "configurePreset": "linux-dev" },
+    { "name": "linux-package-static",   "configurePreset": "linux-package-static" },
+    { "name": "linux-package-shared",   "configurePreset": "linux-package-shared" },
+    { "name": "macos-dev",              "configurePreset": "macos-dev" },
+    { "name": "macos-package-static",   "configurePreset": "macos-package-static" },
+    { "name": "macos-package-shared",   "configurePreset": "macos-package-shared" }
   ],
 
   "testPresets": [
     {
-      "name": "default",
-      "configurePreset": "default",
-      "output": {
-        "outputOnFailure": true
-      },
-      "execution": {
-        "noTestsAction": "error",
-        "stopOnFailure": false
-      }
+      "name": "windows-dev",
+      "configurePreset": "windows-dev",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error", "stopOnFailure": false }
+    },
+    {
+      "name": "linux-dev",
+      "configurePreset": "linux-dev",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error", "stopOnFailure": false }
+    },
+    {
+      "name": "macos-dev",
+      "configurePreset": "macos-dev",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error", "stopOnFailure": false }
     }
   ]
 }
