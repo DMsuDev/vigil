@@ -32,6 +32,8 @@ option(VIGIL_BUILD_TESTS    "Build Vigil's unit-test suite."  ${PROJECT_IS_TOP_L
 option(VIGIL_BUILD_WARNINGS     "Enable strict compiler warning suites."  ${PROJECT_IS_TOP_LEVEL})
 option(VIGIL_WARNINGS_AS_ERRORS "Treat compiler warnings as hard errors." OFF)
 
+option(VIGIL_ENABLE_STACK_TRACE "Enable cross-platform call stack capture and symbolication" ON)
+
 # ------------------------------------------------------------------------------
 #  Dependency Management Options
 # ------------------------------------------------------------------------------

@@ -22,6 +22,11 @@ set(VIGIL_SOURCES
   logging/logger.cpp
   logging/logger_registry.cpp
   logging/log_limiter.cpp
+
+  detail/symbol_utils.cpp
+  trace/stack_trace.cpp
+
+  assert.cpp
 )
 
 set(VIGIL_HEADERS
@@ -34,6 +39,8 @@ set(VIGIL_HEADERS
   "${VIGIL_INCLUDE_DIR}/vigil/logging/log_limiter.h"
   "${VIGIL_INCLUDE_DIR}/vigil/logging/log_level.h"
   "${VIGIL_INCLUDE_DIR}/vigil/logging/file_mode.h"
+
+  "${VIGIL_INCLUDE_DIR}/vigil/assert.h"
 )
 
 set(VIGIL_GENERATED_HEADERS
