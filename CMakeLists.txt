@@ -54,6 +54,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(compiler_options)
 include(compiler_warnings)
+include(copy_runtime_deps)
 
 # ------------------------------------------------------------------------------
 #  Isolated Target Architecture & Output Layout
