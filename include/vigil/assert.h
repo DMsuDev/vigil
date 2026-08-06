@@ -5,11 +5,13 @@
 
 #pragma once
 
-#include "vigil/detail/platform_detection.h"
 #include "vigil/detail/compiler_attributes.h"
 #include "vigil/detail/preprocessor_utils.h"
+#include "vigil/detail/symbol_export.h"
+
 #include "vigil/core/source_location.h"
-#include "vigil/logging/logger.h"
+
+#include <string_view>
 
 /**
  * @file assert.h
