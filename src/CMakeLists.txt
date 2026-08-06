@@ -16,11 +16,19 @@ set(VIGIL_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 set(VIGIL_GENERATED_INCLUDE_DIR "${PROJECT_BINARY_DIR}/include")
 
 set(VIGIL_SOURCES
-  vigil.cpp
+
+  logging/detail/logger_impl.cpp
+  logging/logger.cpp
+  logging/logger_registry.cpp
 )
 
 set(VIGIL_HEADERS
   "${VIGIL_INCLUDE_DIR}/vigil/vigil.h"
+
+  "${VIGIL_INCLUDE_DIR}/vigil/logging/logger.h"
+  "${VIGIL_INCLUDE_DIR}/vigil/logging/logger_registry.h"
+  "${VIGIL_INCLUDE_DIR}/vigil/logging/log_level.h"
+  "${VIGIL_INCLUDE_DIR}/vigil/logging/file_mode.h"
 )
 
 set(VIGIL_GENERATED_HEADERS
@@ -81,6 +89,46 @@ target_compile_features(vigil PUBLIC cxx_std_17)
 set_target_properties(vigil PROPERTIES
   CXX_EXTENSIONS OFF
   FOLDER         "Vigil"
+)
+
+# ------------------------------------------------------------------------------
+#  Preprocessor Compile Definitions
+# ------------------------------------------------------------------------------
+target_compile_definitions(vigil
+  PRIVATE
+    # Windows-specific export symbol toggle when generating a shared .dll
+    $<$<BOOL:${VIGIL_BUILD_SHARED}>:VIGIL_EXPORT_SYMBOLS>
+
+    $<$<CONFIG:Debug>:VIGIL_BUILD_DEBUG=1>
+    $<$<NOT:$<CONFIG:Debug>>:VIGIL_BUILD_RELEASE=1>
+
+  PUBLIC
+    # Tells consumers whether they are building against or consuming shared binary code
+    $<$<BOOL:${VIGIL_BUILD_SHARED}>:VIGIL_SHARED_LIBRARY>
+
+    # Enable assertion checks in Debug and RelWithDebInfo builds
+    $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:VIGIL_ENABLE_ASSERTS>
+)
+
+# ------------------------------------------------------------------------------
+#  Enable Optional Stack Trace Capture & Symbolication
+# ------------------------------------------------------------------------------
+if(VIGIL_ENABLE_STACK_TRACE)
+  target_compile_definitions(vigil PUBLIC VIGIL_ENABLE_STACK_TRACE)
+
+  if(WIN32)
+    target_link_libraries(vigil PRIVATE dbghelp)
+  endif()
+endif()
+
+# ------------------------------------------------------------------------------
+#  Dependency Linking Setup
+# ------------------------------------------------------------------------------
+target_link_libraries(vigil
+  PUBLIC
+    fmt::fmt
+  PRIVATE
+    spdlog::spdlog
 )
 
 # ------------------------------------------------------------------------------
