@@ -53,8 +53,14 @@ jobs:
               - include
 
       - name: Configure
-        run: >
-          cmake -S . -B build -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DVIGIL_BUILD_TESTS=ON
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -DCMAKE_CXX_STANDARD=20 \
+            -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+            -DVIGIL_BUILD_TESTS=ON \
+            -DVIGIL_INSTALL=OFF
 
       - name: Build
         run: cmake --build build --parallel

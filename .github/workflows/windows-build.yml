@@ -47,11 +47,24 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Configure
-        run: >
-          cmake -S . -B build -A ${{ matrix.platform }} -DCMAKE_CXX_STANDARD=${{ matrix.standard }} ${{ matrix.shared }}
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -A ${{ matrix.platform }} \
+            -DCMAKE_CXX_STANDARD=${{ matrix.standard }} \
+            -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+            -DVIGIL_INSTALL=OFF \
+            ${{ matrix.shared }}
+
       - name: Build
         run: >
           cmake --build build --config ${{ matrix.build_type }} --parallel
+
       - name: Test
-        run: >
-          ctest --test-dir build -C ${{ matrix.build_type }} --output-on-failure --timeout 120
+        run: |
+          ctest \
+            --test-dir build \
+            -C ${{ matrix.build_type }} \
+            --output-on-failure \
+            --timeout 120

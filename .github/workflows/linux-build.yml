@@ -57,13 +57,24 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-        run: >
-          cmake -S . -B build -DCMAKE_CXX_STANDARD=${{ matrix.standard }} -DCMAKE_CXX_STANDARD_REQUIRED=ON -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.shared }}
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -DCMAKE_CXX_STANDARD=${{ matrix.standard }} \
+            -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DVIGIL_INSTALL=OFF \
+            ${{ matrix.shared }}
 
       - name: Build
         run: >
           cmake --build build --config ${{ matrix.build_type }} --parallel
 
       - name: Test
-        run: >
-          ctest --test-dir build -C ${{ matrix.build_type }} --output-on-failure --timeout 120
+        run: |
+          ctest \
+            --test-dir build \
+            -C ${{ matrix.build_type }} \
+            --output-on-failure \
+            --timeout 120
