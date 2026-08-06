@@ -43,6 +43,17 @@ set(VIGIL_HEADERS
   "${VIGIL_INCLUDE_DIR}/vigil/assert.h"
 )
 
+set(VIGIL_INTERNAL_HEADERS
+  "${VIGIL_INCLUDE_DIR}/vigil/core/smart_pointers.h"
+  "${VIGIL_INCLUDE_DIR}/vigil/core/source_location.h"
+
+  "${VIGIL_INCLUDE_DIR}/vigil/detail/compiler_attributes.h"
+  "${VIGIL_INCLUDE_DIR}/vigil/detail/compiler_features.h"
+  "${VIGIL_INCLUDE_DIR}/vigil/detail/platform_detection.h"
+  "${VIGIL_INCLUDE_DIR}/vigil/detail/preprocessor_utils.h"
+  "${VIGIL_INCLUDE_DIR}/vigil/detail/symbol_export.h"
+)
+
 set(VIGIL_GENERATED_HEADERS
   "${VIGIL_GENERATED_INCLUDE_DIR}/vigil/version.h"
 )
@@ -69,6 +80,7 @@ endif()
 target_sources(vigil
   PRIVATE
     ${VIGIL_SOURCES}
+
   PUBLIC
     FILE_SET HEADERS
     BASE_DIRS
@@ -77,6 +89,14 @@ target_sources(vigil
     FILES
       ${VIGIL_HEADERS}
       ${VIGIL_GENERATED_HEADERS}
+
+  PRIVATE
+    FILE_SET internal_headers
+    TYPE HEADERS
+    BASE_DIRS
+      "${VIGIL_INCLUDE_DIR}"
+    FILES
+      ${VIGIL_INTERNAL_HEADERS}
 )
 
 add_library(vigil::vigil ALIAS vigil)
@@ -166,7 +186,7 @@ if(VIGIL_INSTALL)
   set(project_config_in     "${PROJECT_SOURCE_DIR}/cmake/VigilConfig.cmake.in")
   set(project_config_out    "${PROJECT_BINARY_DIR}/VigilConfig.cmake")
   set(version_config_file   "${PROJECT_BINARY_DIR}/VigilConfigVersion.cmake")
-  set(export_name            "vigil-targets")
+  set(export_name           "vigil-targets")
   set(pkgconfig_install_dir "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
   set(pkg_config_file       "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.pc")
 
@@ -180,6 +200,13 @@ if(VIGIL_INSTALL)
     ARCHIVE          DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     LIBRARY          DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     RUNTIME          DESTINATION "${CMAKE_INSTALL_BINDIR}"
+  )
+
+  # Install detail headers for transitive includes without exposing them
+  # as part of the target's public CMake file set.
+  install(FILES
+    ${VIGIL_INTERNAL_HEADERS}
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/vigil/detail"
   )
 
   # ----------------------------------------------------------------------------
