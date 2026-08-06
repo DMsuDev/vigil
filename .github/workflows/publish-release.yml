@@ -60,19 +60,19 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfmt-dev libspdlog-dev
+          sudo apt-get install -y libfmt-dev
 
       - name: Install dependencies (macOS)
         if: matrix.os == 'macos-latest'
         run: |
           brew update
-          brew install fmt spdlog
+          brew install fmt
 
       - name: Install dependencies (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          choco install fmt spdlog -y
+          choco install fmt -y
 
       - name: Configure
         shell: bash
