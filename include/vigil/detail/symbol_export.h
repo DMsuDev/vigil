@@ -19,7 +19,7 @@
  * public macro.
  *
  * Build configuration macros are supplied by CMake:
- * - `VIGIL_BUILD_SHARED` indicates that Vigil is built or consumed as a shared library.
+ * - `VIGIL_SHARED_LIBRARY` indicates that Vigil is built or consumed as a shared library.
  * - `VIGIL_EXPORT_SYMBOLS` is defined only while building the Vigil library itself.
  *
  * When neither macro is defined, Vigil is assumed to be used as a static
@@ -53,7 +53,7 @@
  * VIGIL_API void Initialize();
  * @endcode
  */
-#if defined(VIGIL_BUILD_SHARED)
+#if defined(VIGIL_SHARED_LIBRARY)
 
     // ---- Windows / Cygwin ------------------------------------------------
     #if defined(VIGIL_PLATFORM_WINDOWS)
