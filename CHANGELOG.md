@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-08-06
+
+### 🐛 Bug Fixes
+
+- Improve dependency resolution for fmt and spdlog libraries ([922106b](https://github.com/DMsuDev/Vigil/commit/922106b139379a0dc73678243967cc2a7056ded9))
+
+- Add CMAKE_PREFIX_PATH to build configuration ([69532c3](https://github.com/DMsuDev/Vigil/commit/69532c395f1a2d9171927a65a790976d651d08d6))
+
+### 🔧 Maintenance
+
+- Remove scheduled trigger from OpenSSF Scorecard workflow ([cc77edc](https://github.com/DMsuDev/Vigil/commit/cc77edc719cffbeca309a82dbe2a4c7193e2f9f4))
+
 ## [0.1.0] - 2026-08-06
 
 ### 🏗️ Project Setup
