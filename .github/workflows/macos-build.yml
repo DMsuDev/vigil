@@ -1,0 +1,57 @@
+name: "Build (macOS)"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/macos-build.yml"
+
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/macos-build.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: >-
+      macOS ${{ matrix.arch }} C++${{ matrix.standard }} ${{ matrix.build_type }} ${{ matrix.shared && 'Shared' || 'Static' }}
+    runs-on: macos-latest
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        arch: [arm64, x86_64]
+        standard: [20, 23]
+        shared: ["", "-DBUILD_SHARED_LIBS=ON"]
+        build_type: [Debug, Release]
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -DCMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} -DCMAKE_CXX_STANDARD=${{ matrix.standard }} -DCMAKE_CXX_STANDARD_REQUIRED=ON -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.shared }}
+      - name: Build
+        run: >
+          cmake --build build --config ${{ matrix.build_type }} --parallel
+      - name: Test
+        run: >
+          ctest --test-dir build -C ${{ matrix.build_type }} --output-on-failure --timeout 120

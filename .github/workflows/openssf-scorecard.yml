@@ -1,0 +1,47 @@
+name: "Supply Chain Security"
+
+on:
+  workflow_dispatch:
+  # Branch-Protection check only supports the default branch. See
+  # https://github.com/ossf/scorecard/blob/main/docs/checks.md#branch-protection
+  branch_protection_rule:
+  # To guarantee Maintained check is occasionally updated. See
+  # https://github.com/ossf/scorecard/blob/main/docs/checks.md#maintained
+  schedule:
+    - cron: "26 14 * * 5"
+  push:
+    branches: [main]
+
+concurrency:
+  group: supply-chain-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scorecard:
+    name: OpenSSF Scorecard
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: read # Read workflow runs for branch-protection check
+      checks: read # Read check runs for branch-protection check
+      pull-requests: read # Read PR metadata for branch-protection check
+      contents: read # Read repo contents for Maintained check
+      security-events: write # Upload results to code-scanning dashboard
+      id-token: write # Publish results and get the badge
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload to code-scanning
+        uses: github/codeql-action/upload-sarif@87557b9c84dde89fdd9b10e88954ac2f4248e463 # v3.29.5
+        with:
+          sarif_file: results.sarif

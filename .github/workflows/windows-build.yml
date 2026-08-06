@@ -1,0 +1,57 @@
+name: "Build (Windows)"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/windows-build.yml"
+
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/windows-build.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: >-
+      Windows ${{ matrix.platform }} C++${{ matrix.standard }} ${{ matrix.build_type }} ${{ matrix.shared && 'Shared' || 'Static' }}
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        platform: [Win32, x64]
+        standard: [20, 23]
+        shared: ["", "-DBUILD_SHARED_LIBS=ON"]
+        build_type: [Debug, Release]
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -A ${{ matrix.platform }} -DCMAKE_CXX_STANDARD=${{ matrix.standard }} ${{ matrix.shared }}
+      - name: Build
+        run: >
+          cmake --build build --config ${{ matrix.build_type }} --parallel
+      - name: Test
+        run: >
+          ctest --test-dir build -C ${{ matrix.build_type }} --output-on-failure --timeout 120

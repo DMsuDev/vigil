@@ -1,0 +1,64 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/security-codeql.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "cmake/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/security-codeql.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Analyze - build the project so CodeQL can trace compiled C++ code
+  # ---------------------------------------------------------------------------
+  analyze:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: github/codeql-action/init@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
+
+        with:
+          languages: cpp
+          # Manual build mode: we control exactly what gets compiled and
+          # analyzed, instead of relying on autobuild to guess our CMake setup.
+          build-mode: manual
+
+          # Analyze only project source code.
+          config: |
+            paths:
+              - src
+              - include
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_STANDARD_REQUIRED=ON -DVIGIL_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - uses: github/codeql-action/analyze@7188fc363630916deb702c7fdcf4e481b751f97a # v4.37.1
+        with:
+          category: "/language:cpp"
