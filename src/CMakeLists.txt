@@ -202,6 +202,15 @@ if(VIGIL_INSTALL)
     RUNTIME          DESTINATION "${CMAKE_INSTALL_BINDIR}"
   )
 
+  if(TARGET spdlog)
+    install(TARGETS spdlog
+      EXPORT ${export_name}
+      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    )
+  endif()
+
   # Install detail headers for transitive includes without exposing them
   # as part of the target's public CMake file set.
   install(FILES
