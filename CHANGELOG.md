@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Remove spdlog installation from dependency setup ([9c19202](https://github.com/DMsuDev/Vigil/commit/9c1920244fc25af37a338eadb10a4866e41e0e82))
 
+- Refactor CMake commands for improved readability and add VIGIL_INSTALL=OFF ([76687f1](https://github.com/DMsuDev/Vigil/commit/76687f115b7f4d3c48cc2ad9b301a4e662cb5029))
+
 ### ◀️ Reverts
 
 - Remove spdlog dependency from VigilConfig ([52abc01](https://github.com/DMsuDev/Vigil/commit/52abc01af0b833474f80c58430e0d800a1887b8f))
