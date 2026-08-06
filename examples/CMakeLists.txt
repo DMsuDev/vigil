@@ -12,18 +12,14 @@
 # ------------------------------------------------------------------------------
 #  Example Registration Helper Macro/Function
 # ------------------------------------------------------------------------------
-function(vigil_add_example folder name)
-  if(folder STREQUAL "" OR name STREQUAL "")
-    message(FATAL_ERROR "Vigil: Example folder and name must be specified.")
-  endif()
-
-  set(example_source "${CMAKE_CURRENT_SOURCE_DIR}/${folder}/${name}.cpp")
+function(vigil_add_example name)
+  set(example_source "${CMAKE_CURRENT_SOURCE_DIR}/${name}.cpp")
 
   if(NOT EXISTS ${example_source})
     message(FATAL_ERROR "Vigil: Example source file '${example_source}' does not exist.")
   endif()
 
-  add_executable(${name} "${folder}/${name}.cpp")
+  add_executable(${name} "${name}.cpp")
 
   target_link_libraries(${name}
     PRIVATE
@@ -33,12 +29,15 @@ function(vigil_add_example folder name)
   vigil_enable_warnings(${name})
   vigil_set_compiler_options(${name})
 
+  vigil_copy_runtime_dependencies(${name})
+
   set_target_properties(${name} PROPERTIES
-    FOLDER "Vigil/Examples/${folder}"
+    FOLDER "Vigil/Examples"
   )
 endfunction()
 
 # ------------------------------------------------------------------------------
 #  Example Target Declarations
 # ------------------------------------------------------------------------------
-vigil_add_example(meta main)
+vigil_add_example(logger_example)
+vigil_add_example(assert_example)
