@@ -30,6 +30,9 @@
 // ---- Versioning --------------------------------------------------------
 #include "vigil/version.h"
 
+// ---- Core --------------------------------------------------------------
+#include "vigil/core/console.h"
+
 // ---- Logging -----------------------------------------------------------
 #include "vigil/logging/logger.h"
 #include "vigil/logging/logger_registry.h"

@@ -16,6 +16,7 @@ set(VIGIL_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 set(VIGIL_GENERATED_INCLUDE_DIR "${PROJECT_BINARY_DIR}/include")
 
 set(VIGIL_SOURCES
+  core/console.cpp
 
   logging/detail/logger_impl.cpp
   logging/logger.cpp
@@ -25,6 +26,8 @@ set(VIGIL_SOURCES
 
 set(VIGIL_HEADERS
   "${VIGIL_INCLUDE_DIR}/vigil/vigil.h"
+
+  "${VIGIL_INCLUDE_DIR}/vigil/core/console.h"
 
   "${VIGIL_INCLUDE_DIR}/vigil/logging/logger.h"
   "${VIGIL_INCLUDE_DIR}/vigil/logging/logger_registry.h"
