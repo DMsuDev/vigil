@@ -15,7 +15,7 @@
     <img src="https://img.shields.io/badge/Platform-Linux-2d2d2d?style=flat&logo=linux&logoColor=white" alt="Platform Linux">
     <img src="https://img.shields.io/badge/Platform-Windows-0078D6?style=flat&logo=windows&logoColor=white" alt="Platform Windows">
     <img src="https://img.shields.io/badge/Platform-macOS-000000?style=flat&logo=apple&logoColor=white" alt="Platform macOS">
-    <img src="https://img.shields.io/badge/Version-0.1.1-purple?style=flat" alt="Version 0.1.1">
+    <img src="https://img.shields.io/badge/Version-0.1.2-purple?style=flat" alt="Version 0.1.2">
   </p>
 </div>
 
@@ -67,7 +67,7 @@ include(FetchContent)
 FetchContent_Declare(
   vigil
   GIT_REPOSITORY https://github.com/DMsuDev/vigil.git
-  GIT_TAG        v0.1.1
+  GIT_TAG        v0.1.2
 )
 
 FetchContent_MakeAvailable(vigil)
