@@ -43,6 +43,7 @@ include(GoogleTest)
 #  Source File Maps
 # ------------------------------------------------------------------------------
 set(VIGIL_GTEST_SOURCES
+  test_assert.cpp
   test_async.cpp
   test_log_limiter.cpp
   test_logger.cpp
