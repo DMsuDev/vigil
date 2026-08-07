@@ -1,9 +1,8 @@
 name: "Publish Release"
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
+  release:
+    types: [published]
 
   workflow_dispatch:
     inputs:
@@ -17,29 +16,35 @@ permissions:
   contents: read
 
 concurrency:
-  group: publish-release-${{ github.ref }}
+  group: publish-release-${{ github.event.release.tag_name || inputs.tag }}
   cancel-in-progress: false
 
 env:
   BUILD_DIR: build
   INSTALL_DIR: install
   PROJECT_NAME: Vigil
-  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
+  # ---------------------------------------------------------------------------
+  # Job 0: Validate the release tag format (must be strict SemVer)
+  # ---------------------------------------------------------------------------
   validate-tag:
     name: Validate tag format
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check strict SemVer
+      - name: Resolve and validate tag
         shell: bash
         run: |
+          RELEASE_TAG="${{ github.event.release.tag_name || inputs.tag }}"
           if [[ ! "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::Tag '${RELEASE_TAG}' is not a valid semantic version (vX.Y.Z)"
             exit 1
           fi
 
+  # ---------------------------------------------------------------------------
+  # Job 1: Build and package each platform
+  # ---------------------------------------------------------------------------
   build:
     name: Package (${{ matrix.platform }})
     needs: validate-tag
@@ -57,69 +62,64 @@ jobs:
             archive: zip
 
           - os: macos-latest
-            platform: macos
+            platform: macos-arm64
             archive: tar.gz
 
     runs-on: ${{ matrix.os }}
 
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          submodules: recursive
+          fetch-depth: 0
 
-      - name: Install dependencies (Linux)
+      - name: Configure (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libfmt-dev
+          cmake \
+            -S . \
+            -B "${BUILD_DIR}" \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+            -DVIGIL_INSTALL=ON \
+            -DVIGIL_USE_SYSTEM_FMT=OFF \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DVIGIL_BUILD_EXAMPLES=OFF \
+            -DVIGIL_BUILD_TESTS=OFF
 
-      - name: Install dependencies (macOS)
+      - name: Configure (macOS)
         if: matrix.os == 'macos-latest'
         run: |
-          brew update
-          brew install fmt
+          cmake \
+            -S . \
+            -B "${BUILD_DIR}" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+            -DVIGIL_INSTALL=ON \
+            -DVIGIL_USE_SYSTEM_FMT=OFF \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DVIGIL_BUILD_EXAMPLES=OFF \
+            -DVIGIL_BUILD_TESTS=OFF
 
-      - name: Install dependencies (Windows)
+      - name: Configure (Windows)
         if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          vcpkg install fmt:x64-windows
-
-      - name: Configure
         shell: bash
         run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            cmake \
-              -S . \
-              -B "${BUILD_DIR}" \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_TOOLCHAIN_FILE="${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake" \
-              -DVCPKG_TARGET_TRIPLET=x64-windows \
-              -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-              -DVIGIL_INSTALL=ON \
-              -DVIGIL_USE_SYSTEM_FMT=ON \
-              -DBUILD_SHARED_LIBS=OFF \
-              -DVIGIL_BUILD_EXAMPLES=OFF \
-              -DVIGIL_BUILD_TESTS=OFF
-          else
-            if [ "${{ matrix.os }}" = "macos-latest" ]; then
-              PREFIX_PATH="/opt/homebrew"
-            else
-              PREFIX_PATH="/usr"
-            fi
-
-            cmake \
-              -S . \
-              -B "${BUILD_DIR}" \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_PREFIX_PATH="${PREFIX_PATH}" \
-              -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-              -DVIGIL_INSTALL=ON \
-              -DVIGIL_USE_SYSTEM_FMT=ON \
-              -DBUILD_SHARED_LIBS=OFF \
-              -DVIGIL_BUILD_EXAMPLES=OFF \
-              -DVIGIL_BUILD_TESTS=OFF
-          fi
+          cmake \
+            -S . \
+            -B "${BUILD_DIR}" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+            -DVIGIL_INSTALL=ON \
+            -DVIGIL_USE_SYSTEM_FMT=OFF \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DVIGIL_BUILD_EXAMPLES=OFF \
+            -DVIGIL_BUILD_TESTS=OFF
 
       - name: Build
         shell: bash
@@ -137,8 +137,7 @@ jobs:
       - name: Package (tar.gz)
         if: matrix.archive == 'tar.gz'
         shell: bash
-        run: |
-          tar -czf "${PACKAGE_NAME}.tar.gz" -C "${INSTALL_DIR}" .
+        run: tar -czf "${PACKAGE_NAME}.tar.gz" -C "${INSTALL_DIR}" .
 
       - name: Package (zip)
         if: matrix.archive == 'zip'
@@ -154,8 +153,11 @@ jobs:
           name: ${{ env.PACKAGE_NAME }}
           path: ${{ env.PACKAGE_NAME }}.${{ matrix.archive }}
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 1
 
+  # ---------------------------------------------------------------------------
+  # Job 2: Collect artifacts, generate checksums and publish the release
+  # ---------------------------------------------------------------------------
   release:
     name: Publish release
     needs: build
@@ -164,9 +166,10 @@ jobs:
     permissions:
       contents: write
 
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
 
+    steps:
       - name: Download all artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -175,15 +178,16 @@ jobs:
 
       - name: Generate SHA256 checksums
         working-directory: dist
-        run: sha256sum *.tar.gz *.zip > SHA256SUMS.txt
+        shell: bash
+        run: |
+          find . -maxdepth 1 \( -name "*.tar.gz" -o -name "*.zip" \) \
+            -exec sha256sum {} + > SHA256SUMS.txt
+          cat SHA256SUMS.txt
 
-      - name: Create GitHub Release
+      - name: Upload release assets
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          name: ${{ env.RELEASE_TAG }}
-          generate_release_notes: true
-          draft: false
           files: |
             dist/*.tar.gz
             dist/*.zip
