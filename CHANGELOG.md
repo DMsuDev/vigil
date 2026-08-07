@@ -5,7 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.1.2] - 2026-08-07
+
+### 🐛 Bug Fixes
+
+- Add Threads package dependency and update header file inclusion ([412b2f5](https://github.com/DMsuDev/Vigil/commit/412b2f5826c7c50d5b6026d915e7c9427fa7a60c))
 
 ### 🚜 Refactor
 
@@ -24,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Remove spdlog installation from dependency setup ([9c19202](https://github.com/DMsuDev/Vigil/commit/9c1920244fc25af37a338eadb10a4866e41e0e82))
 
 - Refactor CMake commands for improved readability and add VIGIL_INSTALL=OFF ([76687f1](https://github.com/DMsuDev/Vigil/commit/76687f115b7f4d3c48cc2ad9b301a4e662cb5029))
+
+- Update Windows build script for fix error ([ba876d1](https://github.com/DMsuDev/Vigil/commit/ba876d1c81a2bdec6ccac8ee287ce265cfaf43b4))
+
+- Add workflow_dispatch input for release version ([780ea29](https://github.com/DMsuDev/Vigil/commit/780ea292e615396fb3afff0eaef93ec9855894f2))
 
 ### ◀️ Reverts
 
