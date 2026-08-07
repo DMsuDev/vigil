@@ -25,8 +25,8 @@
 
 It helps applications capture useful diagnostic information, detect failures, and simplify debugging across development and production environments.
 
-> [!IMPORTANT]
-> This project is currently in **early development** and is being uploaded to the repository in stages. The API is not yet stable and may change without notice.
+> [!NOTE]
+> **Vigil** is under **active development**. While the current API is considered stable, new features and improvements may be introduced in future releases.
 
 ## Features
 
