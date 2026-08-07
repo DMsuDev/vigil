@@ -48,13 +48,13 @@ jobs:
 
       - name: Configure
         run: |
-          cmake \
-            -S . \
-            -B build \
-            -A ${{ matrix.platform }} \
-            -DCMAKE_CXX_STANDARD=${{ matrix.standard }} \
-            -DCMAKE_CXX_STANDARD_REQUIRED=ON \
-            -DVIGIL_INSTALL=OFF \
+          cmake `
+            -S . `
+            -B build `
+            -A ${{ matrix.platform }} `
+            -DCMAKE_CXX_STANDARD=${{ matrix.standard }} `
+            -DCMAKE_CXX_STANDARD_REQUIRED=ON `
+            -DVIGIL_INSTALL=OFF `
             ${{ matrix.shared }}
 
       - name: Build
@@ -63,8 +63,8 @@ jobs:
 
       - name: Test
         run: |
-          ctest \
-            --test-dir build \
-            -C ${{ matrix.build_type }} \
-            --output-on-failure \
+          ctest `
+            --test-dir build `
+            -C ${{ matrix.build_type }} `
+            --output-on-failure `
             --timeout 120
