@@ -14,6 +14,8 @@ concurrency:
   group: supply-chain-${{ github.ref }}
   cancel-in-progress: true
 
+permissions: read-all
+
 jobs:
   scorecard:
     name: OpenSSF Scorecard
@@ -26,6 +28,7 @@ jobs:
       contents: read # Read repo contents for Maintained check
       security-events: write # Upload results to code-scanning dashboard
       id-token: write # Publish results and get the badge
+      statuses: read # Read commit statuses for branch-protection check
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
