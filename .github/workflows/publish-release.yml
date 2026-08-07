@@ -63,6 +63,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.version || github.ref_name }}
 
       - name: Install dependencies (Linux)
         if: matrix.os == 'ubuntu-latest'
@@ -80,30 +82,43 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          choco install fmt -y
+          vcpkg install fmt:x64-windows
 
       - name: Configure
         shell: bash
         run: |
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            PREFIX_PATH="C:/ProgramData/chocolatey"
-          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
-            PREFIX_PATH="/opt/homebrew"
+            cmake \
+              -S . \
+              -B "${BUILD_DIR}" \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_TOOLCHAIN_FILE="${VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+              -DVCPKG_TARGET_TRIPLET=x64-windows \
+              -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+              -DVIGIL_INSTALL=ON \
+              -DVIGIL_USE_SYSTEM_FMT=ON \
+              -DBUILD_SHARED_LIBS=OFF \
+              -DVIGIL_BUILD_EXAMPLES=OFF \
+              -DVIGIL_BUILD_TESTS=OFF
           else
-            PREFIX_PATH="/usr"
-          fi
+            if [ "${{ matrix.os }}" = "macos-latest" ]; then
+              PREFIX_PATH="/opt/homebrew"
+            else
+              PREFIX_PATH="/usr"
+            fi
 
-          cmake \
-            -S . \
-            -B "${BUILD_DIR}" \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH="${PREFIX_PATH}" \
-            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-            -DVIGIL_INSTALL=ON \
-            -DVIGIL_USE_SYSTEM_FMT=ON \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DVIGIL_BUILD_EXAMPLES=OFF \
-            -DVIGIL_BUILD_TESTS=OFF
+            cmake \
+              -S . \
+              -B "${BUILD_DIR}" \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_PREFIX_PATH="${PREFIX_PATH}" \
+              -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+              -DVIGIL_INSTALL=ON \
+              -DVIGIL_USE_SYSTEM_FMT=ON \
+              -DBUILD_SHARED_LIBS=OFF \
+              -DVIGIL_BUILD_EXAMPLES=OFF \
+              -DVIGIL_BUILD_TESTS=OFF
+          fi
 
       - name: Build
         run: cmake --build "${BUILD_DIR}" --config Release --parallel
