@@ -38,7 +38,7 @@ option(VIGIL_ENABLE_STACK_TRACE "Enable cross-platform call stack capture and sy
 #  Dependency Management Options
 # ------------------------------------------------------------------------------
 set(vigil_use_system_default  OFF)
-if(NOT PROJECT_IS_TOP_LEVEL OR VIGIL_INSTALL)
+if(VIGIL_INSTALL)
   set(vigil_use_system_default  ON)
 endif()
 
