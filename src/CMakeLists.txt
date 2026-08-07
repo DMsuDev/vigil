@@ -32,6 +32,9 @@ set(VIGIL_SOURCES
 set(VIGIL_HEADERS
   "${VIGIL_INCLUDE_DIR}/vigil/vigil.h"
 
+  "${VIGIL_INCLUDE_DIR}/vigil/core/smart_pointers.h"
+  "${VIGIL_INCLUDE_DIR}/vigil/core/source_location.h"
+
   "${VIGIL_INCLUDE_DIR}/vigil/core/console.h"
 
   "${VIGIL_INCLUDE_DIR}/vigil/logging/logger.h"
@@ -44,9 +47,6 @@ set(VIGIL_HEADERS
 )
 
 set(VIGIL_INTERNAL_HEADERS
-  "${VIGIL_INCLUDE_DIR}/vigil/core/smart_pointers.h"
-  "${VIGIL_INCLUDE_DIR}/vigil/core/source_location.h"
-
   "${VIGIL_INCLUDE_DIR}/vigil/detail/compiler_attributes.h"
   "${VIGIL_INCLUDE_DIR}/vigil/detail/compiler_features.h"
   "${VIGIL_INCLUDE_DIR}/vigil/detail/platform_detection.h"
