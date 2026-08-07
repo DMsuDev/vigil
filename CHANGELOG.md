@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.3] - 2026-08-07
+
+### 🐛 Bug Fixes
+
+- Specify shell for build and install steps in publish-release workflow ([afeffe9](https://github.com/DMsuDev/Vigil/commit/afeffe9a752cdcfef812677a87f30a2348bfdaca))
+
+- Add missing permissions for scorecard job in OpenSSF workflow ([30651e6](https://github.com/DMsuDev/Vigil/commit/30651e6e1c50d26ebcfecea113e643ae54d500a7))
+
+- Refine dependency management condition for system defaults ([c97e38f](https://github.com/DMsuDev/Vigil/commit/c97e38fa8f57b348cafe491f12dd1340f1d22f7e))
+
 ## [0.1.2] - 2026-08-07
 
 ### 🐛 Bug Fixes
