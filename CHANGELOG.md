@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Add Threads package dependency and update header file inclusion ([412b2f5](https://github.com/DMsuDev/Vigil/commit/412b2f5826c7c50d5b6026d915e7c9427fa7a60c))
 
+- Update Windows dependency installation on workflow and improve CMake configuration with dynamic checkout reference for version input ([c7e1913](https://github.com/DMsuDev/Vigil/commit/c7e19133cfb266d7425a1fd1fc36ad81808a5cb5))
+
 ### 🚜 Refactor
 
 - Remove unused header includes ([85aa90c](https://github.com/DMsuDev/Vigil/commit/85aa90c63280745a84f9264e0e62af47caf9f901))
