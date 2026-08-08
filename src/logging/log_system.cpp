@@ -3,7 +3,7 @@
 //  See LICENSE file in the project root for full license text.
 // -----------------------------------------------------------------------------
 
-#include "vigil/logging/logger_registry.h"
+#include "vigil/logging/log_system.h"
 
 #include "logging/detail/logger_impl.h"
 #include "logging/detail/spd_convert.h"
@@ -72,7 +72,7 @@ static bool IsInitializedUnsafe() noexcept { return g_Initialized; }
 void EnsureInitialized(const char* function)
 {
     if (!g_Initialized)
-        throw std::logic_error(std::string("[Vigil] LoggerRegistry::") + function + "() called before Init().");
+        throw std::logic_error(std::string("[Vigil] LogSystem::") + function + "() called before Init().");
 }
 
 /// @brief Creates a console sink filtering at @p level.
@@ -155,7 +155,7 @@ Shared<detail::LoggerImpl> CreateLoggerImpl(
 // Logger facade
 //==============================================================================
 
-void LoggerRegistry::Init(const LogSystemConfig& config)
+void LogSystem::Init(const LogSystemConfig& config)
 {
     std::scoped_lock lock(g_Mutex);
 
@@ -201,7 +201,7 @@ void LoggerRegistry::Init(const LogSystemConfig& config)
     }
 }
 
-Logger& LoggerRegistry::Create(std::string_view name)
+Logger& LogSystem::Create(std::string_view name)
 {
     std::scoped_lock lock(g_Mutex);
     EnsureInitialized("Create");
@@ -217,7 +217,7 @@ Logger& LoggerRegistry::Create(std::string_view name)
     return *it->second;
 }
 
-Logger& LoggerRegistry::Create(const LogConfig& config)
+Logger& LogSystem::Create(const LogConfig& config)
 {
     std::scoped_lock lock(g_Mutex);
     EnsureInitialized("Create");
@@ -239,7 +239,7 @@ Logger& LoggerRegistry::Create(const LogConfig& config)
     return *it->second;
 }
 
-void LoggerRegistry::Shutdown()
+void LogSystem::Shutdown()
 {
     std::scoped_lock lock(g_Mutex);
     if (!g_Initialized) return;
@@ -256,7 +256,7 @@ void LoggerRegistry::Shutdown()
 // Logger lifecycle management
 //==============================================================================
 
-void LoggerRegistry::Remove(std::string_view name)
+void LogSystem::Remove(std::string_view name)
 {
     std::scoped_lock lock(g_Mutex);
     if (!IsInitializedUnsafe()) return;
@@ -268,7 +268,7 @@ void LoggerRegistry::Remove(std::string_view name)
     g_NamedLoggers.erase(it);
 }
 
-void LoggerRegistry::SetMain(std::string_view name)
+void LogSystem::SetMain(std::string_view name)
 {
     std::scoped_lock lock(g_Mutex);
     if (!IsInitializedUnsafe()) return;
@@ -285,13 +285,13 @@ void LoggerRegistry::SetMain(std::string_view name)
 // Global logger accessors
 //==============================================================================
 
-bool LoggerRegistry::IsInitialized() noexcept
+bool LogSystem::IsInitialized() noexcept
 {
     std::scoped_lock lock(g_Mutex);
     return g_Initialized;
 }
 
-Logger& LoggerRegistry::Main()
+Logger& LogSystem::Main()
 {
     std::scoped_lock lock(g_Mutex);
     EnsureInitialized("Main");
@@ -299,7 +299,7 @@ Logger& LoggerRegistry::Main()
     return *g_MainLogger;
 }
 
-Logger& LoggerRegistry::Get(std::string_view name)
+Logger& LogSystem::Get(std::string_view name)
 {
     std::scoped_lock lock(g_Mutex);
     EnsureInitialized("Get");
@@ -310,7 +310,7 @@ Logger& LoggerRegistry::Get(std::string_view name)
     throw std::runtime_error("Logger not found: " + std::string{name});
 }
 
-Logger* LoggerRegistry::Find(std::string_view name)
+Logger* LogSystem::Find(std::string_view name)
 {
     std::scoped_lock lock(g_Mutex);
     if (!IsInitializedUnsafe()) return nullptr;
@@ -323,7 +323,7 @@ Logger* LoggerRegistry::Find(std::string_view name)
 // Global log level control
 //==============================================================================
 
-void LoggerRegistry::SetGlobalLevel(LogLevel level)
+void LogSystem::SetGlobalLevel(LogLevel level)
 {
     std::scoped_lock lock(g_Mutex);
     if (!IsInitializedUnsafe()) return;
@@ -333,7 +333,7 @@ void LoggerRegistry::SetGlobalLevel(LogLevel level)
         handle->SetLevel(level);
 }
 
-void LoggerRegistry::SetGlobalFileLevel(LogLevel level)
+void LogSystem::SetGlobalFileLevel(LogLevel level)
 {
     std::scoped_lock lock(g_Mutex);
     if (!IsInitializedUnsafe()) return;
@@ -352,7 +352,7 @@ void LoggerRegistry::SetGlobalFileLevel(LogLevel level)
     }
 }
 
-void LoggerRegistry::SetConsoleLevel(LogLevel level)
+void LogSystem::SetConsoleLevel(LogLevel level)
 {
     std::scoped_lock lock(g_Mutex);
     if (!IsInitializedUnsafe()) return;
@@ -364,7 +364,7 @@ void LoggerRegistry::SetConsoleLevel(LogLevel level)
 // Flush control
 //==============================================================================
 
-void LoggerRegistry::FlushAll()
+void LogSystem::FlushAll()
 {
     std::scoped_lock lock(g_Mutex);
     if (!IsInitializedUnsafe()) return;
@@ -374,7 +374,7 @@ void LoggerRegistry::FlushAll()
         logger->Flush();
 }
 
-void LoggerRegistry::Flush(std::string_view name)
+void LogSystem::Flush(std::string_view name)
 {
     std::scoped_lock lock(g_Mutex);
     if (auto it = g_NamedLoggers.find(std::string{name}); it != g_NamedLoggers.end())

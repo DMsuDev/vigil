@@ -3,7 +3,7 @@
 //  See LICENSE file in the project root for full license text.
 // -----------------------------------------------------------------------------
 
-#include "vigil/logging/logger_registry.h"
+#include "vigil/logging/log_system.h"
 
 #include "test_helpers.h"
 
@@ -18,7 +18,7 @@ TEST(LoggerTest, ReportsTheNameItWasCreatedWith)
     config.LogFile = "test_logger_name.log";
     vigil::test::ScopedRegistry registry(config);
 
-    ASSERT_EQ(LoggerRegistry::Main().GetName(), "logger_name_test");
+    ASSERT_EQ(LogSystem::Main().GetName(), "logger_name_test");
 }
 
 TEST(LoggerTest, SetLevelGetLevelRoundTrip)
@@ -28,7 +28,7 @@ TEST(LoggerTest, SetLevelGetLevelRoundTrip)
     config.LogFile = "test_logger_level.log";
     vigil::test::ScopedRegistry registry(config);
 
-    auto& logger = LoggerRegistry::Main();
+    auto& logger = LogSystem::Main();
 
     logger.SetLevel(LogLevel::Warn);
     ASSERT_EQ(logger.GetLevel(), LogLevel::Warn);
@@ -44,7 +44,7 @@ TEST(LoggerTest, MessagesBelowTheActiveLevelNeverReachTheSinks)
     config.LogFile = "test_logger_filter.log";
     vigil::test::ScopedRegistry registry(config);
 
-    auto& logger = LoggerRegistry::Main();
+    auto& logger = LogSystem::Main();
     auto sink = vigil::test::AttachTestSink(logger);
 
     logger.SetLevel(LogLevel::Warn);
@@ -65,7 +65,7 @@ TEST(LoggerTest, FormattedLoggingInterpolatesFmtStyleArguments)
     config.LogFile = "test_logger_format.log";
     vigil::test::ScopedRegistry registry(config);
 
-    auto& logger = LoggerRegistry::Main();
+    auto& logger = LogSystem::Main();
     auto sink = vigil::test::AttachTestSink(logger);
 
     logger.Info("value is {}", 42);
@@ -86,7 +86,7 @@ TEST(LoggerTest, FlushForwardsToEveryAttachedSink)
     config.LogFile = "test_logger_flush.log";
     vigil::test::ScopedRegistry registry(config);
 
-    auto& logger = LoggerRegistry::Main();
+    auto& logger = LogSystem::Main();
     auto sinkA = vigil::test::AttachTestSink(logger);
     auto sinkB = vigil::test::AttachTestSink(logger);
 

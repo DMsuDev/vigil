@@ -12,7 +12,7 @@
 #include <utility>
 
 /**
- * @file logger_registry.h
+ * @file log_system.h
  * @brief Main facade and entry point for Vigil's logging system.
  *
  * Provides thread-safe access to a centralized main logger and to dynamically
@@ -22,14 +22,13 @@
  * ### Example
  *
  * @code{.cpp}
- * vigil::LoggerRegistry::Init({
+ * vigil::LogSystem::Init({
  *     .Name = "Editor",
- *     .FileMode = vigil::FileOpenMode::Truncate
  * });
  *
  * VIGIL_INFO("Application initialized successfully");
  *
- * auto& netLogger = vigil::LoggerRegistry::Create("Network");
+ * auto& netLogger = vigil::LogSystem::Create("Network");
  * VIGIL_LOG_NAMED("Network", vigil::LogLevel::Warn, "Connection retry attempt #{}", attempt);
  * @endcode
  */
@@ -72,15 +71,15 @@ struct LogConfig
  /**
  * @brief Centralized registry and entry point for Vigil's loggers.
  *
- * `LoggerRegistry` acts as a static registry controlling the lifecycle, setup, and
+ * `LogSystem` acts as a static registry controlling the lifecycle, setup, and
  * retrieval of named logger instances. A default "Main" logger is created upon
  * invoking @ref Init.
  *
- * Subsystem-specific loggers can be created dynamically via @ref LoggerRegistry::Create. By default,
+ * Subsystem-specific loggers can be created dynamically via @ref LogSystem::Create. By default,
  * all loggers share the main file sink to consolidate output, but can be configured
  * with dedicated files or custom severity thresholds as needed.
  */
-class VIGIL_API LoggerRegistry {
+class VIGIL_API LogSystem {
 public:
     /**
      * @brief Initializes the primary logging subsystem and creates the main logger.
@@ -119,7 +118,7 @@ public:
     /**
      * @brief Creates or retrieves a named logger using an explicit configuration.
      *
-     * Unlike the simpler @ref LoggerRegistry::Create overload, this version allows per-logger
+     * Unlike the simpler @ref LogSystem::Create overload, this version allows per-logger
      * customization of file mode, sink severity levels, asynchronous behavior,
      * and other configuration options.
      *
@@ -261,7 +260,7 @@ public:
 
 /**
  * @name Free-Function Logging API
- * @brief `spdlog`-style free functions that log through @ref LoggerRegistry::Main.
+ * @brief `spdlog`-style free functions that log through @ref LogSystem::Main.
  *
  * Equivalent in behavior to the @ref VIGIL_TRACE "main logger macros", provided
  * as plain functions for call sites that prefer to avoid macros. Both forms are
@@ -270,73 +269,73 @@ public:
  */
 
 /// @copydoc Logger::Trace(std::string_view)
-inline void Trace(std::string_view message) { LoggerRegistry::Main().Trace(message); }
+inline void Trace(std::string_view message) { LogSystem::Main().Trace(message); }
 
 /// @copydoc Logger::Debug(std::string_view)
-inline void Debug(std::string_view message) { LoggerRegistry::Main().Debug(message); }
+inline void Debug(std::string_view message) { LogSystem::Main().Debug(message); }
 
 /// @copydoc Logger::Info(std::string_view)
-inline void Info(std::string_view message) { LoggerRegistry::Main().Info(message); }
+inline void Info(std::string_view message) { LogSystem::Main().Info(message); }
 
 /// @copydoc Logger::Warn(std::string_view)
-inline void Warn(std::string_view message) { LoggerRegistry::Main().Warn(message); }
+inline void Warn(std::string_view message) { LogSystem::Main().Warn(message); }
 
 /// @copydoc Logger::Error(std::string_view)
-inline void Error(std::string_view message) { LoggerRegistry::Main().Error(message); }
+inline void Error(std::string_view message) { LogSystem::Main().Error(message); }
 
 /// @copydoc Logger::Critical(std::string_view)
-inline void Critical(std::string_view message) { LoggerRegistry::Main().Critical(message); }
+inline void Critical(std::string_view message) { LogSystem::Main().Critical(message); }
 
 /// @copydoc Logger::Log(LogLevel, std::string_view)
-inline void Log(LogLevel level, std::string_view message) { LoggerRegistry::Main().Log(level, message); }
+inline void Log(LogLevel level, std::string_view message) { LogSystem::Main().Log(level, message); }
 
 /// @copydoc Logger::Trace(detail::FormatString<Args...>, Args&&...)
 template <typename... Args>
 void Trace(detail::FormatString<Args...> message, Args&&... args)
 {
-    LoggerRegistry::Main().Trace(message, std::forward<Args>(args)...);
+    LogSystem::Main().Trace(message, std::forward<Args>(args)...);
 }
 
 /// @copydoc Logger::Debug(detail::FormatString<Args...>, Args&&...)
 template <typename... Args>
 void Debug(detail::FormatString<Args...> message, Args&&... args)
 {
-    LoggerRegistry::Main().Debug(message, std::forward<Args>(args)...);
+    LogSystem::Main().Debug(message, std::forward<Args>(args)...);
 }
 
 /// @copydoc Logger::Info(detail::FormatString<Args...>, Args&&...)
 template <typename... Args>
 void Info(detail::FormatString<Args...> message, Args&&... args)
 {
-    LoggerRegistry::Main().Info(message, std::forward<Args>(args)...);
+    LogSystem::Main().Info(message, std::forward<Args>(args)...);
 }
 
 /// @copydoc Logger::Warn(detail::FormatString<Args...>, Args&&...)
 template <typename... Args>
 void Warn(detail::FormatString<Args...> message, Args&&... args)
 {
-    LoggerRegistry::Main().Warn(message, std::forward<Args>(args)...);
+    LogSystem::Main().Warn(message, std::forward<Args>(args)...);
 }
 
 /// @copydoc Logger::Error(detail::FormatString<Args...>, Args&&...)
 template <typename... Args>
 void Error(detail::FormatString<Args...> message, Args&&... args)
 {
-    LoggerRegistry::Main().Error(message, std::forward<Args>(args)...);
+    LogSystem::Main().Error(message, std::forward<Args>(args)...);
 }
 
 /// @copydoc Logger::Critical(detail::FormatString<Args...>, Args&&...)
 template <typename... Args>
 void Critical(detail::FormatString<Args...> message, Args&&... args)
 {
-    LoggerRegistry::Main().Critical(message, std::forward<Args>(args)...);
+    LogSystem::Main().Critical(message, std::forward<Args>(args)...);
 }
 
 /// @copydoc Logger::Log(LogLevel, detail::FormatString<Args...>, Args&&...)
 template <typename... Args>
 void Log(LogLevel level, detail::FormatString<Args...> message, Args&&... args)
 {
-    LoggerRegistry::Main().Log(level, message, std::forward<Args>(args)...);
+    LogSystem::Main().Log(level, message, std::forward<Args>(args)...);
 }
 
 /** @} */
@@ -354,7 +353,7 @@ void Log(LogLevel level, detail::FormatString<Args...> message, Args&&... args)
  *
  * compile-time filtering based on @ref VIGIL_ACTIVE_LOG_LEVEL.
  *
- * @note The macros assume the main logger is accessed via @ref LoggerRegistry::Main.
+ * @note The macros assume the main logger is accessed via @ref LogSystem::Main.
  * compile-time filtering based on @ref VIGIL_ACTIVE_LOG_LEVEL.
  *
  * Disabled log statements are completely eliminated during compilation.
@@ -450,7 +449,7 @@ void Log(LogLevel level, detail::FormatString<Args...> message, Args&&... args)
  * @def VIGIL_LOG_NAMED(name, level, ...)
  * @brief Emits a log message through a specific named logger instance.
  *
- * Retrieves (or creates) a named logger via @ref LoggerRegistry::Create and logs
+ * Retrieves (or creates) a named logger via @ref LogSystem::Create and logs
  * the payload if the specified @p level satisfies the compile-time gate (`VIGIL_ACTIVE_LOG_LEVEL`).
  *
  * @param name  Unique string identifier for the target subsystem logger.
@@ -463,7 +462,7 @@ void Log(LogLevel level, detail::FormatString<Args...> message, Args&&... args)
 #define VIGIL_LOG_NAMED(name, level, ...)                                     \
     do {                                                                      \
         if (static_cast<int>(level) >= VIGIL_ACTIVE_LOG_LEVEL) {              \
-            ::vigil::LoggerRegistry::Get(name).Log(level, __VA_ARGS__);       \
+            ::vigil::LogSystem::Get(name).Log(level, __VA_ARGS__);       \
         }                                                                     \
     } while (0)
 

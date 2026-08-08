@@ -15,7 +15,7 @@ project(Vigil
   LANGUAGES CXX
   DESCRIPTION "Cross-platform diagnostics library for C++."
 )
-message(STATUS "Configuring ${PROJECT_NAME}: v${PROJECT_VERSION}")
+message(STATUS "${PROJECT_NAME} version: ${PROJECT_VERSION}")
 
 # ------------------------------------------------------------------------------
 #  Project-Wide Configuration Options

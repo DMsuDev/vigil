@@ -128,13 +128,13 @@ int main()
   cfg.Name = "MyApp";
   cfg.ConsoleLevel = vigil::LogLevel::Info;
 
-  vigil::LoggerRegistry::Init(cfg);
+  vigil::LogSystem::Init(cfg);
 
   VIGIL_INFO("Application started");
   VIGIL_WARN("Running with config profile '{}'", "default");
   VIGIL_ERROR("Failed to connect to {}:{}", "127.0.0.1", 5432);
 
-  vigil::LoggerRegistry::Shutdown();
+  vigil::LogSystem::Shutdown();
   return 0;
 }
 ```
@@ -154,7 +154,7 @@ int main()
   vigil::LogSystemConfig cfg;
   cfg.Name = "LimiterDemo";
   cfg.ConsoleLevel = vigil::LogLevel::Trace;
-  vigil::LoggerRegistry::Init(cfg);
+  vigil::LogSystem::Init(cfg);
 
   for (int i = 0; i < 10; ++i)
   {
@@ -174,7 +174,7 @@ int main()
     std::this_thread::sleep_for(std::chrono::milliseconds(250));
   }
 
-  vigil::LoggerRegistry::Shutdown();
+  vigil::LogSystem::Shutdown();
   return 0;
 }
 ```
@@ -189,7 +189,7 @@ int main()
   vigil::LogSystemConfig cfg;
   cfg.Name = "AssertDemo";
   cfg.ConsoleLevel = vigil::LogLevel::Trace;
-  vigil::LoggerRegistry::Init(cfg);
+  vigil::LogSystem::Init(cfg);
 
   int value = 42;
   int* ptr = &value;
@@ -198,7 +198,7 @@ int main()
   VIGIL_ASSERT_NOT_NULL(ptr);
   VIGIL_ASSERT_IN_RANGE(value, 0, 100);
 
-  vigil::LoggerRegistry::Shutdown();
+  vigil::LogSystem::Shutdown();
   return 0;
 }
 ```

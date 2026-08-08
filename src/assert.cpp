@@ -4,7 +4,7 @@
 // -----------------------------------------------------------------------------
 
 #include "vigil/assert.h"
-#include "vigil/logging/logger_registry.h"
+#include "vigil/logging/log_system.h"
 #include "trace/stack_trace.h"
 
 #include "vigil/detail/symbol_utils.h"
@@ -28,7 +28,7 @@ namespace vigil::detail {
     std::string_view fileLocation = FormatFilePath(loc.file_name(), 4U);
 
     // Check if the logging system is initialized and safe to use
-    if (::vigil::LoggerRegistry::IsInitialized()) {
+    if (::vigil::LogSystem::IsInitialized()) {
         if (message.empty()) {
             ::vigil::Log(
                 ::vigil::LogLevel::Critical,
@@ -58,7 +58,7 @@ namespace vigil::detail {
                 message,
                 stackDump);
         }
-        ::vigil::LoggerRegistry::Main().Flush();
+        ::vigil::LogSystem::Main().Flush();
     } else {
         // Fallback to low-level stderr if the logger isn't ready (e.g., startup/shutdown)
         std::cerr << "[VIGIL CRITICAL] Assertion failed: '" << exprText

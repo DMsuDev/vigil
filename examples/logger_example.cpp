@@ -47,7 +47,7 @@ int main()
         vigil::LogSystemConfig config;
         config.Name         = "Example";
         config.ConsoleLevel = vigil::LogLevel::Trace;
-        vigil::LoggerRegistry::Init(config);
+        vigil::LogSystem::Init(config);
 
         vigil::Info("Thanks for trying Vigil version {}.{}.{} !",
             VIGIL_VERSION_MAJOR, VIGIL_VERSION_MINOR, VIGIL_VERSION_PATCH);
@@ -77,7 +77,7 @@ int main()
         DemoFlushControl();
         DemoLoggerLifecycle();
 
-        vigil::LoggerRegistry::Shutdown();
+        vigil::LogSystem::Shutdown();
     }
     catch (const std::exception& ex)
     {
@@ -91,7 +91,7 @@ int main()
 static void DemoNamedLoggers()
 {
     // Simple named logger sharing the main file sink.
-    auto& net = vigil::LoggerRegistry::Create("Network");
+    auto& net = vigil::LogSystem::Create("Network");
     net.Info("Connected to server.");
     VIGIL_LOG_NAMED("Network", vigil::LogLevel::Warn, "Connection retry attempt #{}", 1);
 
@@ -101,11 +101,11 @@ static void DemoNamedLoggers()
     physicsCfg.LogFile   = "physics.log";
     physicsCfg.FileMode  = vigil::FileOpenMode::Truncate;
     physicsCfg.FileLevel = vigil::LogLevel::Debug;
-    vigil::LoggerRegistry::Create(physicsCfg);
-    vigil::LoggerRegistry::Get("Physics").Debug("Simulation step complete.");
+    vigil::LogSystem::Create(physicsCfg);
+    vigil::LogSystem::Get("Physics").Debug("Simulation step complete.");
 
     // Find() returns nullptr instead of throwing when a logger does not exist.
-    if (auto* audio = vigil::LoggerRegistry::Find("Audio"))
+    if (auto* audio = vigil::LogSystem::Find("Audio"))
         audio->Info("Audio subsystem ready.");
     else
         VIGIL_WARN("No 'Audio' logger registered yet.");
@@ -129,7 +129,7 @@ static void DemoRateLimiting()
 
 static void DemoLevelControl()
 {
-    auto& logger = vigil::LoggerRegistry::Main();
+    auto& logger = vigil::LogSystem::Main();
     vigil::Info("Current level: {}", LevelName(logger.GetLevel()));
 
     // Per-logger level: raise the bar, then restore.
@@ -139,15 +139,15 @@ static void DemoLevelControl()
     VIGIL_DEBUG("This message should be displayed.");
 
     // SetGlobalLevel() applies the same change to every registered logger at once.
-    vigil::LoggerRegistry::SetGlobalLevel(vigil::LogLevel::Info);
+    vigil::LogSystem::SetGlobalLevel(vigil::LogLevel::Info);
     VIGIL_DEBUG("This message should not be displayed either!");
-    vigil::LoggerRegistry::SetGlobalLevel(vigil::LogLevel::Trace);
+    vigil::LogSystem::SetGlobalLevel(vigil::LogLevel::Trace);
     VIGIL_DEBUG("This message should be displayed again.");
 }
 
 static void DemoFlushControl()
 {
-    auto& logger = vigil::LoggerRegistry::Main();
+    auto& logger = vigil::LogSystem::Main();
 
     // Per-logger level filtering.
     logger.SetLevel(vigil::LogLevel::Debug);
@@ -156,26 +156,26 @@ static void DemoFlushControl()
     logger.SetLevel(vigil::LogLevel::Trace);
 
     // Per-sink level filtering: file sink raised to Warn, console to Info.
-    vigil::LoggerRegistry::SetGlobalFileLevel(vigil::LogLevel::Warn);
-    vigil::LoggerRegistry::SetConsoleLevel(vigil::LogLevel::Info);
+    vigil::LogSystem::SetGlobalFileLevel(vigil::LogLevel::Warn);
+    vigil::LogSystem::SetConsoleLevel(vigil::LogLevel::Info);
     VIGIL_TRACE("Dropped by the file sink.");
     VIGIL_INFO("Shown on the console; dropped by the file sink.");
 
     // Restore and flush.
-    vigil::LoggerRegistry::SetGlobalLevel(vigil::LogLevel::Trace);
-    vigil::LoggerRegistry::Flush("Network");
-    vigil::LoggerRegistry::FlushAll();
+    vigil::LogSystem::SetGlobalLevel(vigil::LogLevel::Trace);
+    vigil::LogSystem::Flush("Network");
+    vigil::LogSystem::FlushAll();
 }
 
 static void DemoLoggerLifecycle()
 {
-    vigil::LoggerRegistry::Create("Temporary").Info("Created a temporary logger.");
+    vigil::LogSystem::Create("Temporary").Info("Created a temporary logger.");
 
     // Promote a named logger to replace Main().
-    vigil::LoggerRegistry::SetMain("Temporary");
+    vigil::LogSystem::SetMain("Temporary");
     VIGIL_INFO("This now goes through the promoted 'Temporary' logger.");
 
     // Remove loggers whose sinks are no longer needed.
-    vigil::LoggerRegistry::Remove("Physics");
-    vigil::LoggerRegistry::Remove("Audio"); // no-op: never created
+    vigil::LogSystem::Remove("Physics");
+    vigil::LogSystem::Remove("Audio"); // no-op: never created
 }

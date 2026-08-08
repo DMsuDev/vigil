@@ -47,7 +47,7 @@ set(VIGIL_GTEST_SOURCES
   test_async.cpp
   test_log_limiter.cpp
   test_logger.cpp
-  test_logger_registry.cpp
+  test_log_system.cpp
 )
 
 # ------------------------------------------------------------------------------

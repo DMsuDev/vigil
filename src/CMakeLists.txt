@@ -20,7 +20,7 @@ set(VIGIL_SOURCES
 
   logging/detail/logger_impl.cpp
   logging/logger.cpp
-  logging/logger_registry.cpp
+  logging/log_system.cpp
   logging/log_limiter.cpp
 
   detail/symbol_utils.cpp
@@ -38,7 +38,7 @@ set(VIGIL_HEADERS
   "${VIGIL_INCLUDE_DIR}/vigil/core/console.h"
 
   "${VIGIL_INCLUDE_DIR}/vigil/logging/logger.h"
-  "${VIGIL_INCLUDE_DIR}/vigil/logging/logger_registry.h"
+  "${VIGIL_INCLUDE_DIR}/vigil/logging/log_system.h"
   "${VIGIL_INCLUDE_DIR}/vigil/logging/log_limiter.h"
   "${VIGIL_INCLUDE_DIR}/vigil/logging/log_level.h"
   "${VIGIL_INCLUDE_DIR}/vigil/logging/file_mode.h"

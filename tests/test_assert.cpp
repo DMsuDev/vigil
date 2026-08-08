@@ -4,7 +4,7 @@
 // -----------------------------------------------------------------------------
 
 #include "vigil/assert.h"
-#include "vigil/logging/logger_registry.h"
+#include "vigil/logging/log_system.h"
 
 #include <gtest/gtest.h>
 
@@ -46,7 +46,7 @@ TEST(AssertTest, AssertFalseTerminatesProcess)
 {
     EXPECT_DEATH(
         {
-            ::vigil::LoggerRegistry::Shutdown();
+            ::vigil::LogSystem::Shutdown();
             VIGIL_ASSERT(false);
         },
         "Assertion failed");
@@ -56,7 +56,7 @@ TEST(AssertTest, AssertNotNullTerminatesOnNullPointer)
 {
     EXPECT_DEATH(
         {
-            ::vigil::LoggerRegistry::Shutdown();
+            ::vigil::LogSystem::Shutdown();
             int* ptr = nullptr;
             VIGIL_ASSERT_NOT_NULL(ptr);
         },
@@ -67,7 +67,7 @@ TEST(AssertTest, AssertInRangeTerminatesWhenValueIsOutOfRange)
 {
     EXPECT_DEATH(
         {
-            ::vigil::LoggerRegistry::Shutdown();
+            ::vigil::LogSystem::Shutdown();
             VIGIL_ASSERT_IN_RANGE(150, 0, 100);
         },
         "Assertion failed");
@@ -77,7 +77,7 @@ TEST(AssertTest, UnreachableAssertTerminatesProcess)
 {
     EXPECT_DEATH(
         {
-            ::vigil::LoggerRegistry::Shutdown();
+            ::vigil::LogSystem::Shutdown();
             VIGIL_UNREACHABLE_ASSERT();
         },
         "Assertion failed");

@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
         vigil::LogSystemConfig config;
         config.Name         = "AssertExample";
         config.ConsoleLevel = vigil::LogLevel::Trace;
-        vigil::LoggerRegistry::Init(config);
+        vigil::LogSystem::Init(config);
 
         vigil::Info("Vigil Assertion Example  v{}.{}.{}",
             VIGIL_VERSION_MAJOR, VIGIL_VERSION_MINOR, VIGIL_VERSION_PATCH);
@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
             if (std::strcmp(arg, "--help") == 0 || std::strcmp(arg, "-h") == 0)
             {
                 PrintUsage(app_name.c_str());
-                vigil::LoggerRegistry::Shutdown();
+                vigil::LogSystem::Shutdown();
                 return 0;
             }
         }
@@ -112,13 +112,13 @@ int main(int argc, char* argv[])
                     vigil::Error("Unknown option: '{}'.", arg);
                     vigil::Info("");
                     PrintUsage(app_name.c_str());
-                    vigil::LoggerRegistry::Shutdown();
+                    vigil::LogSystem::Shutdown();
                     return 1;
                 }
             }
         }
 
-        vigil::LoggerRegistry::Shutdown();
+        vigil::LogSystem::Shutdown();
     }
     catch (const std::exception& ex)
     {

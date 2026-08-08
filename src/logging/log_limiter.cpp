@@ -4,7 +4,7 @@
 // -----------------------------------------------------------------------------
 
 #include "vigil/logging/log_limiter.h"
-#include "vigil/logging/logger_registry.h"
+#include "vigil/logging/log_system.h"
 
 #include <unordered_set>
 #include <unordered_map>
@@ -29,7 +29,7 @@ bool LogOncePolicy::ShouldLog(const std::string& key)
 void LogOncePolicy::LogOnce(const std::string& key, LogLevel level, const std::string& msg)
 {
     if (ShouldLog(key))
-        LoggerRegistry::Main().Log(level, "{}", msg);
+        LogSystem::Main().Log(level, "{}", msg);
 }
 
 //==============================================================================
@@ -64,7 +64,7 @@ bool LogTTLPolicy::ShouldLog(const std::string& key, double ttlSeconds)
 void LogTTLPolicy::LogTTL(const std::string& key, double ttlSeconds, LogLevel level, const std::string& msg)
 {
     if (ShouldLog(key, ttlSeconds))
-        LoggerRegistry::Main().Log(level, "{}", msg);
+        LogSystem::Main().Log(level, "{}", msg);
 }
 
 } // namespace vigil

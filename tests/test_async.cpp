@@ -3,7 +3,7 @@
 //  See LICENSE file in the project root for full license text.
 // -----------------------------------------------------------------------------
 
-#include "vigil/logging/logger_registry.h"
+#include "vigil/logging/log_system.h"
 
 #include "test_helpers.h"
 
@@ -34,10 +34,10 @@ TEST(AsyncTest, MainLoggerDeliversEveryMessageOnceTheRegistryShutsDown)
         config.Async = true;
         vigil::test::ScopedRegistry registry(config);
 
-        sink = vigil::test::AttachTestSink(LoggerRegistry::Main());
+        sink = vigil::test::AttachTestSink(LogSystem::Main());
 
         for (size_t i = 0; i < messages; ++i)
-            LoggerRegistry::Main().Info("Hello message #{}", i);
+            LogSystem::Main().Info("Hello message #{}", i);
     }
 
     ASSERT_EQ(sink->msg_counter(), messages);

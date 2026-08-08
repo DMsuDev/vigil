@@ -5,11 +5,11 @@
 
 #pragma once
 
-// White-box test helpers. LoggerRegistry is a process-wide singleton (Init()
+// White-box test helpers. LogSystem is a process-wide singleton (Init()
 // after the first successful call is a no-op), so every test that needs its
 // own configuration must force a Shutdown()/Init() cycle around itself.
 
-#include "vigil/logging/logger_registry.h"
+#include "vigil/logging/log_system.h"
 #include "logging/detail/logger_impl.h"
 
 #include "test_sink.h"
@@ -39,7 +39,7 @@ public:
 inline ::testing::Environment* const g_LogDirEnvironment =
     ::testing::AddGlobalTestEnvironment(new LogDirEnvironment);
 
-/// @brief RAII guard that provides each test with an isolated LoggerRegistry state.
+/// @brief RAII guard that provides each test with an isolated LogSystem state.
 ///
 /// Console output is suppressed by default. The log file is always written
 /// into @ref kLogDir; @p config.LogFile must be provided and must include
@@ -52,11 +52,11 @@ struct ScopedRegistry {
 
         config.LogFile = (kLogDir / (config.LogFile.empty() ? config.Name : config.LogFile)).string();
 
-        vigil::LoggerRegistry::Shutdown();
-        vigil::LoggerRegistry::Init(config);
+        vigil::LogSystem::Shutdown();
+        vigil::LogSystem::Init(config);
     }
 
-    ~ScopedRegistry() { vigil::LoggerRegistry::Shutdown(); }
+    ~ScopedRegistry() { vigil::LogSystem::Shutdown(); }
 
     ScopedRegistry(const ScopedRegistry&)            = delete;
     ScopedRegistry& operator=(const ScopedRegistry&) = delete;

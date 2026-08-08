@@ -35,7 +35,7 @@
 
 // ---- Logging -----------------------------------------------------------
 #include "vigil/logging/logger.h"
-#include "vigil/logging/logger_registry.h"
+#include "vigil/logging/log_system.h"
 #include "vigil/logging/log_limiter.h"
 
 // ---- Assert ------------------------------------------------------------

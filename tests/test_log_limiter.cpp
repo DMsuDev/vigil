@@ -4,7 +4,7 @@
 // -----------------------------------------------------------------------------
 
 #include "vigil/logging/log_limiter.h"
-#include "vigil/logging/logger_registry.h"
+#include "vigil/logging/log_system.h"
 
 #include "test_helpers.h"
 
@@ -46,7 +46,7 @@ TEST(LogLimiterTest, LogOnceWritesThroughTheMainLoggerOnlyOncePerKey)
     config.LogFile = "test_log_once_write.log";
     vigil::test::ScopedRegistry registry(config);
 
-    auto sink = vigil::test::AttachTestSink(LoggerRegistry::Main());
+    auto sink = vigil::test::AttachTestSink(LogSystem::Main());
     const std::string key = "log_once_write_test_key";
 
     LogOncePolicy::LogOnce(key, LogLevel::Info, "first");
@@ -82,7 +82,7 @@ TEST(LogLimiterTest, LogTTLWritesThroughTheMainLoggerOncePerTTLWindow)
     config.LogFile = "test_log_ttl_write.log";
     vigil::test::ScopedRegistry registry(config);
 
-    auto sink = vigil::test::AttachTestSink(LoggerRegistry::Main());
+    auto sink = vigil::test::AttachTestSink(LogSystem::Main());
     const std::string key = "log_ttl_write_test_key";
 
     LogTTLPolicy::LogTTL(key, 100.0, LogLevel::Warn, "first");
