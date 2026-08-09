@@ -41,3 +41,4 @@ endfunction()
 # ------------------------------------------------------------------------------
 vigil_add_example(logger_example)
 vigil_add_example(assert_example)
+vigil_add_example(scoped_example)
