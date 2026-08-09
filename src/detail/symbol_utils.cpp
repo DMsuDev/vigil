@@ -11,12 +11,13 @@ namespace vigil::detail {
 
 namespace {
 
-constexpr std::array<std::string_view, 5> kCallingConventions{
+constexpr std::array<std::string_view, 6> kCallingConventions{
     "__cdecl ",
     "__stdcall ",
     "__fastcall ",
     "__vectorcall ",
-    "__thiscall "
+    "__thiscall ",
+    "(void)"
 };
 
 } // Anonymous namespace
@@ -45,24 +46,13 @@ std::string_view FormatFilePath(std::string_view path, unsigned levels)
 
 std::string CleanFunctionSignature(std::string_view signature)
 {
-    std::string result;
-    result.reserve(signature.size());
+    std::string result{signature};
 
     // Remove compiler-specific calling conventions from function signatures.
-    std::size_t i = 0;
-    while (i < signature.size()) {
-        bool matched = false;
-
-        for (const std::string_view cc : kCallingConventions) {
-            if (signature.compare(i, cc.size(), cc) == 0) {
-                i += cc.size();
-                matched = true;
-                break;
-            }
-        }
-
-        if (!matched)
-            result += signature[i++];
+    for (const std::string_view cc : kCallingConventions) {
+        std::size_t pos = 0;
+        while ((pos = result.find(cc, pos)) != std::string::npos)
+            result.erase(pos, cc.size());
     }
 
     return result;

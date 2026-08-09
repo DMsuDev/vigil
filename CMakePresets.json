@@ -17,6 +17,7 @@
       "cacheVariables": {
         "VIGIL_BUILD_TESTS":    true,
         "VIGIL_BUILD_EXAMPLES": true,
+        "VIGIL_ENABLE_SCOPED_LOG": true,
         "VIGIL_INSTALL":        false
       }
     },
