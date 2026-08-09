@@ -40,6 +40,7 @@ set(VIGIL_HEADERS
   "${VIGIL_INCLUDE_DIR}/vigil/logging/logger.h"
   "${VIGIL_INCLUDE_DIR}/vigil/logging/log_system.h"
   "${VIGIL_INCLUDE_DIR}/vigil/logging/log_limiter.h"
+  "${VIGIL_INCLUDE_DIR}/vigil/logging/scoped_logger.h"
   "${VIGIL_INCLUDE_DIR}/vigil/logging/log_level.h"
   "${VIGIL_INCLUDE_DIR}/vigil/logging/file_mode.h"
 
@@ -143,7 +144,7 @@ target_compile_definitions(vigil
 )
 
 # ------------------------------------------------------------------------------
-#  Enable Optional Stack Trace Capture & Symbolication
+#  Enable Optional Features
 # ------------------------------------------------------------------------------
 if(VIGIL_ENABLE_STACK_TRACE)
   target_compile_definitions(vigil PUBLIC VIGIL_ENABLE_STACK_TRACE)
@@ -151,6 +152,10 @@ if(VIGIL_ENABLE_STACK_TRACE)
   if(WIN32)
     target_link_libraries(vigil PRIVATE dbghelp)
   endif()
+endif()
+
+if(VIGIL_ENABLE_SCOPED_LOG)
+  target_compile_definitions(vigil PUBLIC VIGIL_ENABLE_SCOPED_LOG)
 endif()
 
 # ------------------------------------------------------------------------------

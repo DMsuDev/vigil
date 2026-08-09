@@ -36,6 +36,7 @@ It helps applications capture useful diagnostic information, detect failures, an
 - Log spam protection with one-shot and TTL-based rate limiting.
 - Assertion macros integrated with source-location capture and logging.
 - Optional stack trace support (platform-dependent) for richer diagnostics.
+- RAII scope instrumentation with automatic entry/exit logging and elapsed time.
 - CMake-first integration: subproject, package install/export, and preset-friendly options.
 
 ## Install (CMake)
@@ -104,6 +105,7 @@ cmake -S . -B build -DCMAKE_PREFIX_PATH="/path/to/vigil/install/prefix"
 - `VIGIL_USE_SYSTEM_FMT`: Prefer system-installed `fmt` when available.
 - `VIGIL_BUILD_SHARED`: Build Vigil as a shared library.
 - `VIGIL_ENABLE_STACK_TRACE`: Enable stack trace and symbolication support.
+- `VIGIL_ENABLE_SCOPED_LOG`: Enable `VIGIL_SCOPED_LOG` and `VIGIL_SCOPED_LOG_FUNCTION` macros.
 
 Example configure command:
 
@@ -205,6 +207,56 @@ int main()
 
 `VIGIL_ASSERT` is active when assertions are enabled (`VIGIL_ENABLE_ASSERTS`).
 `VIGIL_VERIFY` always evaluates its condition, even when asserts are disabled.
+
+### 4) Scoped logging
+
+Instrument functions and code blocks with automatic entry/exit trace logging and elapsed time. Enable at configure time with `-DVIGIL_ENABLE_SCOPED_LOG=ON`.
+
+```cpp
+#include <vigil/vigil.h>
+#include <vigil/logging/scoped_logger.h>
+
+static void LoadAssets()
+{
+    VIGIL_SCOPED_LOG_FUNCTION();
+
+    {
+        VIGIL_SCOPED_LOG("Parsing manifest");
+        // ...
+    }
+
+    {
+        VIGIL_SCOPED_LOG("Uploading textures");
+        // ...
+    }
+}
+
+int main()
+{
+    vigil::LogSystemConfig cfg;
+    cfg.Name         = "MyApp";
+    cfg.ConsoleLevel = vigil::LogLevel::Trace;
+    vigil::LogSystem::Init(cfg);
+
+    LoadAssets();
+
+    vigil::LogSystem::Shutdown();
+    return 0;
+}
+```
+
+Output:
+
+```text
+[TRACE] >> void LoadAssets()
+[TRACE] >> Parsing manifest
+[TRACE] << Parsing manifest (15 ms)
+[TRACE] >> Uploading textures
+[TRACE] << Uploading textures (20 ms)
+[TRACE] << void LoadAssets() (37 ms)
+```
+
+When `VIGIL_ENABLE_SCOPED_LOG` is not defined, both macros expand to `((void)0)` and incur no overhead.
 
 ## License
 
