@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Fix installed libbacktrace path in VigilConfig.cmake
   - Removed `stack_trace` headers from `VIGIL_INTERNAL_HEADERS`
 
+- Update CMake command syntax for Windows to use PowerShell style ([ae6845c](https://github.com/DMsuDev/Vigil/commit/ae6845c09dcb1b05169c140ac6105e9d36a2ae42))
+
 ### ◀️ Reverts
 
 - Enforce system fmt usage when installing Vigil ([c8ec327](https://github.com/DMsuDev/Vigil/commit/c8ec32740eb620be33b4817a9e7b98a635ccc84f))
