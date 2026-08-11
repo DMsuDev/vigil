@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] - 2026-08-11
+
+### 🐛 Bug Fixes
+
+- Properly install vendored `libbacktrace` ([a263791](https://github.com/DMsuDev/Vigil/commit/a263791f0669db432b631065b80336f16bed68e5))
+
+  - Install libbacktrace alongside Vigil on POSIX platforms
+  - Fix installed libbacktrace path in VigilConfig.cmake
+  - Removed `stack_trace` headers from `VIGIL_INTERNAL_HEADERS`
+
+### ◀️ Reverts
+
+- Enforce system fmt usage when installing Vigil ([c8ec327](https://github.com/DMsuDev/Vigil/commit/c8ec32740eb620be33b4817a9e7b98a635ccc84f))
+
+- Install fmt library for Linux, macOS, and Windows in CI workflow ([678328f](https://github.com/DMsuDev/Vigil/commit/678328fce21e4a0ab36752a8aa5cacc9df4bf4ad))
+
 ## [0.3.0] - 2026-08-11
 
 ### 🚀 Features
