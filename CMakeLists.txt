@@ -51,6 +51,14 @@ endif()
 option(VIGIL_USE_SYSTEM_FMT "Use system-installed fmt library" ${vigil_use_system_default})
 message(STATUS "Vigil: Using system-installed fmt library: ${VIGIL_USE_SYSTEM_FMT}")
 
+if(VIGIL_INSTALL AND NOT VIGIL_USE_SYSTEM_FMT)
+  message(WARNING
+    "Vigil: VIGIL_USE_SYSTEM_FMT=OFF is incompatible with VIGIL_INSTALL=ON "
+    "(fmt is part of Vigil's public API). Forcing VIGIL_USE_SYSTEM_FMT=ON."
+  )
+  set(VIGIL_USE_SYSTEM_FMT ON CACHE BOOL "Use system-installed fmt library" FORCE)
+endif()
+
 # ------------------------------------------------------------------------------
 #  Global Core Modules & System Paths
 # ------------------------------------------------------------------------------
