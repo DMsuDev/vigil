@@ -18,13 +18,6 @@ set(SPDLOG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/spdlog")
 # ------------------------------------------------------------------------------
 set(PKG_CONFIG_REQUIRES "")
 
-if(VIGIL_INSTALL AND NOT VIGIL_USE_SYSTEM_FMT)
-  message(FATAL_ERROR
-    "Vigil: VIGIL_INSTALL requires VIGIL_USE_SYSTEM_FMT=ON. "
-    "Installing with a vendored fmt copy is not supported, "
-    "as its targets are not exported.")
-endif()
-
 if(VIGIL_USE_SYSTEM_FMT)
   find_package(fmt CONFIG REQUIRED GLOBAL)
   list(APPEND PKG_CONFIG_REQUIRES fmt)
