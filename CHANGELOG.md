@@ -5,6 +5,67 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-08-11
+
+### 🚀 Features
+
+- Add `ScopedLogger` RAII utility and scoped log macros ([5d5e0e6](https://github.com/DMsuDev/Vigil/commit/5d5e0e6e881e3d09f7bb0efd4102d7f9fbfddf02))
+
+- Add `scoped_example` to demonstrate ScopedLogger functionality ([90c9692](https://github.com/DMsuDev/Vigil/commit/90c96923754cd63a3bd7c3072f99f27573c9f684))
+
+- Add unit tests for `ScopedLogger` functionality ([7a24f1c](https://github.com/DMsuDev/Vigil/commit/7a24f1cf45d7917d2b9130a9ea7e187789f7b10c))
+
+- Improve POSIX and Windows stack trace capture with libbacktrace and DbgHelp ([2c31c97](https://github.com/DMsuDev/Vigil/commit/2c31c97ed1e7df35e1e205218a8cf48316863002))
+
+  - Added stack trace capture functionality for POSIX platforms using libbacktrace.
+  - Implemented stack trace capture for Windows using DbgHelp.
+  - Introduced CaptureFromAddresses method for symbolication of raw addresses.
+  - Enhanced StackFrame structure to include column information and inlined frame detection.
+  - Updated documentation for stack trace methods and usage examples.
+
+### 🐛 Bug Fixes
+
+- Fix Autotools build commands on POSIX ([2e04d8d](https://github.com/DMsuDev/Vigil/commit/2e04d8df7470ad365952cb9cfd272c0a0337ef59))
+
+- Update file permissions for configure and install-sh scripts ([e054f2e](https://github.com/DMsuDev/Vigil/commit/e054f2e7528bef1b138b0889205beb40bf8b1449))
+
+- Reorganize badge display for better visibility ([80d9fcd](https://github.com/DMsuDev/Vigil/commit/80d9fcdb8e330fcd615cff0dc213f76290b44f14))
+
+### 🚜 Refactor
+
+- Publish assets to existing GitHub releases ([016019a](https://github.com/DMsuDev/Vigil/commit/016019a8dd877c98d73eb1bf36b6d2ad090bfca0))
+
+  - Trigger the workflow on published releases instead of tag pushes
+  - Remove unnecessary fmt system dependency installation since `VIGIL_USE_SYSTEM_FMT` is disabled
+
+- **BREAKING:** Replace `LoggerRegistry` with `LogSystem` ([7fca087](https://github.com/DMsuDev/Vigil/commit/7fca087557eee6ce6726cdda1be302f21eb9d497))
+
+  - Reworks the logging API around `LogSystem` and updates its consumers and tests accordingly.
+  - Renames the registry implementation and related test files to reflect the new architecture.
+
+### ⚡ Performance
+
+- Update CleanFunctionSignature calling conventions ([7502e60](https://github.com/DMsuDev/Vigil/commit/7502e604a2a74a499c63aa0532208115f07dc575))
+
+  - Adjust calling conventions used by `CleanFunctionSignature`
+  - Improve performance of function signature processing
+  - Preserve existing signature-cleaning behavior
+  - Enable `VIGIL_ENABLE_SCOPED_LOG` by default in the `base-dev` CMake preset
+
+### 🛠️ Build System
+
+- Add `libbacktrace` dependency for POSIX ([fd5a7c1](https://github.com/DMsuDev/Vigil/commit/fd5a7c1614897c3ac6ee460742fe3351b47e3c63))
+
+### 🔧 Maintenance
+
+- Remove OpenSSF Scorecard workflow file ([6921bbb](https://github.com/DMsuDev/Vigil/commit/6921bbb05fa39d48cca9e2972277551fb9d4ce70))
+
+- Restrict architecture matrix to arm64 only ([ea2f28f](https://github.com/DMsuDev/Vigil/commit/ea2f28fcbaebbedc975fbe22bf0a84f3ea813b6a))
+
+### ◀️ Reverts
+
+- Remove unsupported installation check for vendored fmt ([5f701a4](https://github.com/DMsuDev/Vigil/commit/5f701a4526393d6f442bf426c7ed7f02dba7a1fd))
+
 ## [0.1.3] - 2026-08-07
 
 ### 🐛 Bug Fixes
