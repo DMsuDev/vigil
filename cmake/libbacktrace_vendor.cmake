@@ -31,6 +31,7 @@ ExternalProject_Add(libbacktrace
     "${CMAKE_COMMAND}" -E env
     "CC=${CMAKE_C_COMPILER}"
     "CFLAGS=${CMAKE_C_FLAGS}"
+    /bin/sh
     "${LIBBACKTRACE_SOURCE_DIR}/configure"
     "--prefix=<INSTALL_DIR>"
     "--enable-shared=no"
