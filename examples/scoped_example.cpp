@@ -96,7 +96,6 @@ static void DemoNestedScopes()
     }
 }
 
-// VIGIL_SCOPED_LOG accepts an explicit LogLevel as second argument.
 static void DemoExplicitLevel()
 {
     VIGIL_SCOPED_LOG_FUNCTION();

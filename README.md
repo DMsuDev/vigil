@@ -6,24 +6,31 @@
   </picture>
 
   <p>
-    <strong>Diagnostics and Logging Tools for C++</strong><br>
-    Assertions • Structured Logging • Runtime Diagnostics
+    <strong>Logging and Diagnostics for C++</strong><br>
+    Structured Logging • Assertions • Runtime Instrumentation
   </p>
 
   <p>
-    <img src="https://img.shields.io/badge/License-MIT-green?style=flat&logo=open-source-initiative&logoColor=white" alt="License MIT">
-    <img src="https://img.shields.io/badge/Platform-Linux-2d2d2d?style=flat&logo=linux&logoColor=white" alt="Platform Linux">
-    <img src="https://img.shields.io/badge/Platform-Windows-0078D6?style=flat&logo=windows&logoColor=white" alt="Platform Windows">
-    <img src="https://img.shields.io/badge/Platform-macOS-000000?style=flat&logo=apple&logoColor=white" alt="Platform macOS">
-    <img src="https://img.shields.io/badge/Version-0.1.3-purple?style=flat" alt="Version 0.1.3">
+    <img src="https://img.shields.io/github/license/DMsuDev/vigil?style=flat&logo=open-source-initiative&logoColor=white" alt="License MIT">
+    <img src="https://img.shields.io/github/v/release/DMsuDev/vigil?style=flat&label=Version&color=purple" alt="Version">
+    <a href="https://github.com/DMsuDev/vigil/actions/workflows/linux-build.yml">
+        <img src="https://github.com/DMsuDev/vigil/actions/workflows/linux-build.yml/badge.svg" alt="Linux Build">
+    </a>
+    <a href="https://github.com/DMsuDev/vigil/actions/workflows/windows-build.yml">
+        <img src="https://github.com/DMsuDev/vigil/actions/workflows/windows-build.yml/badge.svg" alt="Windows Build">
+    </a>
+    <a href="https://github.com/DMsuDev/vigil/actions/workflows/macos-build.yml">
+        <img src="https://github.com/DMsuDev/vigil/actions/workflows/macos-build.yml/badge.svg" alt="macOS Build">
+    </a>
   </p>
+
 </div>
 
 ## Overview
 
-**Vigil** is a C++ diagnostics library focused on structured logging and runtime error reporting.
+**Vigil** is a C++ logging and diagnostics library built around structured logging, assertions, and runtime instrumentation.
 
-It helps applications capture useful diagnostic information, detect failures, and simplify debugging across development and production environments.
+It is designed to provide a consistent interface for recording application events, detecting failures, and capturing useful context when debugging. Vigil supports **C++17 and later** on **Linux, Windows, and macOS**.
 
 > [!NOTE]
 > **Vigil** is under **active development**. While the current API is considered stable, new features and improvements may be introduced in future releases.
@@ -31,49 +38,39 @@ It helps applications capture useful diagnostic information, detect failures, an
 ## Features
 
 - Structured logging with fmt-style formatting.
-- Main logger and named logger model for subsystem-oriented diagnostics.
-- Runtime log-level controls for global, console, and file sinks.
-- Log spam protection with one-shot and TTL-based rate limiting.
-- Assertion macros integrated with source-location capture and logging.
-- Optional stack trace support (platform-dependent) for richer diagnostics.
+- Main and named loggers for subsystem-oriented diagnostics.
+- Configurable log levels and console/file sinks.
+- One-shot and TTL-based rate limiting to prevent log spam.
+- Assertion macros with source-location capture and logging.
+- Optional stack trace support for richer failure diagnostics.
 - RAII scope instrumentation with automatic entry/exit logging and elapsed time.
-- CMake-first integration: subproject, package install/export, and preset-friendly options.
+- CMake integration with subproject, `FetchContent`, and package installation support.
 
-## Install (CMake)
+## CMake Integration
 
-Vigil is designed to integrate cleanly into modern CMake workflows.
+Choose the option that best fits your project:
 
 ### Option 1: Add as subdirectory
 
 If Vigil lives inside your repository (for example as a git submodule):
 
 ```cmake
-cmake_minimum_required(VERSION 3.28)
-project(MyApp LANGUAGES CXX)
-
 add_subdirectory(vendor/vigil)
-
-add_executable(my_app src/main.cpp)
 target_link_libraries(my_app PRIVATE vigil::vigil)
 ```
 
-### Option 2: FetchContent (recommended for external dependency)
+### Option 2: [`FetchContent`](https://cmake.org/cmake/help/latest/module/FetchContent.html) (recommended for external dependencies)
 
 ```cmake
-cmake_minimum_required(VERSION 3.28)
-project(MyApp LANGUAGES CXX)
-
 include(FetchContent)
 
 FetchContent_Declare(
   vigil
   GIT_REPOSITORY https://github.com/DMsuDev/vigil.git
-  GIT_TAG        v0.1.3
+  GIT_TAG        v0.2.0 # <HASH or Tag>
 )
 
 FetchContent_MakeAvailable(vigil)
-
-add_executable(my_app src/main.cpp)
 target_link_libraries(my_app PRIVATE vigil::vigil)
 ```
 
@@ -82,12 +79,8 @@ target_link_libraries(my_app PRIVATE vigil::vigil)
 After installing Vigil to your system or custom prefix:
 
 ```cmake
-cmake_minimum_required(VERSION 3.28)
-project(MyApp LANGUAGES CXX)
-
 find_package(Vigil CONFIG REQUIRED)
 
-add_executable(my_app src/main.cpp)
 target_link_libraries(my_app PRIVATE vigil::vigil)
 ```
 
@@ -113,13 +106,15 @@ Example configure command:
 cmake -S . -B build \
   -DCMAKE_BUILD_TYPE=Release \
   -DVIGIL_BUILD_TESTS=OFF \
-  -DVIGIL_BUILD_EXAMPLES=OFF \
-  -DVIGIL_BUILD_SHARED=OFF
+  -DVIGIL_BUILD_EXAMPLES=OFF
 ```
 
-## Basic Usage
+## Usage
 
-### 1) System logging (main logger)
+<details>
+<summary>Logging</summary>
+
+Initialize the logger and write messages at different log levels.
 
 ```cpp
 #include <vigil/vigil.h>
@@ -141,7 +136,10 @@ int main()
 }
 ```
 
-### 2) System logging with log limiter
+</details>
+
+<details>
+<summary>Rate-limited logging</summary>
 
 Use this pattern in hot loops or noisy code paths to prevent log flooding.
 
@@ -181,7 +179,10 @@ int main()
 }
 ```
 
-### 3) Basic assert example
+</details>
+
+<details>
+<summary>Assertions</summary>
 
 ```cpp
 #include <vigil/vigil.h>
@@ -205,16 +206,18 @@ int main()
 }
 ```
 
-`VIGIL_ASSERT` is active when assertions are enabled (`VIGIL_ENABLE_ASSERTS`).
-`VIGIL_VERIFY` always evaluates its condition, even when asserts are disabled.
+`VIGIL_ASSERT` is enabled in `Debug` and `RelWithDebInfo` builds and disabled in `Release` builds.
+`VIGIL_VERIFY` always evaluates its condition, regardless of the build configuration.
 
-### 4) Scoped logging
+</details>
+
+<details>
+<summary>Scoped logging</summary>
 
 Instrument functions and code blocks with automatic entry/exit trace logging and elapsed time. Enable at configure time with `-DVIGIL_ENABLE_SCOPED_LOG=ON`.
 
 ```cpp
 #include <vigil/vigil.h>
-#include <vigil/logging/scoped_logger.h>
 
 static void LoadAssets()
 {
@@ -256,9 +259,10 @@ Output:
 [TRACE] << void LoadAssets() (37 ms)
 ```
 
-When `VIGIL_ENABLE_SCOPED_LOG` is not defined, both macros expand to `((void)0)` and incur no overhead.
+When `VIGIL_ENABLE_SCOPED_LOG` is disabled, both macros expand to `((void)0)` and incur no runtime overhead.
+
+</details>
 
 ## License
 
-This project is licensed under the **MIT License**.<br>
-See the [LICENSE](LICENSE) file for more information.
+Vigil is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for more information.
