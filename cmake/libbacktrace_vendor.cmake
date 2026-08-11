@@ -20,6 +20,7 @@ include(ExternalProject)
 set(LIBBACKTRACE_SOURCE_DIR  "${PROJECT_SOURCE_DIR}/vendor/libbacktrace")
 set(LIBBACKTRACE_BINARY_DIR  "${PROJECT_BINARY_DIR}/_deps/libbacktrace")
 set(LIBBACKTRACE_INSTALL_DIR "${LIBBACKTRACE_BINARY_DIR}/install")
+set(LIBBACKTRACE_LIBRARY     "${LIBBACKTRACE_INSTALL_DIR}/lib/libbacktrace.a")
 
 file(MAKE_DIRECTORY "${LIBBACKTRACE_INSTALL_DIR}/include")
 
@@ -38,18 +39,22 @@ ExternalProject_Add(libbacktrace
     "--with-pic"
   BUILD_COMMAND    make -j
   INSTALL_COMMAND  make install
-  BUILD_BYPRODUCTS "${LIBBACKTRACE_INSTALL_DIR}/lib/libbacktrace.a"
+  BUILD_BYPRODUCTS "${LIBBACKTRACE_LIBRARY}"
   UPDATE_COMMAND ""
 )
 
-add_library(libbacktrace::libbacktrace STATIC IMPORTED GLOBAL)
+# ------------------------------------------------------------------------------
+#  Create the Internal Imported Target
+# ------------------------------------------------------------------------------
 
-set_target_properties(libbacktrace::libbacktrace PROPERTIES
+add_library(vigil::libbacktrace STATIC IMPORTED GLOBAL)
+
+set_target_properties(vigil::libbacktrace PROPERTIES
   IMPORTED_LOCATION
-    "${LIBBACKTRACE_INSTALL_DIR}/lib/libbacktrace.a"
+    "${LIBBACKTRACE_LIBRARY}"
   INTERFACE_INCLUDE_DIRECTORIES
     "${LIBBACKTRACE_INSTALL_DIR}/include"
 )
 
 # Ensure the static library exists before anything tries to link against it.
-add_dependencies(libbacktrace::libbacktrace libbacktrace)
+add_dependencies(vigil::libbacktrace libbacktrace)

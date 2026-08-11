@@ -54,13 +54,7 @@ set(VIGIL_INTERNAL_HEADERS
   "${VIGIL_INCLUDE_DIR}/vigil/detail/platform_detection.h"
   "${VIGIL_INCLUDE_DIR}/vigil/detail/preprocessor_utils.h"
   "${VIGIL_INCLUDE_DIR}/vigil/detail/symbol_export.h"
-
-  "${CMAKE_CURRENT_SOURCE_DIR}/logging/detail/logger_impl.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/logging/detail/spd_convert.h"
-
-  "${CMAKE_CURRENT_SOURCE_DIR}/trace/stack_trace.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/trace/detail/stack_trace_posix.h"
-  "${CMAKE_CURRENT_SOURCE_DIR}/trace/detail/stack_trace_win.h"
+  "${VIGIL_INCLUDE_DIR}/vigil/detail/symbol_utils.h"
 )
 
 set(VIGIL_GENERATED_HEADERS
@@ -165,7 +159,7 @@ if(VIGIL_ENABLE_STACK_TRACE)
     include(libbacktrace_vendor)
 
     target_sources(vigil PRIVATE trace/detail/stack_trace_posix.cpp)
-    target_link_libraries(vigil PRIVATE libbacktrace::libbacktrace)
+    target_link_libraries(vigil PRIVATE vigil::libbacktrace)
   endif()
 endif()
 
@@ -231,6 +225,13 @@ if(VIGIL_INSTALL)
       ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
       LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
       RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    )
+  endif()
+
+  if(VIGIL_ENABLE_STACK_TRACE AND NOT WIN32)
+    install(
+      FILES "${LIBBACKTRACE_LIBRARY}"
+      DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     )
   endif()
 

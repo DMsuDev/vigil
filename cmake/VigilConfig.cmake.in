@@ -1,15 +1,38 @@
 # ==============================================================================
+# VIGIL - PACKAGE CONFIGURATION
+# ==============================================================================
+# Description: Configures the Vigil package for downstream consumers.
+#
 #  Copyright (c) 2026 @DMsuDev. Licensed under the MIT License.
 #  Distributed under the MIT License (http://opensource.org/licenses/MIT)
 # ==============================================================================
 
 @PACKAGE_INIT@
 
+# ------------------------------------------------------------------------------
+#  Internal Dependencies
+# ------------------------------------------------------------------------------
+
 include(CMakeFindDependencyMacro)
 
 find_dependency(fmt CONFIG REQUIRED)
 
 find_package(Threads REQUIRED)
+
+if(@VIGIL_ENABLE_STACK_TRACE@ AND NOT WIN32)
+  if(NOT TARGET vigil::libbacktrace)
+    add_library(vigil::libbacktrace STATIC IMPORTED)
+
+    set_target_properties(vigil::libbacktrace PROPERTIES
+      IMPORTED_LOCATION
+        "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/libbacktrace.a"
+    )
+  endif()
+endif()
+
+# ------------------------------------------------------------------------------
+#  Export Targets
+# ------------------------------------------------------------------------------
 
 include("${CMAKE_CURRENT_LIST_DIR}/vigil-targets.cmake")
 
