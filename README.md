@@ -10,21 +10,13 @@
     Structured Logging • Assertions • Runtime Instrumentation
   </p>
 
-  <p>
-    <img src="https://img.shields.io/github/license/DMsuDev/vigil?style=flat&logo=open-source-initiative&logoColor=white" alt="License MIT">
-    <img src="https://img.shields.io/github/v/release/DMsuDev/vigil?style=flat&label=Version&color=purple" alt="Version">
-    <a href="https://github.com/DMsuDev/vigil/actions/workflows/linux-build.yml">
-        <img src="https://github.com/DMsuDev/vigil/actions/workflows/linux-build.yml/badge.svg" alt="Linux Build">
-    </a>
-    <a href="https://github.com/DMsuDev/vigil/actions/workflows/windows-build.yml">
-        <img src="https://github.com/DMsuDev/vigil/actions/workflows/windows-build.yml/badge.svg" alt="Windows Build">
-    </a>
-    <a href="https://github.com/DMsuDev/vigil/actions/workflows/macos-build.yml">
-        <img src="https://github.com/DMsuDev/vigil/actions/workflows/macos-build.yml/badge.svg" alt="macOS Build">
-    </a>
-  </p>
-
 </div>
+
+[![License MIT](https://img.shields.io/github/license/DMsuDev/vigil?style=flat&logo=open-source-initiative&logoColor=white)](https://github.com/DMsuDev/vigil/blob/main/LICENSE)
+![Version](https://img.shields.io/github/v/release/DMsuDev/vigil?style=flat&label=Version&color=purple)
+[![Linux Build](https://github.com/DMsuDev/vigil/actions/workflows/linux-build.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/linux-build.yml)
+[![Windows Build](https://github.com/DMsuDev/vigil/actions/workflows/windows-build.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/windows-build.yml)
+[![macOS Build](https://github.com/DMsuDev/vigil/actions/workflows/macos-build.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/macos-build.yml)
 
 ## Overview
 
