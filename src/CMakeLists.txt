@@ -24,6 +24,7 @@ set(VIGIL_SOURCES
   logging/log_limiter.cpp
 
   detail/symbol_utils.cpp
+
   trace/stack_trace.cpp
 
   assert.cpp
@@ -53,6 +54,13 @@ set(VIGIL_INTERNAL_HEADERS
   "${VIGIL_INCLUDE_DIR}/vigil/detail/platform_detection.h"
   "${VIGIL_INCLUDE_DIR}/vigil/detail/preprocessor_utils.h"
   "${VIGIL_INCLUDE_DIR}/vigil/detail/symbol_export.h"
+
+  "${CMAKE_CURRENT_SOURCE_DIR}/logging/detail/logger_impl.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/logging/detail/spd_convert.h"
+
+  "${CMAKE_CURRENT_SOURCE_DIR}/trace/stack_trace.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/trace/detail/stack_trace_posix.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/trace/detail/stack_trace_win.h"
 )
 
 set(VIGIL_GENERATED_HEADERS
@@ -96,6 +104,7 @@ target_sources(vigil
     TYPE HEADERS
     BASE_DIRS
       "${VIGIL_INCLUDE_DIR}"
+      "${CMAKE_CURRENT_SOURCE_DIR}"
     FILES
       ${VIGIL_INTERNAL_HEADERS}
 )
@@ -150,7 +159,13 @@ if(VIGIL_ENABLE_STACK_TRACE)
   target_compile_definitions(vigil PUBLIC VIGIL_ENABLE_STACK_TRACE)
 
   if(WIN32)
+    target_sources(vigil PRIVATE trace/detail/stack_trace_win.cpp)
     target_link_libraries(vigil PRIVATE dbghelp)
+  else()
+    include(libbacktrace_vendor)
+
+    target_sources(vigil PRIVATE trace/detail/stack_trace_posix.cpp)
+    target_link_libraries(vigil PRIVATE libbacktrace::libbacktrace)
   endif()
 endif()
 
@@ -161,11 +176,14 @@ endif()
 # ------------------------------------------------------------------------------
 #  Dependency Linking Setup
 # ------------------------------------------------------------------------------
+find_package(Threads REQUIRED)
+
 target_link_libraries(vigil
   PUBLIC
     fmt::fmt
   PRIVATE
     spdlog::spdlog
+    Threads::Threads
 )
 
 # ------------------------------------------------------------------------------
