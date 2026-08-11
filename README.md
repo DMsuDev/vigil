@@ -59,7 +59,7 @@ include(FetchContent)
 FetchContent_Declare(
   vigil
   GIT_REPOSITORY https://github.com/DMsuDev/vigil.git
-  GIT_TAG        v0.2.0 # <HASH or Tag>
+  GIT_TAG        # HASH or Tag
 )
 
 FetchContent_MakeAvailable(vigil)
