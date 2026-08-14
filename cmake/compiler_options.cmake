@@ -34,19 +34,8 @@ function(vigil_set_compiler_options target)
     )
   else()
     target_compile_options(${target} PRIVATE
-      -fvisibility=hidden       # Symbols hidden by default; VIGIL_API opts in.
-      -fvisibility-inlines-hidden
-    )
-
-    target_compile_options(${target} PRIVATE
       $<$<CONFIG:Debug>:-fno-omit-frame-pointer> # Keep frame pointers for debugging/profiling.
       $<$<CONFIG:Release>:-D_FORTIFY_SOURCE=2>   # Buffer overflow checks in libc calls.
     )
   endif()
-
-  # Position-independent code is required regardless of platform once a
-  # static target may be linked into a shared consumer.
-  set_target_properties(${target} PROPERTIES
-    POSITION_INDEPENDENT_CODE ON
-  )
 endfunction()

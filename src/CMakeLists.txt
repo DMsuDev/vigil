@@ -123,10 +123,11 @@ target_include_directories(vigil
 target_compile_features(vigil PUBLIC cxx_std_17)
 
 set_target_properties(vigil PROPERTIES
-  CXX_EXTENSIONS OFF
-  FOLDER         "Vigil"
+  CXX_EXTENSIONS            OFF
+  CXX_VISIBILITY_PRESET     hidden
+  VISIBILITY_INLINES_HIDDEN ON
+  FOLDER                    "Vigil"
 )
-
 # ------------------------------------------------------------------------------
 #  Preprocessor Compile Definitions
 # ------------------------------------------------------------------------------
