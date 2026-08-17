@@ -1,0 +1,6 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Question / Discussion
+    url: https://github.com/DMsuDev/vigil/discussions
+    about: For open-ended questions or general discussions, use GitHub Discussions.

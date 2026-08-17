@@ -1,0 +1,69 @@
+name: "Bug Report"
+description: "Report a bug or unexpected behavior."
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before reporting a bug, please follow these guidelines. They help identify and fix issues more efficiently.
+
+        - **Use a descriptive title** that clearly summarizes the problem.
+        - **Report one bug per issue.** If you encounter multiple unrelated bugs, open a separate issue for each one.
+        - **Search [open](https://github.com/DMsuDev/vigil/issues) and [closed](https://github.com/DMsuDev/vigil/issues?q=is%3Aissue+is%3Aclosed) issues** before opening a new one — it may already have been reported or fixed.
+        - **Use the latest release** and verify that the issue is still present before reporting.
+
+        ---
+
+  - type: input
+    id: version
+    attributes:
+      label: "Version"
+      description: "The version of Vigil you are using."
+      placeholder: "e.g. v0.1.0 or commit hash"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: "Environment"
+      description: "OS, compiler, and any relevant hardware (e.g. GPU for graphical issues)."
+      placeholder: "e.g. Windows 11 + MSVC 2022, Ubuntu 22.04 + GCC 12"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Issue Description"
+      description: "Describe the bug clearly. What did you expect to happen, and what happened instead?"
+      placeholder: |
+        Expected: ...
+        Actual: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to Reproduce"
+      description: "A minimal set of steps that reliably reproduce the issue. If not applicable, write N/A."
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: extras
+    attributes:
+      label: "Screenshots / Videos / Logs"
+      description: "Attach any screenshots, screen recordings, stack traces, or relevant log output."
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report this.
