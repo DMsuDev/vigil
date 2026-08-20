@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### 🚀 Features
+
+- Add security policy and vulnerability reporting guidelines ([c7f5a88](https://github.com/DMsuDev/Vigil/commit/c7f5a88dae92215ed7324b61df27e106f02be86e))
+
+- Add issue templates for bug reports and feature requests ([372f45e](https://github.com/DMsuDev/Vigil/commit/372f45e38463580f4a10e6f943d2043f92136561))
+
+### 🚜 Refactor
+
+- Relocate symbol visibility flags and remove redundant PIC setup ([c87ccbe](https://github.com/DMsuDev/Vigil/commit/c87ccbea51c21804e0fad0bf3bc62a4492710bd2))
+
+  - Move -fvisibility flags to src target configuration where API visibility is handled
+  - Remove unnecessary global `POSITION_INDEPENDENT_CODE` target property
+
+### 🔧 Maintenance
+
+- Add FUNDING.yml to specify GitHub funding information ([630c4d3](https://github.com/DMsuDev/Vigil/commit/630c4d31644231d6249c5a99cef7a8977e42e9c2))
+
 ## [0.3.1] - 2026-08-11
 
 ### 🐛 Bug Fixes
