@@ -12,20 +12,21 @@
 
 </div>
 
+<div align="center">
+
 [![License MIT](https://img.shields.io/github/license/DMsuDev/vigil?style=flat&logo=open-source-initiative&logoColor=white)](https://github.com/DMsuDev/vigil/blob/main/LICENSE)
 ![Version](https://img.shields.io/github/v/release/DMsuDev/vigil?style=flat&label=Version&color=purple)
 [![Linux Build](https://github.com/DMsuDev/vigil/actions/workflows/linux-build.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/linux-build.yml)
 [![Windows Build](https://github.com/DMsuDev/vigil/actions/workflows/windows-build.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/windows-build.yml)
 [![macOS Build](https://github.com/DMsuDev/vigil/actions/workflows/macos-build.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/macos-build.yml)
 
+</div>
+
 ## Overview
 
 **Vigil** is a C++ logging and diagnostics library built around structured logging, assertions, and runtime instrumentation.
 
 It is designed to provide a consistent interface for recording application events, detecting failures, and capturing useful context when debugging. Vigil supports **C++17 and later** on **Linux, Windows, and macOS**.
-
-> [!NOTE]
-> **Vigil** is under **active development**. While the current API is considered stable, new features and improvements may be introduced in future releases.
 
 ## Features
 
@@ -255,6 +256,19 @@ When `VIGIL_ENABLE_SCOPED_LOG` is disabled, both macros expand to `((void)0)` an
 
 </details>
 
+## Contributing
+
+Contributions are always welcome! ❤️ Whether you are reporting bugs, fixing issues, adding new examples, or improving the documentation, your help is appreciated.
+
+Before opening a pull request:
+
+- Keep pull requests focused: prefer small, atomic PRs that address a single feature or fix.
+- Write clear commit messages using [Conventional Commits](https://www.conventionalcommits.org/).
+- Ensure the project builds cleanly without introducing new compiler warnings.
+
+For major changes or new features, please open an issue first to discuss what you would like to change.
+
 ## License
 
-Vigil is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for more information.
+Vigil is licensed under the **MIT License**.
+See the [LICENSE](LICENSE) file for more information.
