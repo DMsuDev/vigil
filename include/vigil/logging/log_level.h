@@ -52,7 +52,7 @@ enum class LogLevel : uint8_t {
  */
 constexpr bool IsLevelActive(LogLevel level) noexcept
 {
-    return static_cast<int>(level) >= VIGIL_ACTIVE_LOG_LEVEL;
+    return static_cast<uint8_t>(level) >= static_cast<uint8_t>(VIGIL_ACTIVE_LOG_LEVEL);
 }
 
 } // namespace vigil
