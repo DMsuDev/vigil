@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "vigil/detail/platform_detection.h"
+#include "vigil/detail/compiler_attributes.h" // For VIGIL_CURRENT_FUNCTION()
 
 #if defined(VIGIL_CPP20)
     #include <source_location>

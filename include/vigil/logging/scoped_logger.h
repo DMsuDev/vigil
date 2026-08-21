@@ -6,9 +6,11 @@
 #pragma once
 
 #include "vigil/logging/log_system.h"
-#include "vigil/detail/symbol_utils.h"
 #include "vigil/detail/symbol_export.h"
-#include "vigil/detail/compiler_features.h"
+
+#include "vigil/detail/symbol_utils.h"        // For CleanFunctionSignature()
+#include "vigil/detail/compiler_attributes.h" // For VIGIL_CURRENT_FUNCTION()
+#include "vigil/detail/preprocessor_utils.h"  // For VIGIL_CONCAT() and VIGIL_STRINGIFY()
 
 #include <chrono>
 #include <string>
@@ -133,19 +135,6 @@ private:
 
 #ifdef VIGIL_ENABLE_SCOPED_LOG
 
-/// @cond VIGIL_INTERNAL_DOCS
-#if defined(VIGIL_COMPILER_MSVC)
-    #define VIGIL_FUNC_SIG __FUNCSIG__
-#elif defined(VIGIL_COMPILER_GCC) || defined(VIGIL_COMPILER_CLANG)
-    #define VIGIL_FUNC_SIG __PRETTY_FUNCTION__
-#else
-    #define VIGIL_FUNC_SIG __func__
-#endif
-
-#define VIGIL_CONCAT_IMPL(a, b) a##b
-#define VIGIL_CONCAT(a, b)      VIGIL_CONCAT_IMPL(a, b)
-/// @endcond
-
 /**
  * @name Scoped Logger Macros
  * @{
@@ -167,7 +156,7 @@ private:
  */
 #define VIGIL_SCOPED_LOG_FUNCTION()                                 \
     ::vigil::ScopedLogger VIGIL_CONCAT(_vigil_scope_fn_, __LINE__)( \
-        ::vigil::detail::CleanFunctionSignature(VIGIL_FUNC_SIG),    \
+        ::vigil::detail::CleanFunctionSignature(VIGIL_CURRENT_FUNCTION),    \
         ::vigil::ScopedLogger::OwnedTag{})
 
 /** @} */

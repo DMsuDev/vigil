@@ -83,6 +83,48 @@
 #define VIGIL_STRINGIFY(x) VIGIL_STRINGIFY_IMPL(x)
 
 // ============================================================================
+// Token Concatenation
+// ============================================================================
+
+/**
+ * @def VIGIL_CONCAT_IMPL(a, b)
+ * @brief Internal helper. Do not use directly, use VIGIL_CONCAT() instead.
+ *
+ * @details The preprocessor ## operator suppresses macro expansion of its
+ * operands. This helper performs the raw token paste; VIGIL_CONCAT() wraps
+ * it with one extra level of macro indirection so that both @p a and @p b
+ * are fully expanded before the paste occurs.
+ *
+ * @see VIGIL_CONCAT()
+ */
+#define VIGIL_CONCAT_IMPL(a, b) a##b
+
+/**
+ * @def VIGIL_CONCAT(a, b)
+ * @brief Concatenates two tokens after fully expanding both macro arguments.
+ *
+ * @details Use this (not VIGIL_CONCAT_IMPL) whenever either argument may
+ * itself be a macro. The extra level of indirection guarantees that @p a
+ * and @p b are expanded to their final values before the ## operator pastes
+ * them together, producing correct results on all supported compilers
+ * including MSVC.
+ *
+ * @param a Left-hand token or macro to expand and concatenate.
+ * @param b Right-hand token or macro to expand and concatenate.
+ *
+ * @code
+ * #define PREFIX  vigil_scope_
+ * #define COUNTER 42
+ *
+ * VIGIL_CONCAT(PREFIX, COUNTER)       // -> vigil_scope_42
+ * VIGIL_CONCAT_IMPL(PREFIX, COUNTER)  // -> PREFIX##COUNTER (likely NOT what you want)
+ * @endcode
+ *
+ * @see VIGIL_CONCAT_IMPL()
+ */
+#define VIGIL_CONCAT(a, b) VIGIL_CONCAT_IMPL(a, b)
+
+// ============================================================================
 // Bit-Flag Helpers
 // ============================================================================
 

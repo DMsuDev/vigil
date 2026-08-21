@@ -235,39 +235,6 @@
 /** @} */
 
 // ============================================================================
-// Current Function Information
-// ============================================================================
-
-/**
- * @def VIGIL_CURRENT_FUNCTION
- * @brief Expands to the name or signature of the current function.
- *
- * Defines `VIGIL_CURRENT_FUNCTION`, a compiler-independent macro that expands
- * to the most descriptive function identifier supported by the active
- * compiler.
- *
- * Depending on the compiler, this may be:
- * - `__FUNCSIG__` (MSVC)
- * - `__PRETTY_FUNCTION__` (Clang/GCC)
- * - `__func__` (fallback)
- *
- * The exact contents are implementation-defined and should be treated as diagnostic information only.
- *
- * The macro expands to a null-terminated character string describing the
- * current function and is primarily intended for diagnostics, assertions,
- * logging and crash reporting.
- */
-#if defined(VIGIL_COMPILER_MSVC)
-    #define VIGIL_CURRENT_FUNCTION __FUNCSIG__
-#elif defined(VIGIL_COMPILER_CLANG) || \
-      defined(VIGIL_COMPILER_CLANG_CL) || \
-      defined(VIGIL_COMPILER_GCC)
-    #define VIGIL_CURRENT_FUNCTION __PRETTY_FUNCTION__
-#else
-    #define VIGIL_CURRENT_FUNCTION __func__
-#endif
-
-// ============================================================================
 // Language Standard Detection
 // ============================================================================
 
