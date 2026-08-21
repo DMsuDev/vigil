@@ -41,6 +41,10 @@ ExternalProject_Add(libbacktrace
   INSTALL_COMMAND  make install
   BUILD_BYPRODUCTS "${LIBBACKTRACE_LIBRARY}"
   UPDATE_COMMAND ""
+  LOG_CONFIGURE ON
+  LOG_BUILD     ON
+  LOG_INSTALL   ON
+  LOG_OUTPUT_ON_FAILURE ON
 )
 
 # ------------------------------------------------------------------------------
