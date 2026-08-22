@@ -137,10 +137,10 @@ static void DemoBasicAssert()
 {
     vigil::Info("== Basic assertions =========================================");
 
-    VIGIL_ASSERT(true, "Unconditional pass.");
+    VIGIL_ASSERT_MSG(true, "Unconditional pass.");
 
     int x = 42;
-    VIGIL_ASSERT(x == 42, "Expected x == 42, got {}", x);
+    VIGIL_ASSERT_MSG(x == 42, "Expected x == 42, got {}", x);
     VIGIL_ASSERT(x > 0);
 
     vigil::Info("  All basic assertions passed  (x = {}).", x);
@@ -155,8 +155,8 @@ static void DemoVerify()
     int counter = 0;
     auto increment = [&counter]() { ++counter; return true; };
 
-    VIGIL_VERIFY(increment(), "Side effect must execute.");
-    VIGIL_ASSERT(counter == 1, "counter should be 1 after VIGIL_VERIFY, got {}", counter);
+    VIGIL_VERIFY_MSG(increment(), "Side effect must execute.");
+    VIGIL_ASSERT_MSG(counter == 1, "counter should be 1 after VIGIL_VERIFY, got {}", counter);
 
     vigil::Info("  Side effect confirmed: counter = {}.", counter);
 }
@@ -170,10 +170,10 @@ static void DemoNullCheck()
     int* null_p = nullptr;
 
     VIGIL_ASSERT_NOT_NULL(valid);
-    VIGIL_ASSERT(*valid == 100, "Dereferenced value should be 100, got {}", *valid);
+    VIGIL_ASSERT_MSG(*valid == 100, "Dereferenced value should be 100, got {}", *valid);
 
     // Confirming the null is null (passing case — no abort).
-    VIGIL_ASSERT(null_p == nullptr, "Null pointer correctly identified.");
+    VIGIL_ASSERT_MSG(null_p == nullptr, "Null pointer correctly identified.");
 
     vigil::Info("  Pointer checks passed  (value = {}).", *valid);
 }
@@ -184,11 +184,11 @@ static void DemoRangeCheck()
 
     int    age   = 25;
     double temp  = 22.5;
-    size_t index = 5;
+    int index = 5;
 
     VIGIL_ASSERT_IN_RANGE(age,   0,    120);
     VIGIL_ASSERT_IN_RANGE(temp, -50.0, 50.0);
-    VIGIL_ASSERT_IN_RANGE(index, 0u,   9u);
+    VIGIL_ASSERT_IN_RANGE(index, 0,   9);
 
     vigil::Info("  All ranges valid  (age={}, temp={:.1f}, index={}).",
         age, temp, index);
@@ -222,7 +222,7 @@ static void FailBasicAssert()
 {
     vigil::Warn("Triggering intentional failure: basic assertion.");
     int x = 42;
-    VIGIL_ASSERT(x == 0, "Expected x == 0, but x = {}.", x);
+    VIGIL_ASSERT_MSG(x == 0, "Expected x == 0, but x = {}.", x);
 }
 
 static void FailNullCheck()
