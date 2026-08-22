@@ -459,11 +459,11 @@ void Log(LogLevel level, detail::FormatString<Args...> message, Args&&... args)
  * @note Because @p level is evaluated at runtime, plain runtime checks are used instead of
  *       `if constexpr` to support dynamic severity levels.
  */
-#define VIGIL_LOG_NAMED(name, level, ...)                                     \
-    do {                                                                      \
-        if (static_cast<int>(level) >= VIGIL_ACTIVE_LOG_LEVEL) {              \
-            ::vigil::LogSystem::Get(name).Log(level, __VA_ARGS__);       \
-        }                                                                     \
+#define VIGIL_LOG_NAMED(name, level, ...)                           \
+    do {                                                            \
+        if (::vigil::IsLevelActive(level)) {                        \
+            ::vigil::LogSystem::Get(name).Log(level, __VA_ARGS__);  \
+        }                                                           \
     } while (0)
 
 /** @} */

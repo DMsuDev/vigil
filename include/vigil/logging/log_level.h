@@ -41,6 +41,14 @@ enum class LogLevel : uint8_t {
     Off      = VIGIL_LOG_LEVEL_OFF,      ///< Logging disabled.
 };
 
+#if defined(_MSC_VER)
+    #pragma warning(push)
+    #pragma warning(disable: 4296)
+#elif defined(__GNUC__) || defined(__clang__)
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wtype-limits"
+#endif
+
 /**
  * @brief Checks whether a severity level survives the compile-time gate (@ref VIGIL_ACTIVE_LOG_LEVEL).
  *
@@ -54,5 +62,11 @@ constexpr bool IsLevelActive(LogLevel level) noexcept
 {
     return static_cast<uint8_t>(level) >= static_cast<uint8_t>(VIGIL_ACTIVE_LOG_LEVEL);
 }
+
+#if defined(_MSC_VER)
+    #pragma warning(pop)
+#elif defined(__GNUC__) || defined(__clang__)
+    #pragma GCC diagnostic pop
+#endif
 
 } // namespace vigil
