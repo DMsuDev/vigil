@@ -13,12 +13,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Add issue templates for bug reports and feature requests ([372f45e](https://github.com/DMsuDev/Vigil/commit/372f45e38463580f4a10e6f943d2043f92136561))
 
+- Add `VIGIL_ASSERT_MSG` and fix C++17 variadic expansion ([115c9dc](https://github.com/DMsuDev/Vigil/commit/115c9dcfc689a628d940462e6c8cc3f9616144d0))
+
+  - Add explicit `VIGIL_ASSERT_MSG` and `VIGIL_VERIFY_MSG` macros for formatted assertions.
+  - Remove unused `VIGIL_INTERNAL_ASSERT_HAS_MSG` macro helpers.
+  - Ensure C++17 macro expansion correctly passes a single formatted `std::string_view` to `ReportAssertFailure`.
+  - Update `assert_example.cpp` to match new macro signatures and adjust range check types.
+
+### 🐛 Bug Fixes
+
+- Cast VIGIL_ACTIVE_LOG_LEVEL to uint8_t in IsLevelActive ([8663bab](https://github.com/DMsuDev/Vigil/commit/8663bab30ff5ffd89ce6afa7ee60e9816f0fb52e))
+
+- Centralize log level gating in VIGIL_LOG_NAMED ([bffcf1b](https://github.com/DMsuDev/Vigil/commit/bffcf1b36aef7e767c4dc9423391822d1353f455))
+
+  - Update VIGIL_LOG_NAMED to use IsLevelActive instead of raw level comparison.
+  - Suppress -Wtype-limits / C4296 warnings when comparing LogLevel against compile-time gates.
+
 ### 🚜 Refactor
 
 - Relocate symbol visibility flags and remove redundant PIC setup ([c87ccbe](https://github.com/DMsuDev/Vigil/commit/c87ccbea51c21804e0fad0bf3bc62a4492710bd2))
 
   - Move -fvisibility flags to src target configuration where API visibility is handled
   - Remove unnecessary global `POSITION_INDEPENDENT_CODE` target property
+
+- Refactor macros and clean up scoped logger dependencies ([fa5b263](https://github.com/DMsuDev/Vigil/commit/fa5b26389aa22f12151e50ded9f9eff9bd69aad2))
+
+  Relocate signature detection and concatenation macros to their dedicated detail headers,
+  eliminating redundant local macro definitions and improving internal architectural layer separation.
+
+  - Move `VIGIL_CURRENT_FUNCTION` from `platform_detection.h` to `compiler_attributes.h`.
+  - Move `VIGIL_CONCAT` and `VIGIL_CONCAT_IMPL` from `scoped_logger.h` to `preprocessor_utils.h`.
+  - Update `source_location.h` and `scoped_logger.h` includes to directly target the proper headers for attributes and preprocessor tools.
+  - Replace local `VIGIL_FUNC_SIG` references in `scoped_logger.h` with `VIGIL_CURRENT_FUNCTION`.
+
+### 🛠️ Build System
+
+- Silence `libbacktrace` vendor output and log on failure ([ebc049e](https://github.com/DMsuDev/Vigil/commit/ebc049eb8724b2d1ef65735fbc9cdd310c0d76c7))
 
 ### 🔧 Maintenance
 
