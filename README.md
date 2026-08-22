@@ -105,27 +105,29 @@ cmake -S . -B build \
 ## Usage
 
 <details>
-<summary>Logging</summary>
+<summary>Basic & Formatted Logging</summary>
 
-Initialize the logger and write messages at different log levels.
+<br>
+
+Initialize the logging system and issue messages across different severity levels using `fmt` style formatting.
 
 ```cpp
 #include <vigil/vigil.h>
 
 int main()
 {
-  vigil::LogSystemConfig cfg;
-  cfg.Name = "MyApp";
-  cfg.ConsoleLevel = vigil::LogLevel::Info;
+    vigil::LogSystemConfig cfg;
+    cfg.Name = "MyApp";
+    cfg.ConsoleLevel = vigil::LogLevel::Info;
 
-  vigil::LogSystem::Init(cfg);
+    vigil::LogSystem::Init(cfg);
 
-  VIGIL_INFO("Application started");
-  VIGIL_WARN("Running with config profile '{}'", "default");
-  VIGIL_ERROR("Failed to connect to {}:{}", "127.0.0.1", 5432);
+    VIGIL_INFO("Application started");
+    VIGIL_WARN("Running with config profile '{}'", "default");
+    VIGIL_ERROR("Failed to connect to {}:{}", "127.0.0.1", 5432);
 
-  vigil::LogSystem::Shutdown();
-  return 0;
+    vigil::LogSystem::Shutdown();
+    return 0;
 }
 ```
 
@@ -134,7 +136,9 @@ int main()
 <details>
 <summary>Rate-limited logging</summary>
 
-Use this pattern in hot loops or noisy code paths to prevent log flooding.
+<br>
+
+Prevent log spamming in tight loops or high-frequency callbacks using execution policies.
 
 ```cpp
 #include <vigil/vigil.h>
@@ -144,31 +148,33 @@ Use this pattern in hot loops or noisy code paths to prevent log flooding.
 
 int main()
 {
-  vigil::LogSystemConfig cfg;
-  cfg.Name = "LimiterDemo";
-  cfg.ConsoleLevel = vigil::LogLevel::Trace;
-  vigil::LogSystem::Init(cfg);
+    vigil::LogSystemConfig cfg;
+    cfg.Name = "LimiterDemo";
+    cfg.ConsoleLevel = vigil::LogLevel::Trace;
+    vigil::LogSystem::Init(cfg);
 
-  for (int i = 0; i < 10; ++i)
-  {
-    vigil::LogOncePolicy::LogOnce(
-      "startup-warning",
-      vigil::LogLevel::Warn,
-      "This warning is logged only once."
-    );
+    for (int i = 0; i < 10; ++i)
+    {
+        // Logged exactly once during lifetime
+        vigil::LogOncePolicy::LogOnce(
+        "startup-warning",
+        vigil::LogLevel::Warn,
+        "This warning is logged only once."
+        );
 
-    vigil::LogTTLPolicy::LogTTL(
-      "health-ping",
-      1.0,
-      vigil::LogLevel::Info,
-      "Service heartbeat OK"
-    );
+        // Logged at most once every 1.0 second
+        vigil::LogTTLPolicy::LogTTL(
+        "health-ping",
+        1.0,
+        vigil::LogLevel::Info,
+        "Service heartbeat OK"
+        );
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
-  }
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    }
 
-  vigil::LogSystem::Shutdown();
-  return 0;
+    vigil::LogSystem::Shutdown();
+    return 0;
 }
 ```
 
@@ -177,35 +183,51 @@ int main()
 <details>
 <summary>Assertions</summary>
 
+<br>
+
+Perform runtime checks with standard assertions, specific bounds, or formatted context failure reports.
+
 ```cpp
 #include <vigil/vigil.h>
 
 int main()
 {
-  vigil::LogSystemConfig cfg;
-  cfg.Name = "AssertDemo";
-  cfg.ConsoleLevel = vigil::LogLevel::Trace;
-  vigil::LogSystem::Init(cfg);
+    vigil::LogSystemConfig cfg;
+    cfg.Name = "AssertDemo";
+    cfg.ConsoleLevel = vigil::LogLevel::Trace;
+    vigil::LogSystem::Init(cfg);
 
-  int value = 42;
-  int* ptr = &value;
+    int value = 42;
+    int* ptr = &value;
 
-  VIGIL_ASSERT(value == 42, "Expected 42, got {}", value);
-  VIGIL_ASSERT_NOT_NULL(ptr);
-  VIGIL_ASSERT_IN_RANGE(value, 0, 100);
+    VIGIL_ASSERT(value == 42);
+    VIGIL_ASSERT_MSG(value == 42, "Expected 42, got {}", value);
+    VIGIL_ASSERT_NOT_NULL(ptr);
+    VIGIL_ASSERT_IN_RANGE(value, 0, 100);
 
-  vigil::LogSystem::Shutdown();
-  return 0;
+    vigil::LogSystem::Shutdown();
+    return 0;
 }
 ```
 
-`VIGIL_ASSERT` is enabled in `Debug` and `RelWithDebInfo` builds and disabled in `Release` builds.
-`VIGIL_VERIFY` always evaluates its condition, regardless of the build configuration.
+### Assertion Macro Reference
+
+| Macro                          | Custom Message (`fmt`) | Release Build Behavior | Primary Use Case                                        |
+| :----------------------------- | :--------------------: | :--------------------: | :------------------------------------------------------ |
+| `VIGIL_ASSERT(check)`          |          :x:           |      Stripped out      | Preconditions with no side-effects.                     |
+| `VIGIL_ASSERT_MSG(check, ...)` |   :heavy_check_mark:   |      Stripped out      | Complex preconditions requiring runtime context.        |
+| `VIGIL_VERIFY(check)`          |          :x:           |  Condition evaluated   | Function calls with side-effects (e.g. `file.close()`). |
+| `VIGIL_VERIFY_MSG(check, ...)` |   :heavy_check_mark:   |  Condition evaluated   | Side-effect checks needing extra failure context.       |
+
+> [!NOTE]
+> `VIGIL_ASSERT*` macros are active in `Debug` and `RelWithDebInfo` builds (logging source location details and triggering a debugger break upon failure) and completely stripped out in `Release` builds for zero overhead. `VIGIL_VERIFY*` macros **always evaluate their condition** regardless of build type, but only log/break when assertions are enabled.
 
 </details>
 
 <details>
 <summary>Scoped logging</summary>
+
+<br>
 
 Instrument functions and code blocks with automatic entry/exit trace logging and elapsed time. Enable at configure time with `-DVIGIL_ENABLE_SCOPED_LOG=ON`.
 
@@ -241,7 +263,7 @@ int main()
 }
 ```
 
-Output:
+### Expected Output Trace
 
 ```text
 [TRACE] >> void LoadAssets()
@@ -252,7 +274,8 @@ Output:
 [TRACE] << void LoadAssets() (37 ms)
 ```
 
-When `VIGIL_ENABLE_SCOPED_LOG` is disabled, both macros expand to `((void)0)` and incur no runtime overhead.
+> [!NOTE]
+> When `VIGIL_ENABLE_SCOPED_LOG` is disabled at CMake configuration time, both macros expand to `((void)0)` and incur zero runtime overhead.
 
 </details>
 
