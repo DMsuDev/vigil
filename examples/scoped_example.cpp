@@ -107,13 +107,17 @@ static void DemoExplicitLevel()
     }
 }
 
-// The destructor always fires — exit is logged even on early return.
 static void DemoEarlyReturn()
 {
     VIGIL_SCOPED_LOG_FUNCTION();
 
-    vigil::Info("About to return early.");
-    return;
+    const bool hasError = true;
 
-    vigil::Info("This line is never reached.");
+    if (hasError)
+    {
+        vigil::Warn("Encountered early condition, exiting function immediately.");
+        return;
+    }
+
+    vigil::Info("This line is skipped due to early return.");
 }
