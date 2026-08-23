@@ -21,13 +21,15 @@ function(vigil_enable_warnings target)
     message(FATAL_ERROR "Vigil: Target '${target}' does not exist. Cannot apply warning policy.")
   endif()
 
-  if(PROJECT_IS_TOP_LEVEL)
-    if(VIGIL_BUILD_WARNINGS)
-      message(STATUS "Vigil: Enabling strict compiler warnings for target '${target}'.")
-    else()
+  if(NOT VIGIL_BUILD_WARNINGS)
+    if(PROJECT_IS_TOP_LEVEL)
       message(STATUS "Vigil: Compiler warnings are disabled for target '${target}'.")
-      return()
     endif()
+    return()
+  endif()
+
+  if(PROJECT_IS_TOP_LEVEL)
+    message(STATUS "Vigil: Enabling strict compiler warnings for target '${target}'.")
   endif()
 
   if(MSVC)
@@ -79,15 +81,16 @@ function(vigil_enable_warnings target)
         -Wlogical-op          # Suspicious use of logical operators.
         -Wuseless-cast        # Cast to the same type as the expression.
       )
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      target_compile_options(${target} PRIVATE
+        -Wdocumentation
+      )
     endif()
   endif()
 
+  # Automatically add -Werror for GCC/Clang and /WX for MSVC if the user has requested warnings as errors.
   if(VIGIL_WARNINGS_AS_ERRORS)
-    if(MSVC)
-      target_compile_options(${target} PRIVATE /WX)
-    else()
-      target_compile_options(${target} PRIVATE -Werror)
-    endif()
+    set_target_properties(${target} PROPERTIES COMPILE_WARNING_AS_ERROR ON)
   endif()
 
 endfunction()
