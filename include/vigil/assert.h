@@ -63,9 +63,19 @@ namespace vigil::detail {
 } // namespace vigil::detail
 
 /// @cond INTERNAL
+
+// ----------------------------------------------------------------------------
+// Internal macro implementations
+//
+// Two separate paths per C++ version to avoid passing an empty variadic pack
+// to fmt::format in C++17, which is either ill-formed or implementation-defined
+// depending on the fmt version.
+// ----------------------------------------------------------------------------
+
 #if defined(VIGIL_CPP20)
-    // C++20: use __VA_OPT__ to detect whether a message was provided.
-    // If no message is provided, the default empty string_view is used.
+
+    // C++20: __VA_OPT__ cleanly detects whether a message argument was supplied.
+    // When no message is provided the default empty string_view overload is used.
     #define VIGIL_INTERNAL_ASSERT_IMPL(check, loc, ...) \
         do { \
             if (VIGIL_INTERNAL_ASSERT_COND(check)) VIGIL_INTERNAL_ASSERT_ATTR { \
@@ -73,8 +83,11 @@ namespace vigil::detail {
                     __VA_OPT__(, fmt::format(__VA_ARGS__))); \
             } \
         } while (0)
-#else
-    // C++17 fallback: evaluate formatted message through fmt::format.
+
+#else // C++17
+
+    // Message variant: at least one variadic argument (format string + optional args).
+    // Always receives a non-empty pack because VIGIL_ASSERT_MSG guarantees it.
     #define VIGIL_INTERNAL_ASSERT_IMPL(check, loc, ...) \
         do { \
             if (VIGIL_INTERNAL_ASSERT_COND(check)) VIGIL_INTERNAL_ASSERT_ATTR { \
@@ -85,7 +98,22 @@ namespace vigil::detail {
                 ); \
             } \
         } while (0)
-#endif
+
+    // No-message variant: calls ReportAssertFailure without a message argument,
+    // relying on the default empty string_view parameter. Avoids an empty
+    // fmt::format() call which is ill-formed in some fmt versions.
+    #define VIGIL_INTERNAL_ASSERT_IMPL_NO_MSG(check, loc) \
+        do { \
+            if (VIGIL_INTERNAL_ASSERT_COND(check)) VIGIL_INTERNAL_ASSERT_ATTR { \
+                ::vigil::detail::ReportAssertFailure( \
+                    VIGIL_STRINGIFY(check), \
+                    (loc) \
+                ); \
+            } \
+        } while (0)
+
+#endif // VIGIL_CPP20
+
 /// @endcond
 
 // ============================================================================
@@ -94,7 +122,7 @@ namespace vigil::detail {
 
 /**
  * @def VIGIL_ASSERT_MSG(check, ...)
- * @brief Evaluates an expression and triggers an assertion failure with custom message if false.
+ * @brief Evaluates an expression and triggers an assertion failure with a custom message if false.
  *
  * Logs failure details alongside pre-formatted context and halts execution in the debugger.
  * The condition is ignored entirely when assertions are disabled (VIGIL_ENABLE_ASSERTS undefined).
@@ -114,8 +142,14 @@ namespace vigil::detail {
  *
  * @param check Boolean expression to evaluate.
  */
-#define VIGIL_ASSERT(check) \
-    VIGIL_ASSERT_MSG((check), "Assertion failed: " VIGIL_STRINGIFY(check))
+#if defined(VIGIL_CPP20)
+    #define VIGIL_ASSERT(check) \
+        VIGIL_INTERNAL_ASSERT_IMPL((check), VIGIL_CURRENT_LOC())
+#else
+    // C++17: use the no-message variant to avoid an empty fmt::format() call.
+    #define VIGIL_ASSERT(check) \
+        VIGIL_INTERNAL_ASSERT_IMPL_NO_MSG((check), VIGIL_CURRENT_LOC())
+#endif
 
 /**
  * @def VIGIL_VERIFY_MSG(check, ...)
@@ -137,12 +171,24 @@ namespace vigil::detail {
  * Use when the expression has an observable side effect that must execute even when
  * assertion logging and breaking are disabled in non-assert builds (e.g. `VIGIL_VERIFY(file.close())`).
  *
+ * Defined independently of VIGIL_ASSERT to avoid double-wrapping @p check in parentheses,
+ * which would cause VIGIL_STRINGIFY to capture the expression as "(check)" instead of "check".
+ *
  * @param check Boolean expression to evaluate. Always evaluated.
  */
-#define VIGIL_VERIFY(check) \
-    VIGIL_ASSERT((check))
+#if defined(VIGIL_CPP20)
+    #define VIGIL_VERIFY(check) \
+        VIGIL_INTERNAL_ASSERT_IMPL((check), VIGIL_CURRENT_LOC())
+#else
+    #define VIGIL_VERIFY(check) \
+        VIGIL_INTERNAL_ASSERT_IMPL_NO_MSG((check), VIGIL_CURRENT_LOC())
+#endif
 
 #else // !VIGIL_ENABLE_ASSERTS
+
+// ============================================================================
+// Disabled build: no-ops
+// ============================================================================
 
 /// No-op when assertions are disabled. @p check is NOT evaluated.
 #define VIGIL_ASSERT_MSG(check, ...) ((void)0)
