@@ -68,7 +68,7 @@ namespace vigil {
  * @see VIGIL_SCOPED_LOG
  * @see VIGIL_SCOPED_LOG_FUNCTION
  */
-class VIGIL_API ScopedLogger {
+class ScopedLogger {
 public:
     /// @brief Tag type used to opt into the owning-string constructor.
     struct OwnedTag {};
