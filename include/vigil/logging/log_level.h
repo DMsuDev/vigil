@@ -7,6 +7,8 @@
 
 #include <cstdint>
 
+#include "vigil/detail/compiler_attributes.h"
+
 /**
  * @file log_level.h
  * @brief Severity levels, plain-macro form (preprocessor) and enum form (runtime).
@@ -41,13 +43,9 @@ enum class LogLevel : uint8_t {
     Off      = VIGIL_LOG_LEVEL_OFF,      ///< Logging disabled.
 };
 
-#if defined(_MSC_VER)
-    #pragma warning(push)
-    #pragma warning(disable: 4296)
-#elif defined(__GNUC__) || defined(__clang__)
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wtype-limits"
-#endif
+VIGIL_PRAGMA_PUSH_WARNING
+VIGIL_DISABLE_WARNING_MSVC(4296)
+VIGIL_DISABLE_WARNING_GNU("-Wtype-limits")
 
 /**
  * @brief Checks whether a severity level survives the compile-time gate (@ref VIGIL_ACTIVE_LOG_LEVEL).
@@ -63,10 +61,6 @@ constexpr bool IsLevelActive(LogLevel level) noexcept
     return static_cast<uint8_t>(level) >= static_cast<uint8_t>(VIGIL_ACTIVE_LOG_LEVEL);
 }
 
-#if defined(_MSC_VER)
-    #pragma warning(pop)
-#elif defined(__GNUC__) || defined(__clang__)
-    #pragma GCC diagnostic pop
-#endif
+VIGIL_PRAGMA_POP_WARNING
 
 } // namespace vigil

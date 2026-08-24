@@ -380,3 +380,164 @@
 #else
     #define VIGIL_CURRENT_FUNCTION __func__
 #endif
+
+// ============================================================================
+// Warning Control
+// ============================================================================
+
+/// @cond INTERNAL
+// _Pragma requires a string literal. VIGIL_INTERNAL_PRAGMA stringifies its
+// argument token sequence at the preprocessor level, avoiding any dependency
+// on preprocessor_utils.h at this low level of the include hierarchy.
+#define VIGIL_INTERNAL_PRAGMA(x) _Pragma(#x)
+
+// Constructs a diagnostic suppression pragma for the given compiler prefix
+// and warning name. 'ignored' is the only valid kind exposed by the public
+// API - 'warning' and 'error' reclassifications are intentionally excluded.
+#define VIGIL_INTERNAL_DIAG(compiler, name) \
+    VIGIL_INTERNAL_PRAGMA(compiler diagnostic ignored name)
+/// @endcond
+
+/**
+ * @def VIGIL_PRAGMA_PUSH_WARNING
+ * @brief Saves the current compiler warning state onto an internal stack.
+ *
+ * Use before selectively suppressing diagnostics to ensure they can be
+ * fully restored afterwards. Always pair with @c VIGIL_PRAGMA_POP_WARNING.
+ *
+ * @code
+ * VIGIL_PRAGMA_PUSH_WARNING
+ * VIGIL_DISABLE_WARNING_MSVC(4100)
+ * VIGIL_DISABLE_WARNING_GNU("-Wunused-parameter")
+ * #include <noisy_third_party_header.h>
+ * VIGIL_PRAGMA_POP_WARNING
+ * @endcode
+ */
+
+/**
+ * @def VIGIL_PRAGMA_POP_WARNING
+ * @brief Restores the compiler warning state saved by the last push macro.
+ *
+ * Compatible with @c VIGIL_PRAGMA_PUSH_WARNING. Must always follow a matching push.
+ * Mismatched push/pop pairs produce compiler-specific behavior and may
+ * silently suppress warnings beyond the intended scope.
+ */
+
+/**
+ * @def VIGIL_DISABLE_WARNING_MSVC(code)
+ * @brief Disables a specific MSVC warning within the current warning scope.
+ *
+ * No-op on GCC and Clang. Always wrap in a matching
+ * @c VIGIL_PRAGMA_PUSH_WARNING / @c VIGIL_PRAGMA_POP_WARNING pair.
+ *
+ * @param code Numeric MSVC warning code (e.g. @c 4100).
+ *
+ * @code
+ * VIGIL_PRAGMA_PUSH_WARNING
+ * VIGIL_DISABLE_WARNING_MSVC(4100)
+ * void unused_param(int x) {}
+ * VIGIL_PRAGMA_POP_WARNING
+ * @endcode
+ */
+
+/**
+ * @def VIGIL_DISABLE_WARNING_GCC(name)
+ * @brief Disables a specific GCC warning within the current warning scope.
+ *
+ * No-op on MSVC and Clang. For warnings shared between GCC and Clang,
+ * prefer @c VIGIL_DISABLE_WARNING_GNU to suppress both at once.
+ *
+ * @param name Warning name string literal (e.g. @c "-Wunused-parameter").
+ *
+ * @code
+ * VIGIL_PRAGMA_PUSH_WARNING
+ * VIGIL_DISABLE_WARNING_GCC("-Wunused-but-set-variable")
+ * int x = 0;
+ * VIGIL_PRAGMA_POP_WARNING
+ * @endcode
+ */
+
+/**
+ * @def VIGIL_DISABLE_WARNING_CLANG(name)
+ * @brief Disables a specific Clang warning within the current warning scope.
+ *
+ * No-op on MSVC and GCC. For warnings shared between GCC and Clang,
+ * prefer @c VIGIL_DISABLE_WARNING_GNU to suppress both at once.
+ *
+ * @param name Warning name string literal (e.g. @c "-Wunused-parameter").
+ *
+ * @code
+ * VIGIL_PRAGMA_PUSH_WARNING
+ * VIGIL_DISABLE_WARNING_CLANG("-Wunneeded-internal-declaration")
+ * static void debug_helper() {}
+ * VIGIL_PRAGMA_POP_WARNING
+ * @endcode
+ */
+
+/**
+ * @def VIGIL_DISABLE_WARNING_GNU(name)
+ * @brief Disables a warning on both GCC and Clang simultaneously.
+ *
+ * Shorthand for the common case where GCC and Clang share the same warning
+ * name. No-op on MSVC.
+ *
+ * @param name Warning name string literal (e.g. @c "-Wunused-parameter").
+ *
+ * @code
+ * VIGIL_PRAGMA_PUSH_WARNING
+ * VIGIL_DISABLE_WARNING_MSVC(4100)
+ * VIGIL_DISABLE_WARNING_GNU("-Wunused-parameter")
+ * void unused_param(int x) {}
+ * VIGIL_PRAGMA_POP_WARNING
+ * @endcode
+ */
+
+// Implementation -------------------------------------------------------------
+
+#if defined(VIGIL_COMPILER_MSVC)
+    #define VIGIL_PRAGMA_PUSH_WARNING           __pragma(warning(push))
+    #define VIGIL_PRAGMA_POP_WARNING            __pragma(warning(pop))
+    #define VIGIL_DISABLE_WARNING_MSVC(code)    __pragma(warning(disable : code))
+    #define VIGIL_DISABLE_WARNING_GCC(name)
+    #define VIGIL_DISABLE_WARNING_CLANG(name)
+    #define VIGIL_DISABLE_WARNING_GNU(name)
+
+#elif defined(VIGIL_COMPILER_CLANG)
+    #define VIGIL_PRAGMA_PUSH_WARNING           VIGIL_INTERNAL_PRAGMA(clang diagnostic push)
+    #define VIGIL_PRAGMA_POP_WARNING            VIGIL_INTERNAL_PRAGMA(clang diagnostic pop)
+    #define VIGIL_DISABLE_WARNING_MSVC(code)
+    #define VIGIL_DISABLE_WARNING_GCC(name)
+    #define VIGIL_DISABLE_WARNING_CLANG(name)   VIGIL_INTERNAL_DIAG(clang, name)
+    #define VIGIL_DISABLE_WARNING_GNU(name)     VIGIL_INTERNAL_DIAG(clang, name)
+
+#elif defined(VIGIL_COMPILER_GCC)
+    #define VIGIL_PRAGMA_PUSH_WARNING           VIGIL_INTERNAL_PRAGMA(GCC diagnostic push)
+    #define VIGIL_PRAGMA_POP_WARNING            VIGIL_INTERNAL_PRAGMA(GCC diagnostic pop)
+    #define VIGIL_DISABLE_WARNING_MSVC(code)
+    #define VIGIL_DISABLE_WARNING_GCC(name)     VIGIL_INTERNAL_DIAG(GCC, name)
+    #define VIGIL_DISABLE_WARNING_CLANG(name)
+    #define VIGIL_DISABLE_WARNING_GNU(name)     VIGIL_INTERNAL_DIAG(GCC, name)
+
+#else
+    #define VIGIL_PRAGMA_PUSH_WARNING
+    #define VIGIL_PRAGMA_POP_WARNING
+    #define VIGIL_DISABLE_WARNING_MSVC(code)
+    #define VIGIL_DISABLE_WARNING_GCC(name)
+    #define VIGIL_DISABLE_WARNING_CLANG(name)
+    #define VIGIL_DISABLE_WARNING_GNU(name)
+#endif
+
+/**
+ * @def VIGIL_PRAGMA_PUSH_WARNING_MSVC_SILENT
+ * @brief Saves the current MSVC warning state and disables all warnings at once.
+ *
+ * Equivalent to @c warning(push,0). Useful when including third-party headers
+ * that produce unavoidable MSVC diagnostics. Always pair with
+ * @c VIGIL_PRAGMA_POP_WARNING.
+ *
+ * Only defined on MSVC. On GCC and Clang use @c VIGIL_PRAGMA_PUSH_WARNING
+ * combined with explicit @c VIGIL_DISABLE_WARNING_GNU calls instead.
+ */
+#if defined(VIGIL_COMPILER_MSVC)
+    #define VIGIL_PRAGMA_PUSH_WARNING_MSVC_SILENT __pragma(warning(push, 0))
+#endif
