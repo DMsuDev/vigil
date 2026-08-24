@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.1] - 2026-08-24
+
+### 🐛 Bug Fixes
+
+- Resolve C++17 variadic pack and VERIFY stringify issues in Assert.h ([d5e24dc](https://github.com/DMsuDev/Vigil/commit/d5e24dcd76dffcf8781b807b319b7a27e1236643))
+
+  In C++17, `VIGIL_ASSERT` expanded through `VIGIL_ASSERT_MSG` into
+  `VIGIL_INTERNAL_ASSERT_IMPL` with an empty `__VA_ARGS__` pack, producing
+  an ill-formed `fmt::format()` call in some fmt versions.
+
+  `VIGIL_VERIFY` was chained through `VIGIL_ASSERT`, causing `VIGIL_STRINGIFY`
+  to capture the asserted expression wrapped in an extra layer of parentheses,
+  resulting in `(expr)` instead of `expr` in assertion log output.
+
+  - Add `VIGIL_INTERNAL_ASSERT_IMPL_NO_MSG` for C++17 no-message paths,
+    invoking `ReportAssertFailure` directly without a variadic argument.
+  - Route `VIGIL_ASSERT` (C++17) through `_NO_MSG` to avoid an empty
+    `fmt::format()` call entirely.
+  - Redefine `VIGIL_VERIFY` independently of `VIGIL_ASSERT` to eliminate
+    the double-wrapping that corrupted `VIGIL_STRINGIFY` output.
+  - C++20 path is unchanged; `__VA_OPT__` handles the empty pack case
+    cleanly without requiring a separate macro variant.
+
+- Improve early return logging in DemoEarlyReturn function ([352200e](https://github.com/DMsuDev/Vigil/commit/352200e677f2dd5f15ff8d8f94c9b84d0f789529))
+
+### 🚜 Refactor
+
+- Remove VIGIL_API export macro from ScopedLogger ([d9a3d13](https://github.com/DMsuDev/Vigil/commit/d9a3d131e16421aedaec3417949d8274d751c5bd))
+
+  - Prevent MSVC C4251 warning caused by exporting STL members in DLL boundary
+  - ScopedLogger is fully inline/RAII and does not require binary DLL symbol export
+
+- Remove compiler-specific diagnostic pragmas from logger_impl.h ([f4c9614](https://github.com/DMsuDev/Vigil/commit/f4c961410af324ea43127ef4b09e3b79da911ec3))
+
+- Add portable warning control macros in `compiler_attributes.h`. ([4adb8db](https://github.com/DMsuDev/Vigil/commit/4adb8db14ae19916c2ee6563c527592b52d3408f))
+
+  Replace raw `#pragma` blocks throughout the codebase with a unified
+  warning suppression API. Migrate `log_level.h` as first consumer.
+
+  - Add `VIGIL_INTERNAL_PRAGMA` and `VIGIL_INTERNAL_DIAG` as internal helpers.
+  - Add `VIGIL_PRAGMA_PUSH_WARNING` / `VIGIL_PRAGMA_POP_WARNING` and the `VIGIL_DISABLE_WARNING_*` family
+  - Add `VIGIL_PRAGMA_PUSH_WARNING_MSVC_SILENT` (MSVC-only, `warning(push,0)`) in `compiler_attributes.h`.
+  - Migrate `log_level.h` from raw `#pragma` blocks to the new macros.
+
+### 🛠️ Build System
+
+- Fix warning policy propagation and adopt native warning-as-error ([6242fd9](https://github.com/DMsuDev/Vigil/commit/6242fd9509442c284160dfd21a27baaa20a73cdc))
+
+  - Ensure early return when VIGIL_BUILD_WARNINGS is disabled regardless of top-level status
+  - Enable -Wdocumentation diagnostic for Clang toolchains
+  - Replace manual compiler flags (/WX, -Werror) with CMake 3.24+ COMPILE_WARNING_AS_ERROR property
+
 ## [0.4.0] - 2026-08-22
 
 ### 🚀 Features
