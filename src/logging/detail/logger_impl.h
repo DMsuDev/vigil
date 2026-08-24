@@ -9,21 +9,7 @@
 // or exposed to consumers. It is the only place in the codebase allowed to
 // include spdlog directly.
 
-#if defined(_MSC_VER)
-    #pragma warning(push, 0)
-#elif defined(__GNUC__) || defined(__clang__)
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wall"
-    #pragma GCC diagnostic ignored "-Wextra"
-#endif
-
 #include <spdlog/spdlog.h>
-
-#if defined(_MSC_VER)
-    #pragma warning(pop)
-#elif defined(__GNUC__) || defined(__clang__)
-    #pragma GCC diagnostic pop
-#endif
 
 #include "vigil/logging/log_level.h"
 #include "vigil/core/smart_pointers.h"
