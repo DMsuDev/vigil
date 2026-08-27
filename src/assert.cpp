@@ -25,7 +25,8 @@ namespace vigil::detail {
     // Clean the function signature for better readability
     std::string functionName = CleanFunctionSignature(loc.function_name());
 
-    std::string_view fileLocation = FormatFilePath(loc.file_name(), 4U);
+    std::string normalizedFile = NormalizePathSeparators(loc.file_name());
+    std::string_view fileLocation = FormatFilePath(normalizedFile, 4U);
 
     // Check if the logging system is initialized and safe to use
     if (::vigil::LogSystem::IsInitialized()) {
@@ -61,12 +62,15 @@ namespace vigil::detail {
         ::vigil::LogSystem::Main().Flush();
     } else {
         // Fallback to low-level stderr if the logger isn't ready (e.g., startup/shutdown)
-        std::cerr << "[VIGIL CRITICAL] Assertion failed: '" << exprText
-                  << "' at " << loc.file_name() << ":" << loc.line()
-                  << " (" << functionName << ")";
-        if (!message.empty()) {
-            std::cerr << " - " << message;
-        }
+        std::cerr
+            << "[VIGIL CRITICAL] Assertion failed\n"
+            << "  Expression : " << exprText << "\n"
+            << "  Location   : " << fileLocation << ":" << loc.line() << "\n"
+            << "  Function   : " << functionName << "\n";
+
+        if (!message.empty())
+            std::cerr << "  Message    : " << message << "\n";
+
         std::cerr << "\n" << stackDump << std::endl;
     }
 

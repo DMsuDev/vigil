@@ -6,6 +6,7 @@
 #include "vigil/detail/symbol_utils.h"
 
 #include <array>
+#include <algorithm>
 
 namespace vigil::detail {
 
@@ -21,6 +22,13 @@ constexpr std::array<std::string_view, 6> kCallingConventions{
 };
 
 } // Anonymous namespace
+
+std::string NormalizePathSeparators(std::string_view path)
+{
+    std::string result{path};
+    std::replace(result.begin(), result.end(), '\\', '/');
+    return result;
+}
 
 std::string_view FormatFilePath(std::string_view path, unsigned levels)
 {

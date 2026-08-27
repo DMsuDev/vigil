@@ -76,10 +76,10 @@ namespace vigil::detail {
 
     // C++20: __VA_OPT__ cleanly detects whether a message argument was supplied.
     // When no message is provided the default empty string_view overload is used.
-    #define VIGIL_INTERNAL_ASSERT_IMPL(check, loc, ...) \
+    #define VIGIL_INTERNAL_ASSERT_IMPL(check, exprText, loc, ...) \
         do { \
             if (VIGIL_INTERNAL_ASSERT_COND(check)) VIGIL_INTERNAL_ASSERT_ATTR { \
-                ::vigil::detail::ReportAssertFailure(VIGIL_STRINGIFY(check), (loc) \
+                ::vigil::detail::ReportAssertFailure((exprText), (loc) \
                     __VA_OPT__(, fmt::format(__VA_ARGS__))); \
             } \
         } while (0)
@@ -88,11 +88,11 @@ namespace vigil::detail {
 
     // Message variant: at least one variadic argument (format string + optional args).
     // Always receives a non-empty pack because VIGIL_ASSERT_MSG guarantees it.
-    #define VIGIL_INTERNAL_ASSERT_IMPL(check, loc, ...) \
+    #define VIGIL_INTERNAL_ASSERT_IMPL(check, exprText, loc, ...) \
         do { \
             if (VIGIL_INTERNAL_ASSERT_COND(check)) VIGIL_INTERNAL_ASSERT_ATTR { \
                 ::vigil::detail::ReportAssertFailure( \
-                    VIGIL_STRINGIFY(check), \
+                    (exprText), \
                     (loc), \
                     fmt::format(__VA_ARGS__) \
                 ); \
@@ -102,11 +102,11 @@ namespace vigil::detail {
     // No-message variant: calls ReportAssertFailure without a message argument,
     // relying on the default empty string_view parameter. Avoids an empty
     // fmt::format() call which is ill-formed in some fmt versions.
-    #define VIGIL_INTERNAL_ASSERT_IMPL_NO_MSG(check, loc) \
+    #define VIGIL_INTERNAL_ASSERT_IMPL_NO_MSG(check, exprText, loc) \
         do { \
             if (VIGIL_INTERNAL_ASSERT_COND(check)) VIGIL_INTERNAL_ASSERT_ATTR { \
                 ::vigil::detail::ReportAssertFailure( \
-                    VIGIL_STRINGIFY(check), \
+                    (exprText), \
                     (loc) \
                 ); \
             } \
@@ -131,7 +131,7 @@ namespace vigil::detail {
  * @param ...   Format string and arguments (fmt syntax) providing additional context.
  */
 #define VIGIL_ASSERT_MSG(check, ...) \
-    VIGIL_INTERNAL_ASSERT_IMPL((check), VIGIL_CURRENT_LOC(), __VA_ARGS__)
+    VIGIL_INTERNAL_ASSERT_IMPL(check, VIGIL_STRINGIFY(check), VIGIL_CURRENT_LOC(), __VA_ARGS__)
 
 /**
  * @def VIGIL_ASSERT(check)
@@ -144,11 +144,11 @@ namespace vigil::detail {
  */
 #if defined(VIGIL_CPP20)
     #define VIGIL_ASSERT(check) \
-        VIGIL_INTERNAL_ASSERT_IMPL((check), VIGIL_CURRENT_LOC())
+        VIGIL_INTERNAL_ASSERT_IMPL(check, VIGIL_STRINGIFY(check), VIGIL_CURRENT_LOC())
 #else
     // C++17: use the no-message variant to avoid an empty fmt::format() call.
     #define VIGIL_ASSERT(check) \
-        VIGIL_INTERNAL_ASSERT_IMPL_NO_MSG((check), VIGIL_CURRENT_LOC())
+        VIGIL_INTERNAL_ASSERT_IMPL_NO_MSG(check, VIGIL_STRINGIFY(check), VIGIL_CURRENT_LOC())
 #endif
 
 /**
@@ -162,7 +162,7 @@ namespace vigil::detail {
  * @param ...   Format string and arguments (fmt syntax) providing additional context.
  */
 #define VIGIL_VERIFY_MSG(check, ...) \
-    VIGIL_ASSERT_MSG((check), __VA_ARGS__)
+    VIGIL_ASSERT_MSG(check, __VA_ARGS__)
 
 /**
  * @def VIGIL_VERIFY(check)
@@ -178,10 +178,10 @@ namespace vigil::detail {
  */
 #if defined(VIGIL_CPP20)
     #define VIGIL_VERIFY(check) \
-        VIGIL_INTERNAL_ASSERT_IMPL((check), VIGIL_CURRENT_LOC())
+        VIGIL_INTERNAL_ASSERT_IMPL(check, VIGIL_STRINGIFY(check), VIGIL_CURRENT_LOC())
 #else
     #define VIGIL_VERIFY(check) \
-        VIGIL_INTERNAL_ASSERT_IMPL_NO_MSG((check), VIGIL_CURRENT_LOC())
+        VIGIL_INTERNAL_ASSERT_IMPL_NO_MSG(check, VIGIL_STRINGIFY(check), VIGIL_CURRENT_LOC())
 #endif
 
 #else // !VIGIL_ENABLE_ASSERTS
@@ -220,7 +220,7 @@ namespace vigil::detail {
  * @param ptr Pointer expression to validate.
  */
 #define VIGIL_ASSERT_NOT_NULL(ptr) \
-    VIGIL_ASSERT_MSG((ptr) != nullptr, "Pointer must not be null: " VIGIL_STRINGIFY(ptr))
+    VIGIL_ASSERT_MSG(ptr != nullptr, "Pointer must not be null: " VIGIL_STRINGIFY(ptr))
 
 /**
  * @def VIGIL_ASSERT_IN_RANGE(val, min_val, max_val)

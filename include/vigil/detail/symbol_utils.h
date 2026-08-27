@@ -30,6 +30,12 @@ enum class FormatPathMode {
 [[nodiscard]] VIGIL_API
 std::string_view FormatFilePath(std::string_view path, unsigned levels = 1);
 
+/// @brief Normalizes path separators to use '/' instead of '\\'.
+/// @param path Source path (may use '/' or '\\' separators).
+/// @return A new string with normalized path separators.
+[[nodiscard]] VIGIL_API
+std::string NormalizePathSeparators(std::string_view path);
+
 /// @brief Sanitizes a raw function signature by stripping qualifiers, calling conventions, and noise.
 /// @param signature Raw function signature to process.
 /// @return Cleaned, human-readable function signature string.
