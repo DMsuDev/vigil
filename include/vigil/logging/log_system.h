@@ -8,8 +8,23 @@
 #include "vigil/logging/logger.h"
 #include "vigil/detail/symbol_export.h"
 
+#if defined(VIGIL_ENABLE_ASSERTS)
+#include "vigil/assert.h"
+#endif
+
 #include <optional>
 #include <utility>
+
+// Internal guard to ensure the logging system is initialized before proceeding.
+#if defined(VIGIL_ENABLE_ASSERTS)
+    #define VIGIL_LOG_GUARD()                           \
+        VIGIL_ASSERT_MSG(LogSystem::IsInitialized(),    \
+            "Vigil logging API called before Init()."); \
+        if (!LogSystem::IsInitialized()) return
+#else
+    #define VIGIL_LOG_GUARD() \
+        if (!LogSystem::IsInitialized()) return
+#endif
 
 /**
  * @file log_system.h
@@ -68,7 +83,7 @@ struct LogConfig
     std::optional<LogLevel> FileLevel;
 };
 
- /**
+/**
  * @brief Centralized registry and entry point for Vigil's loggers.
  *
  * `LogSystem` acts as a static registry controlling the lifecycle, setup, and
@@ -269,30 +284,31 @@ public:
  */
 
 /// @copydoc Logger::Trace(std::string_view)
-inline void Trace(std::string_view message) { LogSystem::Main().Trace(message); }
+inline void Trace(std::string_view message) { VIGIL_LOG_GUARD(); LogSystem::Main().Trace(message); }
 
 /// @copydoc Logger::Debug(std::string_view)
-inline void Debug(std::string_view message) { LogSystem::Main().Debug(message); }
+inline void Debug(std::string_view message) { VIGIL_LOG_GUARD(); LogSystem::Main().Debug(message); }
 
 /// @copydoc Logger::Info(std::string_view)
-inline void Info(std::string_view message) { LogSystem::Main().Info(message); }
+inline void Info(std::string_view message) { VIGIL_LOG_GUARD(); LogSystem::Main().Info(message); }
 
 /// @copydoc Logger::Warn(std::string_view)
-inline void Warn(std::string_view message) { LogSystem::Main().Warn(message); }
+inline void Warn(std::string_view message) { VIGIL_LOG_GUARD(); LogSystem::Main().Warn(message); }
 
 /// @copydoc Logger::Error(std::string_view)
-inline void Error(std::string_view message) { LogSystem::Main().Error(message); }
+inline void Error(std::string_view message) { VIGIL_LOG_GUARD(); LogSystem::Main().Error(message); }
 
 /// @copydoc Logger::Critical(std::string_view)
-inline void Critical(std::string_view message) { LogSystem::Main().Critical(message); }
+inline void Critical(std::string_view message) { VIGIL_LOG_GUARD(); LogSystem::Main().Critical(message); }
 
 /// @copydoc Logger::Log(LogLevel, std::string_view)
-inline void Log(LogLevel level, std::string_view message) { LogSystem::Main().Log(level, message); }
+inline void Log(LogLevel level, std::string_view message) { VIGIL_LOG_GUARD(); LogSystem::Main().Log(level, message); }
 
 /// @copydoc Logger::Trace(detail::FormatString<Args...>, Args&&...)
 template <typename... Args>
 void Trace(detail::FormatString<Args...> message, Args&&... args)
 {
+    VIGIL_LOG_GUARD();
     LogSystem::Main().Trace(message, std::forward<Args>(args)...);
 }
 
@@ -300,6 +316,7 @@ void Trace(detail::FormatString<Args...> message, Args&&... args)
 template <typename... Args>
 void Debug(detail::FormatString<Args...> message, Args&&... args)
 {
+    VIGIL_LOG_GUARD();
     LogSystem::Main().Debug(message, std::forward<Args>(args)...);
 }
 
@@ -307,6 +324,7 @@ void Debug(detail::FormatString<Args...> message, Args&&... args)
 template <typename... Args>
 void Info(detail::FormatString<Args...> message, Args&&... args)
 {
+    VIGIL_LOG_GUARD();
     LogSystem::Main().Info(message, std::forward<Args>(args)...);
 }
 
@@ -314,6 +332,7 @@ void Info(detail::FormatString<Args...> message, Args&&... args)
 template <typename... Args>
 void Warn(detail::FormatString<Args...> message, Args&&... args)
 {
+    VIGIL_LOG_GUARD();
     LogSystem::Main().Warn(message, std::forward<Args>(args)...);
 }
 
@@ -321,6 +340,7 @@ void Warn(detail::FormatString<Args...> message, Args&&... args)
 template <typename... Args>
 void Error(detail::FormatString<Args...> message, Args&&... args)
 {
+    VIGIL_LOG_GUARD();
     LogSystem::Main().Error(message, std::forward<Args>(args)...);
 }
 
@@ -328,6 +348,7 @@ void Error(detail::FormatString<Args...> message, Args&&... args)
 template <typename... Args>
 void Critical(detail::FormatString<Args...> message, Args&&... args)
 {
+    VIGIL_LOG_GUARD();
     LogSystem::Main().Critical(message, std::forward<Args>(args)...);
 }
 
@@ -335,6 +356,7 @@ void Critical(detail::FormatString<Args...> message, Args&&... args)
 template <typename... Args>
 void Log(LogLevel level, detail::FormatString<Args...> message, Args&&... args)
 {
+    VIGIL_LOG_GUARD();
     LogSystem::Main().Log(level, message, std::forward<Args>(args)...);
 }
 
@@ -342,6 +364,7 @@ void Log(LogLevel level, detail::FormatString<Args...> message, Args&&... args)
 
 } // namespace vigil
 
+#undef VIGIL_LOG_GUARD
 
 // ============================================================================
 // Main Logger Macros
@@ -351,12 +374,11 @@ void Log(LogLevel level, detail::FormatString<Args...> message, Args&&... args)
  * @name Main Logger Macros
  * @brief Convenience macros for logging through the application's main logger.
  *
- * compile-time filtering based on @ref VIGIL_ACTIVE_LOG_LEVEL.
+ * Provides compile-time filtering based on @ref VIGIL_ACTIVE_LOG_LEVEL.
  *
- * @note The macros assume the main logger is accessed via @ref LogSystem::Main.
- * compile-time filtering based on @ref VIGIL_ACTIVE_LOG_LEVEL.
- *
- * Disabled log statements are completely eliminated during compilation.
+ * @note These macros forward log requests to @ref LogSystem::Main.
+ * Log statements disabled by the active log level are completely eliminated
+ * at compile time with zero runtime overhead.
  * @{
  */
 
@@ -459,11 +481,15 @@ void Log(LogLevel level, detail::FormatString<Args...> message, Args&&... args)
  * @note Because @p level is evaluated at runtime, plain runtime checks are used instead of
  *       `if constexpr` to support dynamic severity levels.
  */
-#define VIGIL_LOG_NAMED(name, level, ...)                           \
-    do {                                                            \
-        if (::vigil::IsLevelActive(level)) {                        \
-            ::vigil::LogSystem::Get(name).Log(level, __VA_ARGS__);  \
-        }                                                           \
+#define VIGIL_LOG_NAMED(name, level, ...)                             \
+    do {                                                              \
+        VIGIL_ASSERT_MSG(::vigil::LogSystem::IsInitialized(),         \
+            "Vigil logging API called before Init().");               \
+        if (::vigil::LogSystem::IsInitialized() &&                    \
+            ::vigil::IsLevelActive(level))                            \
+        {                                                             \
+            ::vigil::LogSystem::Create(name).Log(level, __VA_ARGS__); \
+        }                                                             \
     } while (0)
 
 /** @} */

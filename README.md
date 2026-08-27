@@ -116,9 +116,16 @@ Initialize the logging system and issue messages across different severity level
 
 int main()
 {
-    vigil::LogSystemConfig cfg;
-    cfg.Name = "MyApp";
-    cfg.ConsoleLevel = vigil::LogLevel::Info;
+    // Using designated initializers (C++20)
+    vigil::LogSystemConfig cfg{
+        .Name = "MyApp",
+        .ConsoleLevel = vigil::LogLevel::Info
+    };
+
+    // Pre C++20 style configuration (commented out)
+    // vigil::LogSystemConfig cfg;
+    // cfg.Name = "MyApp";
+    // cfg.ConsoleLevel = vigil::LogLevel::Info;
 
     vigil::LogSystem::Init(cfg);
 
@@ -130,6 +137,10 @@ int main()
     return 0;
 }
 ```
+
+> [!IMPORTANT]
+> **Uninitialized API Usage:**
+> Calling any logging macro prior to `vigil::LogSystem::Init()` triggers a `VIGIL_ASSERT` when assertions are enabled, pausing execution and reporting the exact source location to catch missing setup early. In **Release builds**, uninitialized log calls perform an early `return` (**silent no-op**) without evaluating arguments or producing side-effects.
 
 </details>
 
