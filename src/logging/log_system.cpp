@@ -7,6 +7,7 @@
 
 #include "logging/detail/logger_impl.h"
 #include "logging/detail/spd_convert.h"
+#include "logging/detail/hooks_registry.h"
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
@@ -19,24 +20,6 @@
 #include <assert.h>
 
 namespace vigil {
-
-//==============================================================================
-// Helpers
-//==============================================================================
-
-namespace {
-
-/// @brief Appends ".log" to @p stem unless it already ends with that extension.
-std::string MakeLogFileName(std::string_view stem)
-{
-    constexpr std::string_view kExt = ".log";
-    if (stem.size() >= kExt.size() &&
-        stem.substr(stem.size() - kExt.size()) == kExt)
-        return std::string{stem};
-    return std::string{stem} + std::string{kExt};
-}
-
-} // namespace
 
 //==============================================================================
 // Logger registry state
@@ -55,24 +38,23 @@ std::recursive_mutex g_Mutex;
 bool g_Initialized = false;
 bool g_Async       = false;
 
+detail::HooksRegistry g_Hooks;
+
 Shared<Logger> g_MainLogger;
 std::unordered_map<std::string, Shared<Logger>> g_NamedLoggers;
 
 // The file sink created during Init() is kept alive here so that named loggers
 // can share it (i.e. all output goes to the same log file by default).
 spdlog::sink_ptr g_SharedFileSink;
-
 spdlog::sink_ptr g_ConsoleSink;
 
 static bool IsInitializedUnsafe() noexcept { return g_Initialized; }
 
-// Guards against use-after-forgetting-to-call-Init(): asserts alone are
-// compiled out under NDEBUG and would otherwise let callers dereference a
-// null main logger or a null shared sink further down the call chain.
 void EnsureInitialized(const char* function)
 {
     if (!g_Initialized)
-        throw std::logic_error(std::string("[Vigil] LogSystem::") + function + "() called before Init().");
+        throw std::logic_error(
+            std::string("[Vigil] LogSystem::") + function + "() called before Init().");
 }
 
 /// @brief Creates a console sink filtering at @p level.
@@ -102,7 +84,7 @@ spdlog::sink_ptr MakeFileSink(const std::string& filePath, FileOpenMode fileMode
 
 /// @brief Builds an spdlog logger (sync or async) from the provided sinks.
 std::shared_ptr<spdlog::logger> MakeSpdLogger(
-    const std::string_view name,
+    std::string_view              name,
     std::vector<spdlog::sink_ptr> sinks)
 {
     std::shared_ptr<spdlog::logger> logger;
@@ -149,7 +131,42 @@ Shared<detail::LoggerImpl> CreateLoggerImpl(
         std::move(fileSink));   // nullptr if this logger shares the main file sink
 }
 
-} // namespace
+} // namespace anonymous
+
+//==============================================================================
+// Helpers
+//==============================================================================
+
+namespace {
+
+/// @brief Appends ".log" to @p stem unless it already ends with that extension.
+std::string MakeLogFileName(std::string_view stem)
+{
+    constexpr std::string_view kExt = ".log";
+    if (stem.size() >= kExt.size() &&
+        stem.substr(stem.size() - kExt.size()) == kExt)
+        return std::string{stem};
+    return std::string{stem} + std::string{kExt};
+}
+
+/// @brief Retrieves all logger handles, including the main logger and named loggers.
+/// @return A vector of shared pointers to all spdlog logger instances.
+auto AllSpdLoggers()
+{
+    std::vector<std::shared_ptr<spdlog::logger>> loggers;
+    loggers.reserve(1 + g_NamedLoggers.size());
+
+    if (g_MainLogger)
+        loggers.push_back(g_MainLogger->Impl().m_Logger);
+
+    for (auto& [_, handle] : g_NamedLoggers)
+        if (handle)
+            loggers.push_back(handle->Impl().m_Logger);
+
+    return loggers;
+}
+
+} // namespace anonymous
 
 //==============================================================================
 // Logger facade
@@ -213,6 +230,8 @@ Logger& LogSystem::Create(std::string_view name)
     auto impl   = CreateLoggerImpl(key, g_ConsoleSink, g_SharedFileSink);
     auto handle = std::make_shared<Logger>(impl);
 
+    g_Hooks.AttachSinkTo(impl->m_Logger);
+
     auto [it, _] = g_NamedLoggers.emplace(std::move(key), std::move(handle));
     return *it->second;
 }
@@ -235,21 +254,89 @@ Logger& LogSystem::Create(const LogConfig& config)
     auto impl     = CreateLoggerImpl(key, g_ConsoleSink, fileSink);
     auto handle   = std::make_shared<Logger>(impl);
 
+    g_Hooks.AttachSinkTo(impl->m_Logger);
+
     auto [it, _] = g_NamedLoggers.emplace(std::move(key), std::move(handle));
     return *it->second;
 }
 
 void LogSystem::Shutdown()
 {
-    std::scoped_lock lock(g_Mutex);
-    if (!g_Initialized) return;
+    LifecycleCallback shutdownCb;
+    {
+        std::scoped_lock lock(g_Mutex);
+        if (!g_Initialized) return;
+        shutdownCb = g_Hooks.Hooks.OnShutdown;
+    }
 
-    spdlog::shutdown();
-    g_MainLogger.reset();
-    g_NamedLoggers.clear();
-    g_ConsoleSink.reset();
-    g_SharedFileSink.reset();
-    g_Initialized = false;
+    if (shutdownCb) shutdownCb();
+
+    {
+        std::scoped_lock lock(g_Mutex);
+        if (!g_Initialized) return; // guard against concurrent Shutdown()
+
+        spdlog::shutdown();
+        g_MainLogger.reset();
+        g_NamedLoggers.clear();
+        g_ConsoleSink.reset();
+        g_SharedFileSink.reset();
+        g_Hooks    = {};
+        g_Initialized = false;
+    }
+}
+
+//==============================================================================
+// Hook registration
+//==============================================================================
+
+void LogSystem::SetHooks(LogHooks hooks)
+{
+    std::scoped_lock lock(g_Mutex);
+    if (!IsInitializedUnsafe()) return;
+
+    g_Hooks.Hooks = std::move(hooks);
+    g_Hooks.UpdateMessageSink(AllSpdLoggers());
+}
+
+void LogSystem::ClearHooks()
+{
+    std::scoped_lock lock(g_Mutex);
+    if (!IsInitializedUnsafe()) return;
+
+    g_Hooks.Clear(AllSpdLoggers());
+}
+
+void LogSystem::SetOnMessage(LogMessageCallback callback)
+{
+    std::scoped_lock lock(g_Mutex);
+    if (!IsInitializedUnsafe()) return;
+
+    g_Hooks.Hooks.OnMessage = std::move(callback);
+    g_Hooks.UpdateMessageSink(AllSpdLoggers());
+}
+
+void LogSystem::SetOnLevelChange(LevelChangeCallback callback)
+{
+    std::scoped_lock lock(g_Mutex);
+    if (!IsInitializedUnsafe()) return;
+
+    g_Hooks.Hooks.OnLevelChange = std::move(callback);
+}
+
+void LogSystem::SetOnFlush(FlushCallback callback)
+{
+    std::scoped_lock lock(g_Mutex);
+    if (!IsInitializedUnsafe()) return;
+
+    g_Hooks.Hooks.OnFlush = std::move(callback);
+}
+
+void LogSystem::SetOnShutdown(LifecycleCallback callback)
+{
+    std::scoped_lock lock(g_Mutex);
+    if (!IsInitializedUnsafe()) return;
+
+    g_Hooks.Hooks.OnShutdown = std::move(callback);
 }
 
 //==============================================================================
@@ -295,7 +382,6 @@ Logger& LogSystem::Main()
 {
     std::scoped_lock lock(g_Mutex);
     EnsureInitialized("Main");
-
     return *g_MainLogger;
 }
 
@@ -307,6 +393,7 @@ Logger& LogSystem::Get(std::string_view name)
     auto it = g_NamedLoggers.find(std::string{name});
     if (it != g_NamedLoggers.end())
         return *it->second;
+
     throw std::runtime_error("Logger not found: " + std::string{name});
 }
 
@@ -325,12 +412,21 @@ Logger* LogSystem::Find(std::string_view name)
 
 void LogSystem::SetGlobalLevel(LogLevel level)
 {
-    std::scoped_lock lock(g_Mutex);
-    if (!IsInitializedUnsafe()) return;
+    LevelChangeCallback cb;
+    LogLevel old;
+    {
+        std::scoped_lock lock(g_Mutex);
+        if (!IsInitializedUnsafe()) return;
 
-    g_MainLogger->SetLevel(level);
-    for (auto& [name, handle] : g_NamedLoggers)
-        handle->SetLevel(level);
+        old = g_MainLogger->GetLevel();
+        g_MainLogger->SetLevel(level);
+        for (auto& [_, handle] : g_NamedLoggers)
+            handle->SetLevel(level);
+
+        cb = g_Hooks.Hooks.OnLevelChange;
+    }
+
+    if (cb) cb(LevelChangeEvent{ {}, old, level });
 }
 
 void LogSystem::SetGlobalFileLevel(LogLevel level)
@@ -346,7 +442,6 @@ void LogSystem::SetGlobalFileLevel(LogLevel level)
     for (auto& [_, handle] : g_NamedLoggers)
     {
         auto sink = handle->Impl().m_FileSink;
-
         if (sink && sink != g_SharedFileSink)
             sink->set_level(spdLevel);
     }
@@ -360,25 +455,71 @@ void LogSystem::SetConsoleLevel(LogLevel level)
     g_ConsoleSink->set_level(detail::ToSpdLevel(level));
 }
 
+void LogSystem::SetLevel(std::string_view name, LogLevel level)
+{
+    LevelChangeCallback cb;
+    LogLevel old;
+    {
+        std::scoped_lock lock(g_Mutex);
+        if (!IsInitializedUnsafe()) return;
+
+        auto it = g_NamedLoggers.find(std::string{name});
+        if (it == g_NamedLoggers.end()) return;
+
+        old = it->second->GetLevel();
+        it->second->SetLevel(level);
+        cb = g_Hooks.Hooks.OnLevelChange;
+    }
+
+    if (cb) cb(LevelChangeEvent{ name, old, level });
+}
+
 //==============================================================================
 // Flush control
 //==============================================================================
 
 void LogSystem::FlushAll()
 {
-    std::scoped_lock lock(g_Mutex);
-    if (!IsInitializedUnsafe()) return;
+    std::vector<std::string> flushedNames;
+    FlushCallback cb;
+    {
+        std::scoped_lock lock(g_Mutex);
+        if (!IsInitializedUnsafe()) return;
 
-    g_MainLogger->Flush();
-    for (auto& [_, logger] : g_NamedLoggers)
-        logger->Flush();
+        g_MainLogger->Flush();
+        flushedNames.emplace_back(g_MainLogger->GetName());
+
+        for (auto& [name, logger] : g_NamedLoggers)
+        {
+            logger->Flush();
+            flushedNames.emplace_back(name);
+        }
+
+        cb = g_Hooks.Hooks.OnFlush;
+    }
+
+    if (cb)
+        for (const auto& name : flushedNames)
+            cb(FlushEvent{ name });
 }
 
 void LogSystem::Flush(std::string_view name)
 {
-    std::scoped_lock lock(g_Mutex);
-    if (auto it = g_NamedLoggers.find(std::string{name}); it != g_NamedLoggers.end())
+    FlushCallback cb;
+    std::string loggerName;
+    {
+        std::scoped_lock lock(g_Mutex);
+        if (!IsInitializedUnsafe()) return;
+
+        auto it = g_NamedLoggers.find(std::string{name});
+        if (it == g_NamedLoggers.end()) return;
+
         it->second->Flush();
+        loggerName = it->first; // Copy the logger name, string_view may be invalidated
+        cb = g_Hooks.Hooks.OnFlush;
+    }
+
+    if (cb) cb(FlushEvent{ loggerName });
 }
 
 } // namespace vigil

@@ -6,6 +6,8 @@
 #pragma once
 
 #include "vigil/logging/logger.h"
+#include "vigil/logging/lifecycle_hooks.h"
+
 #include "vigil/detail/symbol_export.h"
 
 #if defined(VIGIL_ENABLE_ASSERTS)
@@ -115,6 +117,64 @@ public:
     /// @brief True after Init() has completed successfully.
     [[nodiscard]] static bool IsInitialized() noexcept;
 
+    // =========================================================== //
+    //                     HOOKS REGISTRATION                      //
+    // =========================================================== //
+
+    /**
+     * @brief Registers all hooks at once, replacing any previously set hooks.
+     *
+     * Equivalent to calling each individual setter in sequence. Any hook field
+     * left as @c nullptr is treated as "not registered" and clears the previous
+     * value for that hook if one existed.
+     *
+     * Hooks:
+     * - OnMessage: Invoked on every emitted log message.
+     * - OnLevelChange: Invoked whenever a logger's severity level changes.
+     * - OnFlush: Invoked after any flush operation.
+     * - OnShutdown: Invoked at the start of @ref Shutdown.
+     *
+     * @param hooks Aggregate of all hook callbacks to register.
+     *
+     * @see LogHooks
+     */
+    static void SetHooks(LogHooks hooks);
+
+    /// @brief Clears all registered hooks and detaches the message sink.
+    static void ClearHooks();
+
+    /**
+     * @brief Registers a callback invoked on every emitted log message.
+     *
+     * Replaces any previously registered message callback. The callback is
+     * invoked on the logging thread.
+     *
+     * @param callback Function to invoke. Pass @c nullptr to clear.
+     */
+    static void SetOnMessage(LogMessageCallback callback);
+
+    /**
+     * @brief Registers a callback invoked when any logger's severity level changes.
+     * @param callback Function to invoke. Pass @c nullptr to clear.
+     */
+    static void SetOnLevelChange(LevelChangeCallback callback);
+
+    /**
+     * @brief Registers a callback invoked after any flush operation.
+     * @param callback Function to invoke. Pass @c nullptr to clear.
+     */
+    static void SetOnFlush(FlushCallback callback);
+
+    /**
+     * @brief Registers a callback invoked at the start of @ref Shutdown.
+     * @param callback Function to invoke. Pass @c nullptr to clear.
+     */
+    static void SetOnShutdown(LifecycleCallback callback);
+
+    // ============================================================ //
+    //                  LOGGER LIFECYCLE MANAGEMENT                 //
+    // ============================================================ //
+
     /**
      * @brief Returns the named logger associated with @p name, creating it on
      *        first use if necessary.
@@ -147,10 +207,6 @@ public:
      * @throws std::logic_error if called before @ref Init.
      */
     static Logger& Create(const LogConfig& config);
-
-    // ============================================================ //
-    //                  LOGGER LIFECYCLE MANAGEMENT                 //
-    // ============================================================ //
 
     /**
      * @brief Removes a named logger from the registry, releasing its sinks.
@@ -215,9 +271,9 @@ public:
      */
     [[nodiscard]] static Logger* Find(std::string_view name);
 
-    // =============================================================================
-    // Global log level control
-    // =============================================================================
+    // ============================================================ //
+    //                  GLOBAL LOG LEVEL CONTROL                    //
+    // ============================================================ //
 
     /**
      * @brief Sets the global minimum severity level for all loggers.
@@ -250,9 +306,20 @@ public:
      */
     static void SetConsoleLevel(LogLevel level);
 
-    // =============================================================================
-    // Flush control
-    // =============================================================================
+    /**
+     * @brief Sets the log level for a specific named logger.
+     *
+     * Overrides the logger's current level, filtering out messages below
+     * the specified severity for that logger only.
+     *
+     * @param name  Name of the logger to modify.
+     * @param level The new minimum severity level.
+     */
+    static void SetLevel(std::string_view name, LogLevel level);
+
+    // ============================================================ //
+    //                      FLUSH CONTROL                           //
+    // ============================================================ //
 
     /**
      * @brief Flushes all registered loggers.
