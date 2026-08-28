@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <limits>
 #include <sstream>
+#include <unordered_set>
 
 #if defined(VIGIL_ENABLE_STACK_TRACE)
     #if defined(VIGIL_PLATFORM_WINDOWS)
@@ -44,15 +45,18 @@ constexpr std::size_t kPointerWidth = sizeof(void*) * 2;
 ///        the tail of every stack trace and add no diagnostic value.
 [[nodiscard]] bool IsRuntimeFrame(std::string_view symbol)
 {
-    return symbol == "invoke_main"            ||
-           symbol == "__scrt_common_main"     ||
-           symbol == "__scrt_common_main_seh" ||
-           symbol == "mainCRTStartup"         ||
-           symbol == "BaseThreadInitThunk"    ||
-           symbol == "RtlUserThreadStart"     ||
-           symbol == "start"                  ||
-           symbol == "_start"                 ||
-           symbol == "__libc_start_main";
+    static const std::unordered_set<std::string_view> kRuntimeFrames = {
+        "invoke_main",
+        "__scrt_common_main",
+        "__scrt_common_main_seh",
+        "mainCRTStartup",
+        "BaseThreadInitThunk",
+        "RtlUserThreadStart",
+        "start",
+        "_start",
+        "__libc_start_main",
+    };
+    return kRuntimeFrames.count(symbol) != 0;
 }
 
 } // namespace
@@ -82,13 +86,10 @@ std::vector<StackFrame> StackTrace::CaptureFromAddresses(
         return {};
 
 #if defined(VIGIL_PLATFORM_WINDOWS)
-    // Windows: ResolveAddresses accepts const void* const* directly.
     return detail::ResolveAddresses(addresses, count);
 #else
     // POSIX: backtrace_symbols() (used in the fallback path) requires
-    // void* const*, so copy into a local mutable buffer. libbacktrace itself
-    // only needs uintptr_t values, but we pass through the same helper to
-    // keep a single code path.
+    // void* const*, so copy into a local mutable buffer.
     std::vector<void*> mutable_ptrs(count);
     for (std::size_t i = 0; i < count; ++i)
         mutable_ptrs[i] = const_cast<void*>(addresses[i]);
@@ -103,7 +104,7 @@ std::vector<StackFrame> StackTrace::CaptureFromAddresses(
 // Stub implementation — stack tracing disabled at compile time
 //------------------------------------------------------------------------------
 
-std::vector<StackFrame> StackTrace::Capture(unsigned, unsigned)       { return {}; }
+std::vector<StackFrame> StackTrace::Capture(unsigned, unsigned) { return {}; }
 std::vector<StackFrame> StackTrace::CaptureFromAddresses(const void* const*, std::size_t) { return {}; }
 
 #endif // VIGIL_ENABLE_STACK_TRACE
@@ -136,7 +137,6 @@ std::string StackTrace::Format(const std::vector<StackFrame>& frames)
         return "Stack trace: <all frames are runtime boilerplate>\n";
 
     std::ostringstream out;
-
     out << "Stack trace (" << visible.size() << " frames):\n\n";
 
     const int digits = static_cast<int>(
@@ -146,9 +146,8 @@ std::string StackTrace::Format(const std::vector<StackFrame>& frames)
     {
         const StackFrame& frame = *visible[i];
 
-        out << std::setw(digits)
-            << i
-            << "# "
+        out << std::setw(digits) << std::to_string(i) + "#"
+            << ' '
             << FormatAddress(frame.address);
 
         if (!frame.symbolName.empty())
