@@ -26,6 +26,8 @@ function(vigil_add_example name)
       vigil::vigil
   )
 
+  target_compile_features(vigil PUBLIC cxx_std_23)
+
   vigil_enable_warnings(${name})
   vigil_set_compiler_options(${name})
 
@@ -42,3 +44,4 @@ endfunction()
 vigil_add_example(logger_example)
 vigil_add_example(assert_example)
 vigil_add_example(scoped_example)
+vigil_add_example(hooks_example)
