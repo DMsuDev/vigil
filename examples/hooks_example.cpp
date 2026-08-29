@@ -13,6 +13,18 @@
 // Shows how to register and use various hooks in the LogSystem.
 
 // ============================================================================
+// Example Initialization Macro
+// ============================================================================
+
+#define VIGIL_EXAMPLE_INIT(name)               \
+    vigil::LogSystem::Init({                   \
+        .Name         = name,                  \
+        .LogDir       = "logs/hooks",          \
+        .ConsoleLevel = vigil::LogLevel::Trace \
+    });
+
+
+// ============================================================================
 // Helpers
 // ============================================================================
 
@@ -72,10 +84,7 @@ static void Demo_SetHooks()
 
     AppConsole console;
 
-    vigil::LogSystem::Init({
-        .Name    = "HooksDemo",
-        .Async   = false,
-    });
+    VIGIL_EXAMPLE_INIT("HooksDemo");
 
     vigil::LogSystem::SetHooks({
         .OnMessage = [&console](const vigil::LogMessageEvent& e) {
@@ -134,9 +143,7 @@ static void Demo_IndividualSetters()
 {
     std::cout << "\n========== Demo 2: Individual setters ==========\n";
 
-    vigil::LogSystem::Init({
-        .Name   = "IndividualDemo",
-    });
+    VIGIL_EXAMPLE_INIT("IndividualDemo");
 
     // Register only what you need
     vigil::LogSystem::SetOnMessage([](const vigil::LogMessageEvent& e) {
@@ -173,9 +180,7 @@ static void Demo_ClearHooks()
 {
     std::cout << "\n========== Demo 3: ClearHooks ==========\n";
 
-    vigil::LogSystem::Init({
-        .Name   = "ClearDemo",
-    });
+    VIGIL_EXAMPLE_INIT("ClearDemo");
 
     vigil::LogSystem::SetOnMessage([](const vigil::LogMessageEvent& e) {
         std::cout << "[Before clear] " << e.Message << "\n";
@@ -200,9 +205,7 @@ static void Demo_NamedLoggerLevelChange()
 {
     std::cout << "\n========== Demo 4: Named logger level change ==========\n";
 
-    vigil::LogSystem::Init({
-        .Name   = "NamedLevelDemo",
-    });
+    VIGIL_EXAMPLE_INIT("NamedLevelDemo");
 
     vigil::LogSystem::SetOnLevelChange([](const vigil::LevelChangeEvent& e) {
         if (e.LoggerName.empty())

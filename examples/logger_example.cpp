@@ -32,6 +32,17 @@ static const char* LevelName(vigil::LogLevel level)
 }
 
 // ============================================================================
+// Example Initialization Macro
+// ============================================================================
+
+#define VIGIL_EXAMPLE_INIT                     \
+    vigil::LogSystem::Init({                   \
+        .Name         = "Example",             \
+        .LogDir       = "logs/named",          \
+        .ConsoleLevel = vigil::LogLevel::Trace \
+    });
+
+// ============================================================================
 // Demos for various logging features
 // ============================================================================
 
@@ -75,10 +86,7 @@ static void Demo_BasicLogging()
 {
     std::cout << "\n========== Demo Basic Logging ==========\n";
 
-    vigil::LogSystem::Init({
-        .Name         = "Example",
-        .ConsoleLevel = vigil::LogLevel::Trace
-    });
+    VIGIL_EXAMPLE_INIT;
 
     vigil::Info("Thanks for trying Vigil version {}.{}.{} !",
         VIGIL_VERSION_MAJOR, VIGIL_VERSION_MINOR, VIGIL_VERSION_PATCH);
@@ -113,10 +121,7 @@ static void Demo_NamedLoggers()
 {
     std::cout << "\n========== Demo Named Loggers ==========\n";
 
-    vigil::LogSystem::Init({
-        .Name         = "Example",
-        .ConsoleLevel = vigil::LogLevel::Trace
-    });
+    VIGIL_EXAMPLE_INIT;
 
     // Simple named logger sharing the main file sink.
     auto& net = vigil::LogSystem::Create("Network");
@@ -152,10 +157,7 @@ static void Demo_RateLimiting()
 {
     std::cout << "\n========== Demo Rate Limiting ==========\n";
 
-    vigil::LogSystem::Init({
-        .Name         = "Example",
-        .ConsoleLevel = vigil::LogLevel::Trace
-    });
+    VIGIL_EXAMPLE_INIT;
 
     for (int i = 0; i < 5; ++i)
     {
@@ -181,10 +183,7 @@ static void Demo_LevelControl()
 {
     std::cout << "\n========== Demo Level Control ==========\n";
 
-    vigil::LogSystem::Init({
-        .Name         = "Example",
-        .ConsoleLevel = vigil::LogLevel::Trace
-    });
+    VIGIL_EXAMPLE_INIT;
 
     auto& logger = vigil::LogSystem::Main();
     vigil::Info("Current level: {}", LevelName(logger.GetLevel()));
@@ -212,10 +211,7 @@ static void Demo_FlushControl()
 {
     std::cout << "\n========== Demo Flush Control ==========\n";
 
-    vigil::LogSystem::Init({
-        .Name         = "Example",
-        .ConsoleLevel = vigil::LogLevel::Trace
-    });
+    VIGIL_EXAMPLE_INIT;
 
     auto& net = vigil::LogSystem::Create("Network");
     net.Info("Network logger ready.");
@@ -243,10 +239,7 @@ static void Demo_LifecycleHooks()
 {
     std::cout << "\n========== Demo Lifecycle Hooks ==========\n";
 
-    vigil::LogSystem::Init({
-        .Name         = "Example",
-        .ConsoleLevel = vigil::LogLevel::Trace
-    });
+    VIGIL_EXAMPLE_INIT;
 
     // Register hooks to observe logging events without modifying the pipeline.
     vigil::LogSystem::SetHooks({
@@ -290,10 +283,7 @@ static void Demo_LoggerLifecycle()
 {
     std::cout << "\n========== Demo Logger Lifecycle ==========\n";
 
-    vigil::LogSystem::Init({
-        .Name         = "Example",
-        .ConsoleLevel = vigil::LogLevel::Trace
-    });
+    VIGIL_EXAMPLE_INIT;
 
     auto& tmp = vigil::LogSystem::Create("Temporary");
     tmp.Info("Created a temporary logger.");

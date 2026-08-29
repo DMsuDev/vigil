@@ -26,6 +26,17 @@ static void Demo_EarlyReturn();
 static void Demo_ManualScope();
 
 // ============================================================================
+// Example Initialization Macro
+// ============================================================================
+
+#define VIGIL_EXAMPLE_INIT                     \
+    vigil::LogSystem::Init({                   \
+        .Name         = "ScopedExample",       \
+        .LogDir       = "logs/scoped",         \
+        .ConsoleLevel = vigil::LogLevel::Trace \
+    });
+
+// ============================================================================
 // Entry point
 // ============================================================================
 
@@ -65,10 +76,7 @@ static void Demo_FunctionScope()
 {
     std::cout << "\n========== Demo: Function Scope ==========\n";
 
-    vigil::LogSystem::Init({
-        .Name         = "ScopedExample",
-        .ConsoleLevel = vigil::LogLevel::Trace
-    });
+    VIGIL_EXAMPLE_INIT;
 
     {
         VIGIL_SCOPED_LOG_FUNCTION();
@@ -94,10 +102,7 @@ static void Demo_NestedScopes()
 {
     std::cout << "\n========== Demo: Nested Scopes ==========\n";
 
-    vigil::LogSystem::Init({
-        .Name         = "ScopedExample",
-        .ConsoleLevel = vigil::LogLevel::Trace
-    });
+    VIGIL_EXAMPLE_INIT;
 
     {
         VIGIL_SCOPED_LOG_FUNCTION();
@@ -137,10 +142,7 @@ static void Demo_ExplicitLevel()
 {
     std::cout << "\n========== Demo: Explicit Level ==========\n";
 
-    vigil::LogSystem::Init({
-        .Name         = "ScopedExample",
-        .ConsoleLevel = vigil::LogLevel::Trace
-    });
+    VIGIL_EXAMPLE_INIT;
 
     {
         VIGIL_SCOPED_LOG_FUNCTION_LEVEL(vigil::LogLevel::Warn);
@@ -166,10 +168,7 @@ static void Demo_EarlyReturn()
 {
     std::cout << "\n========== Demo: Early Return ==========\n";
 
-    vigil::LogSystem::Init({
-        .Name         = "ScopedExample",
-        .ConsoleLevel = vigil::LogLevel::Trace
-    });
+    VIGIL_EXAMPLE_INIT;
 
     const bool hasError = true;
 
@@ -206,10 +205,7 @@ static void Demo_ManualScope()
 {
     std::cout << "\n========== Demo: Manual Scope ==========\n";
 
-    vigil::LogSystem::Init({
-        .Name         = "ScopedExample",
-        .ConsoleLevel = vigil::LogLevel::Trace
-    });
+    VIGIL_EXAMPLE_INIT;
 
     VIGIL_SCOPE_BEGIN("Pipeline");
 
