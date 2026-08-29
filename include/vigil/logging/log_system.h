@@ -57,6 +57,12 @@ struct LogSystemConfig
     /// @brief Name assigned to the main logger.
     std::string Name = "Main";
 
+    /// @brief Directory where log files are written.
+    /// Created automatically if it does not exist.
+    /// Combined with @ref LogFile to form the final path: `LogDir / LogFile`.
+    /// If empty, log files are written to the current working directory.
+    std::string LogDir;
+
     /// @brief Path to the main log file. Defaults to `Name + ".log"` if left empty.
     std::string LogFile;
 
@@ -74,6 +80,13 @@ struct LogConfig
 {
     /// @brief Name assigned to the logger.
     std::string Name = "New";
+
+    /// @brief Directory where the log file is written.
+    /// Created automatically if it does not exist.
+    /// Combined with @ref LogFile to form the final path: `LogDir / LogFile`.
+    /// If empty, inherits the directory configured in @ref LogSystemConfig, or
+    /// falls back to the current working directory.
+    std::string LogDir;
 
     /// @brief Path to the output log file. Defaults to `Name + ".log"` if left empty.
     std::string LogFile;
