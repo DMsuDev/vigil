@@ -3,10 +3,7 @@
 //  See LICENSE file in the project root for full license text.
 // -----------------------------------------------------------------------------
 
-// This translation unit is compiled only on Windows.
-// It must never be added to the build on POSIX platforms.
-
-#include "stack_trace_win.h"
+#include "stack_trace_backend.h"
 
 #include <Windows.h>
 #include <DbgHelp.h>
@@ -16,106 +13,190 @@
 
 namespace vigil::detail {
 
+//==============================================================================
+// DbgHelp initialization
+//==============================================================================
+
 namespace {
 
-// ---------------------------------------------------------------------------
-// DbgHelp initialization
-//
 // SymInitialize() must be called once per process before any Sym* functions.
-// DbgHelp uses shared global state and is not thread-safe; s_mutex serializes
-// all resolution calls across threads.
-// ---------------------------------------------------------------------------
+// DbgHelp is not thread-safe; s_mutex serializes all resolution calls.
 
-static std::mutex         s_mutex;
-static std::once_flag     s_initFlag;
-static std::atomic<bool>  s_initialized{false};
+std::mutex        s_mutex;
+std::once_flag    s_initFlag;
+std::atomic<bool> s_initialized{false};
 
 void EnsureDbgHelpReady()
 {
-    std::call_once(s_initFlag, []() {
+    std::call_once(s_initFlag, []()
+    {
         SymSetOptions(SYMOPT_LOAD_LINES | SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS);
         const bool ok = (SymInitialize(GetCurrentProcess(), nullptr, TRUE) != FALSE);
         s_initialized.store(ok, std::memory_order_release);
     });
 }
 
-// ---------------------------------------------------------------------------
-// Single-address resolution
-//
-// Pre-conditions: DbgHelp is initialized, s_mutex is held by the caller.
-// ---------------------------------------------------------------------------
+} // namespace
 
-[[nodiscard]] StackFrame ResolveOne(HANDLE process, const void* address)
+//==============================================================================
+// Symbol name cleanup
+//==============================================================================
+
+namespace {
+
+// Removes MSVC calling convention decorators that SymFromAddr occasionally
+// prepends even when SYMOPT_UNDNAME is active (e.g. "__cdecl ").
+void StripCallingConvention(std::string& name)
 {
-    StackFrame frame;
-    frame.address = reinterpret_cast<std::uintptr_t>(address);
-
-    // ---- Symbol name -------------------------------------------------------
-    constexpr ULONG       kMaxNameLen = 512;
-    constexpr std::size_t kBufSize    = sizeof(SYMBOL_INFO) + kMaxNameLen;
-
-    alignas(SYMBOL_INFO) char symbolBuffer[kBufSize] = {};
-    auto* sym         = reinterpret_cast<SYMBOL_INFO*>(symbolBuffer);
-    sym->SizeOfStruct = sizeof(SYMBOL_INFO);
-    sym->MaxNameLen   = kMaxNameLen;
-
-    DWORD64 symDisplacement = 0;
-    if (SymFromAddr(process, frame.address, &symDisplacement, sym))
+    for (std::string_view decorator : {
+        "__cdecl ", "__stdcall ", "__fastcall ", "__vectorcall " })
     {
-        frame.symbolName.assign(sym->Name, sym->NameLen);
-
-        // Strip MSVC calling-convention decorators (e.g. "__cdecl ").
-        constexpr std::string_view kCdecl = "__cdecl ";
-        if (const auto pos = frame.symbolName.find(kCdecl); pos != std::string::npos)
-            frame.symbolName.erase(pos, kCdecl.size());
+        if (const auto pos = name.find(decorator); pos != std::string::npos)
+        {
+            name.erase(pos, decorator.size());
+            break; // at most one decorator per symbol
+        }
     }
-
-    // ---- Source location ---------------------------------------------------
-    IMAGEHLP_LINE64 lineInfo{};
-    lineInfo.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
-    DWORD lineDisplacement = 0;
-    if (SymGetLineFromAddr64(process, frame.address, &lineDisplacement, &lineInfo))
-    {
-        frame.fileName = lineInfo.FileName;
-        frame.line     = static_cast<std::uint32_t>(lineInfo.LineNumber);
-        // DbgHelp does not expose column numbers; leave frame.column = 0.
-    }
-
-    // DbgHelp does not natively expand inlined frames in the same way DWARF
-    // does via backtrace_pcinfo(). SymAddrIncludeInlineTrace() / SymQueryInlineTrace()
-    // exist on Windows 8+ and could be added here in the future.
-    frame.isInlined = false;
-
-    return frame;
 }
 
 } // namespace
 
-// ---------------------------------------------------------------------------
-// Public Windows API (declared in stack_trace_win.h)
-// ---------------------------------------------------------------------------
+//==============================================================================
+// Frame resolution
+//==============================================================================
+
+namespace {
+
+// Resolves a single PC to one StackFrame via SymFromAddr + SymGetLineFromAddr64.
+// Pre-conditions: DbgHelp initialized, s_mutex held by caller.
+[[nodiscard]] StackFrame ResolvePhysical(HANDLE process, DWORD64 address)
+{
+    StackFrame frame;
+    frame.address   = static_cast<std::uintptr_t>(address);
+    frame.isInlined = false;
+
+    // ---- Symbol name -------------------------------------------------------
+
+    constexpr ULONG       kMaxNameLen = 512;
+    constexpr std::size_t kBufSize    = sizeof(SYMBOL_INFO) + kMaxNameLen;
+
+    alignas(SYMBOL_INFO) char buf[kBufSize] = {};
+    auto* sym         = reinterpret_cast<SYMBOL_INFO*>(buf);
+    sym->SizeOfStruct = sizeof(SYMBOL_INFO);
+    sym->MaxNameLen   = kMaxNameLen;
+
+    DWORD64 symDisp = 0;
+    if (SymFromAddr(process, address, &symDisp, sym))
+    {
+        frame.symbolName.assign(sym->Name, sym->NameLen);
+        StripCallingConvention(frame.symbolName);
+    }
+
+    // ---- Source location ---------------------------------------------------
+
+    IMAGEHLP_LINE64 line{};
+    line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+    DWORD lineDisp    = 0;
+    if (SymGetLineFromAddr64(process, address, &lineDisp, &line))
+    {
+        frame.fileName = line.FileName;
+        frame.line     = static_cast<std::uint32_t>(line.LineNumber);
+        // DbgHelp does not expose column numbers; frame.column stays 0.
+    }
+
+    return frame;
+}
+
+// Resolves one PC into its physical frame plus any inlined call sites via
+// SymFromInlineContext / SymGetLineFromInlineContext (DbgHelp 6.x / Win8+).
+// Falls back to ResolvePhysical() when no inline frames are present.
+[[nodiscard]] std::vector<StackFrame> ResolveWithInlines(
+    HANDLE  process,
+    DWORD64 address)
+{
+    std::vector<StackFrame> result;
+
+    const DWORD inlineCount = SymAddrIncludeInlineTrace(process, address);
+    if (inlineCount == 0)
+    {
+        result.push_back(ResolvePhysical(process, address));
+        return result;
+    }
+
+    DWORD context  = 0;
+    DWORD frameIdx = 0;
+    if (!SymQueryInlineTrace(process, address, 0, address, address, &context, &frameIdx))
+    {
+        result.push_back(ResolvePhysical(process, address));
+        return result;
+    }
+
+    result.reserve(static_cast<std::size_t>(inlineCount) + 1u);
+
+    // Emit innermost inlined frames first — matches POSIX ordering where
+    // inlined call sites precede their physical parent frame.
+    for (DWORD i = 0; i < inlineCount; ++i)
+    {
+        StackFrame inlined;
+        inlined.address   = static_cast<std::uintptr_t>(address);
+        inlined.isInlined = true;
+
+        constexpr ULONG kMaxNameLen = 512;
+        alignas(SYMBOL_INFO) char buf[sizeof(SYMBOL_INFO) + kMaxNameLen] = {};
+        auto* sym         = reinterpret_cast<SYMBOL_INFO*>(buf);
+        sym->SizeOfStruct = sizeof(SYMBOL_INFO);
+        sym->MaxNameLen   = kMaxNameLen;
+
+        DWORD64 symDisp = 0;
+        if (SymFromInlineContext(process, address, context, &symDisp, sym))
+        {
+            inlined.symbolName.assign(sym->Name, sym->NameLen);
+            StripCallingConvention(inlined.symbolName);
+        }
+
+        IMAGEHLP_LINE64 line{};
+        line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+        DWORD lineDisp    = 0;
+        if (SymGetLineFromInlineContext(process, address, context, 0, &lineDisp, &line))
+        {
+            inlined.fileName = line.FileName;
+            inlined.line     = static_cast<std::uint32_t>(line.LineNumber);
+        }
+
+        result.push_back(std::move(inlined));
+        ++context;
+    }
+
+    result.push_back(ResolvePhysical(process, address));
+    return result;
+}
+
+} // namespace
+
+//==============================================================================
+// Public Windows API
+//==============================================================================
 
 std::vector<StackFrame> CaptureFrames(unsigned framesToSkip, unsigned maxFrames)
 {
-    // RtlCaptureStackBackTrace is documented to reliably return at most 62
-    // frames when framesToSkip is non-zero on older Windows versions.
-    constexpr unsigned kPlatformMax = 62u;
-    const DWORD toCapture = static_cast<DWORD>(std::min(maxFrames, kPlatformMax));
+    constexpr unsigned kOwnFrames   = 1u;  // CaptureFrames() itself adds one frame to skip
+    constexpr unsigned kAbsoluteMax = 128u;
 
-    std::vector<void*> raw(toCapture);
-
-    // +1 to exclude CaptureFrames() itself.
-    const unsigned skip = (framesToSkip < std::numeric_limits<unsigned>::max())
-                        ? framesToSkip + 1u
+    const unsigned skip = (framesToSkip <= std::numeric_limits<unsigned>::max() - kOwnFrames)
+                        ? framesToSkip + kOwnFrames
                         : framesToSkip;
 
+    const DWORD toCapture = static_cast<DWORD>(std::min(maxFrames, kAbsoluteMax));
+
+    // Store as const void* to avoid reinterpret_cast at the ResolveAddresses call site.
+    std::vector<const void*> raw(toCapture);
     const USHORT captured = CaptureStackBackTrace(
         static_cast<DWORD>(skip),
         toCapture,
-        raw.data(),
+        const_cast<void**>(raw.data()),
         nullptr);
 
-    return ResolveAddresses(raw.data(), captured);
+    return ResolveAddresses(raw.data(), static_cast<std::size_t>(captured));
 }
 
 std::vector<StackFrame> ResolveAddresses(
@@ -128,7 +209,7 @@ std::vector<StackFrame> ResolveAddresses(
     EnsureDbgHelpReady();
     if (!s_initialized.load(std::memory_order_acquire))
     {
-        // DbgHelp failed to initialize; return frames with raw addresses only.
+        // DbgHelp failed to initialize — emit raw-address-only frames.
         std::vector<StackFrame> frames;
         frames.reserve(count);
         for (std::size_t i = 0; i < count; ++i)
@@ -148,7 +229,12 @@ std::vector<StackFrame> ResolveAddresses(
     std::lock_guard<std::mutex> lock(s_mutex);
 
     for (std::size_t i = 0; i < count; ++i)
-        frames.push_back(ResolveOne(process, addresses[i]));
+    {
+        const auto address  = reinterpret_cast<DWORD64>(addresses[i]);
+        auto       expanded = ResolveWithInlines(process, address);
+        for (auto& f : expanded)
+            frames.push_back(std::move(f));
+    }
 
     return frames;
 }

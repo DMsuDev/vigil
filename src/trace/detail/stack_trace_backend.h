@@ -5,8 +5,7 @@
 
 #pragma once
 
-// Internal header — must never be included from any public Vigil header.
-// Included only by stack_trace.cpp (the dispatcher) on POSIX builds.
+// The matching .cpp is selected at build time by CMake based on platform.
 
 #include "trace/stack_trace.h"
 
@@ -17,13 +16,16 @@
 namespace vigil::detail {
 
 /**
- * @brief Captures the current call stack and resolves it via libbacktrace.
+ * @brief Captures the current call stack using the platform-native backend.
  *
- * Async-signal-safe capture (backtrace()) + DWARF resolution (libbacktrace).
+ * - Windows: CaptureStackBackTrace() + DbgHelp (PDB + inline frames)
+ * - Linux:   backtrace() + libbacktrace (DWARF + inline frames)
+ * - macOS:   backtrace() + libbacktrace (DWARF + inline frames)
+ *
  * The +1 skip for this function itself is applied internally.
  *
  * @param framesToSkip Frames to omit above this function.
- * @param maxFrames    Maximum number of frames to capture.
+ * @param maxFrames    Maximum frames to capture, capped to an internal safety ceiling.
  */
 [[nodiscard]] std::vector<StackFrame> CaptureFrames(
     unsigned framesToSkip,
@@ -32,14 +34,16 @@ namespace vigil::detail {
 /**
  * @brief Resolves an array of raw instruction pointers into StackFrames.
  *
- * Not async-signal-safe. Designed for the watchdog thread. Inlined frames
- * are expanded inline after their physical parent frame.
+ * Not async-signal-safe. Designed for the watchdog thread pattern where a
+ * signal handler captures raw PCs and posts them for resolution here.
  *
- * @param addresses Non-const pointer array (backtrace_symbols() requirement).
+ * Inlined frames are expanded inline after their physical parent frame.
+ *
+ * @param addresses Raw instruction pointers to resolve.
  * @param count     Number of entries in @p addresses.
  */
 [[nodiscard]] std::vector<StackFrame> ResolveAddresses(
-    void* const* addresses,
-    std::size_t  count);
+    const void* const* addresses,
+    std::size_t        count);
 
 } // namespace vigil::detail

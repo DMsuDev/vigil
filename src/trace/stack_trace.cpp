@@ -15,20 +15,20 @@
 #include <unordered_set>
 
 #if defined(VIGIL_ENABLE_STACK_TRACE)
-    #if defined(VIGIL_PLATFORM_WINDOWS)
-        #include "detail/stack_trace_win.h"
-    #else
-        #include "detail/stack_trace_posix.h"
-    #endif
+    #include "detail/stack_trace_backend.h"
 #endif
 
 namespace vigil {
+
+//==============================================================================
+// Internal helpers
+//==============================================================================
 
 namespace {
 
 constexpr std::size_t kPointerWidth = sizeof(void*) * 2;
 
-/// @brief Formats a memory address as a zero-padded uppercase hex string.
+// Formats a raw address as zero-padded uppercase hex: "0x00007FF7F6E67B6B".
 [[nodiscard]] std::string FormatAddress(std::uintptr_t address)
 {
     std::ostringstream oss;
@@ -41,17 +41,58 @@ constexpr std::size_t kPointerWidth = sizeof(void*) * 2;
     return oss.str();
 }
 
-/// @brief Returns true for standard runtime entry-point frames that appear at
-///        the tail of every stack trace and add no diagnostic value.
+// Cleans a demangled symbol name for human-readable output — GDB style:
+//   "<lambda_N>::operator()" → "<lambda>()"
+//   "(anonymous namespace)::"  → ""
+//   Appends "()" if the symbol doesn't already end with one.
+[[nodiscard]] std::string SimplifySymbol(std::string_view symbol)
+{
+    std::string result{symbol};
+
+    // "<lambda_N>::operator()" → "<lambda>"
+    constexpr std::string_view kLambdaOp = ">::operator()";
+    std::size_t pos = result.find(kLambdaOp);
+    while (pos != std::string::npos)
+    {
+        const std::size_t open = result.rfind('<', pos);
+        if (open == std::string::npos) break;
+        result.replace(open, pos + kLambdaOp.size() - open, "<lambda>");
+        pos = result.find(kLambdaOp, open + 8u); // 8 = len("<lambda>")
+    }
+
+    // "(anonymous namespace)::" → ""
+    constexpr std::string_view kAnonNs = "(anonymous namespace)::";
+    pos = result.find(kAnonNs);
+    while (pos != std::string::npos)
+    {
+        result.erase(pos, kAnonNs.size());
+        pos = result.find(kAnonNs, pos);
+    }
+
+    // Append "()" — matches GDB convention for function symbols.
+    if (!result.empty() && !result.ends_with(')'))
+        result += "()";
+
+    return result;
+}
+
+// Returns true for standard runtime entry-point symbols that appear at the
+// tail of every stack trace and carry no diagnostic value.
+//
+// NOTE: stops at the first match — runtime frames are always a contiguous
+// block at the bottom. A user symbol colliding with a runtime name would be
+// incorrectly trimmed; accepted trade-off given the near-zero probability.
 [[nodiscard]] bool IsRuntimeFrame(std::string_view symbol)
 {
     static const std::unordered_set<std::string_view> kRuntimeFrames = {
+        // Windows CRT / Win32
         "invoke_main",
         "__scrt_common_main",
         "__scrt_common_main_seh",
         "mainCRTStartup",
         "BaseThreadInitThunk",
         "RtlUserThreadStart",
+        // POSIX / glibc
         "start",
         "_start",
         "__libc_start_main",
@@ -61,18 +102,17 @@ constexpr std::size_t kPointerWidth = sizeof(void*) * 2;
 
 } // namespace
 
-// ============================================================================
-// StackTrace — public implementation
-// ============================================================================
+//==============================================================================
+// StackTrace::Capture / CaptureFromAddresses
+//==============================================================================
 
 #if defined(VIGIL_ENABLE_STACK_TRACE)
 
 std::vector<StackFrame> StackTrace::Capture(unsigned framesToSkip, unsigned maxFrames)
 {
-    // +1 to exclude this function from the output. The backend applies its own
-    // +1 for CaptureFrames() itself, so the total overhead is exactly 2 frames.
-    const unsigned skip = (framesToSkip < std::numeric_limits<unsigned>::max())
-                        ? framesToSkip + 1u
+    constexpr unsigned kOwnFrames = 1u; // Capture() itself adds one frame/level to skip
+    const unsigned skip = (framesToSkip <= std::numeric_limits<unsigned>::max() - kOwnFrames)
+                        ? framesToSkip + kOwnFrames
                         : framesToSkip;
 
     return detail::CaptureFrames(skip, maxFrames);
@@ -85,33 +125,19 @@ std::vector<StackFrame> StackTrace::CaptureFromAddresses(
     if (!addresses || count == 0)
         return {};
 
-#if defined(VIGIL_PLATFORM_WINDOWS)
     return detail::ResolveAddresses(addresses, count);
-#else
-    // POSIX: backtrace_symbols() (used in the fallback path) requires
-    // void* const*, so copy into a local mutable buffer.
-    std::vector<void*> mutable_ptrs(count);
-    for (std::size_t i = 0; i < count; ++i)
-        mutable_ptrs[i] = const_cast<void*>(addresses[i]);
-
-    return detail::ResolveAddresses(mutable_ptrs.data(), count);
-#endif
 }
 
 #else // !VIGIL_ENABLE_STACK_TRACE
 
-//------------------------------------------------------------------------------
-// Stub implementation — stack tracing disabled at compile time
-//------------------------------------------------------------------------------
-
-std::vector<StackFrame> StackTrace::Capture(unsigned, unsigned) { return {}; }
+std::vector<StackFrame> StackTrace::Capture(unsigned, unsigned)                           { return {}; }
 std::vector<StackFrame> StackTrace::CaptureFromAddresses(const void* const*, std::size_t) { return {}; }
 
 #endif // VIGIL_ENABLE_STACK_TRACE
 
-//------------------------------------------------------------------------------
-// Format() — shared across all platforms and both enabled/disabled builds
-//------------------------------------------------------------------------------
+//==============================================================================
+// StackTrace::Format
+//==============================================================================
 
 std::string StackTrace::Format(const std::vector<StackFrame>& frames)
 {
@@ -119,10 +145,14 @@ std::string StackTrace::Format(const std::vector<StackFrame>& frames)
     (void)frames;
     return "Stack trace: <disabled by compile options>\n";
 #else
+
     if (frames.empty())
         return "Stack trace: <empty>\n";
 
-    // Collect pointers to visible frames, trimming the runtime boilerplate tail.
+    // -------------------------------------------------------------------------
+    // Trim runtime boilerplate from the tail
+    // -------------------------------------------------------------------------
+
     std::vector<const StackFrame*> visible;
     visible.reserve(frames.size());
 
@@ -133,37 +163,48 @@ std::string StackTrace::Format(const std::vector<StackFrame>& frames)
         visible.push_back(&frame);
     }
 
+    // Also trim trailing unresolved frames (no symbol, no file)
+    while (!visible.empty() &&
+           visible.back()->symbolName.empty() &&
+           visible.back()->fileName.empty())
+    {
+        visible.pop_back();
+    }
+
     if (visible.empty())
         return "Stack trace: <all frames are runtime boilerplate>\n";
+
+    // -------------------------------------------------------------------------
+    // Render: GDB style: "#N addr in symbol() at file:line"
+    // -------------------------------------------------------------------------
 
     std::ostringstream out;
     out << "Stack trace (" << visible.size() << " frames):\n\n";
 
+    // Index field width grows naturally with frame count — no forced minimum.
     const int digits = static_cast<int>(
-        std::max<std::size_t>(2u, std::to_string(visible.size()).length()));
+        std::to_string(visible.size() > 0u ? visible.size() - 1u : 0u).length());
 
     for (std::size_t i = 0; i < visible.size(); ++i)
     {
         const StackFrame& frame = *visible[i];
 
-        out << std::setw(digits) << std::to_string(i) + "#"
+        out << '#' << std::setw(digits) << std::setfill(' ') << i
             << ' '
             << FormatAddress(frame.address);
 
         if (!frame.symbolName.empty())
         {
-            out << " in " << frame.symbolName;
-
+            out << " in " << SimplifySymbol(frame.symbolName);
             if (frame.isInlined)
-                out << " (inlined)";
+                out << " [inlined]";
         }
 
         if (!frame.fileName.empty())
         {
             out << " at "
                 << detail::FormatFilePath(frame.fileName, 2u)
-                << ':'
-                << frame.line;
+                << ':' << frame.line;
 
             if (frame.column > 0)
                 out << ':' << frame.column;
@@ -174,14 +215,21 @@ std::string StackTrace::Format(const std::vector<StackFrame>& frames)
     }
 
     return out.str();
-#endif
+
+#endif // VIGIL_ENABLE_STACK_TRACE
 }
+
+//==============================================================================
+// StackTrace::CaptureAndFormat
+//==============================================================================
 
 std::string StackTrace::CaptureAndFormat(unsigned framesToSkip, unsigned maxFrames)
 {
-    const unsigned adjusted = (framesToSkip < std::numeric_limits<unsigned>::max())
-                            ? framesToSkip + 1u
+    constexpr unsigned kOwnFrames = 1u; // CaptureAndFormat() itself adds one frame/level to skip
+    const unsigned adjusted = (framesToSkip <= std::numeric_limits<unsigned>::max() - kOwnFrames)
+                            ? framesToSkip + kOwnFrames
                             : framesToSkip;
+
     return Format(Capture(adjusted, maxFrames));
 }
 

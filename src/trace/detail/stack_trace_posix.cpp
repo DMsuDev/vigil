@@ -3,14 +3,11 @@
 //  See LICENSE file in the project root for full license text.
 // -----------------------------------------------------------------------------
 
-// This translation unit is compiled only on POSIX platforms (Linux / macOS).
-// It must never be added to the build on Windows.
+#include "stack_trace_backend.h"
 
-#include "stack_trace_posix.h"
-
-#include <backtrace.h>    // libbacktrace — vendored via FetchContent
-#include <cxxabi.h>       // abi::__cxa_demangle — part of libstdc++ / libc++
-#include <execinfo.h>     // backtrace() — async-signal-safe raw capture
+#include <backtrace.h>    // libbacktrace
+#include <cxxabi.h>       // abi::__cxa_demangle
+#include <execinfo.h>     // backtrace()
 #include <cstdlib>
 #include <cstring>
 #include <memory>
@@ -18,48 +15,54 @@
 
 namespace vigil::detail {
 
+//==============================================================================
+// libbacktrace state
+//==============================================================================
+
 namespace {
 
-// ---------------------------------------------------------------------------
-// libbacktrace state
+// backtrace_create_state() must be called once per process. The resulting
+// state is not thread-safe for concurrent backtrace_pcinfo() calls with
+// threaded=0; all resolution is serialized via BacktraceState::mutex.
 //
-// backtrace_create_state() must be called once per process. The state object
-// is not thread-safe for concurrent calls to backtrace_pcinfo(); we serialize
-// all resolution calls with s_mutex.
-//
-// error_callback receives the error string and an integer error code. We
-// intentionally swallow errors here: if libbacktrace cannot open the binary
-// or locate DWARF data, the symbol will remain as "<unknown>" rather than
-// crashing the crash handler.
-// ---------------------------------------------------------------------------
+// Errors are swallowed intentionally: if libbacktrace cannot locate the binary
+// or its DWARF data, symbols remain empty rather than aborting.
 
 void OnBacktraceError(void* /*data*/, const char* /*msg*/, int /*errnum*/) {}
 
-struct BacktraceState {
+struct BacktraceState
+{
     backtrace_state* state = nullptr;
     std::mutex       mutex;
 
     BacktraceState()
     {
-        // nullptr program name → libbacktrace reads /proc/self/exe (Linux) or
-        // _NSGetExecutablePath() (macOS) to locate the binary and its DWARF.
-        // threaded = 0: we manage our own locking via s_mutex.
-        state = backtrace_create_state(nullptr, /*threaded=*/0,
-                                       OnBacktraceError, /*data=*/nullptr);
+        // nullptr → libbacktrace locates the binary automatically:
+        //   Linux: /proc/self/exe
+        //   macOS: _NSGetExecutablePath()
+        // threaded=0: we serialize access ourselves via mutex above.
+        state = backtrace_create_state(
+            nullptr, /*threaded=*/0, OnBacktraceError, /*data=*/nullptr);
     }
+
+    // Intentional leak — destructor never runs so the state remains valid
+    // through process termination. Suppress with .lsan-suppressions when
+    // running under LSan / ASan if needed.
 };
 
 BacktraceState& GetState()
 {
-    // Constructed once at first call; destructor never runs (intentional:
-    // we may need the state right up until process termination).
     static BacktraceState s;
     return s;
 }
 
-// ---------------------------------------------------------------------------
+} // namespace
+
+//==============================================================================
 // Itanium ABI demangling
-// ---------------------------------------------------------------------------
+//==============================================================================
+
+namespace {
 
 [[nodiscard]] std::string Demangle(const char* mangled)
 {
@@ -70,24 +73,30 @@ BacktraceState& GetState()
     std::unique_ptr<char, decltype(&free)> demangled(
         abi::__cxa_demangle(mangled, nullptr, nullptr, &status), &free);
 
-    return (status == 0 && demangled) ? std::string(demangled.get()) : std::string(mangled);
+    return (status == 0 && demangled)
+        ? std::string(demangled.get())
+        : std::string(mangled);
 }
 
-// ---------------------------------------------------------------------------
-// libbacktrace callback state used during a single resolution pass
-//
-// backtrace_pcinfo() calls FullCallback once per logical frame (including
-// inlined frames at the same PC). We collect them all into an output vector.
-// ---------------------------------------------------------------------------
+} // namespace
 
-struct ResolutionContext {
-    std::vector<StackFrame>* output;  // non-owning, points into caller's vector
-    std::uintptr_t           address; // physical PC being resolved
+//==============================================================================
+// libbacktrace callbacks
+//==============================================================================
+
+namespace {
+
+// backtrace_pcinfo() fires FullCallback once per logical frame at a given PC,
+// including inlined frames. ErrorCallback fires when DWARF resolution fails —
+// we still emit a minimal frame carrying the raw address.
+
+struct ResolutionContext
+{
+    std::vector<StackFrame>* output;     // non-owning — points into caller's vector
+    std::uintptr_t           address;    // physical PC being resolved
+    bool                     firstFrame; // true for the physical frame, false for inlined
 };
 
-// Called by libbacktrace once per logical frame at a given PC.
-// The first call is the innermost (outermost logical) frame; subsequent calls
-// are inlined call sites, in order from innermost to outermost.
 int FullCallback(
     void*       data,
     uintptr_t   /*pc*/,
@@ -103,97 +112,119 @@ int FullCallback(
     frame.fileName   = filename ? filename : "";
     frame.line       = lineno > 0 ? static_cast<std::uint32_t>(lineno) : 0u;
     frame.column     = 0u; // libbacktrace does not provide column numbers
-    // The first frame emitted for this PC is the physical frame; all
-    // subsequent ones at the same PC are inlined call sites.
-    frame.isInlined  = !ctx->output->empty() &&
-                       ctx->output->back().address == ctx->address;
+
+    // First callback for this PC = physical frame; all subsequent = inlined.
+    frame.isInlined = !ctx->firstFrame;
+    ctx->firstFrame = false;
 
     ctx->output->push_back(std::move(frame));
     return 0; // 0 = continue iteration
 }
 
-// Called by libbacktrace when it cannot resolve a PC through DWARF.
-// We emit a minimal frame with just the raw address so the caller still
-// has a record of the instruction pointer.
 void ErrorCallback(void* data, const char* /*msg*/, int /*errnum*/)
 {
     auto* ctx = static_cast<ResolutionContext*>(data);
 
     StackFrame frame;
-    frame.address    = ctx->address;
-    frame.isInlined  = false;
+    frame.address   = ctx->address;
+    frame.isInlined = false;
     ctx->output->push_back(std::move(frame));
 }
 
-// ---------------------------------------------------------------------------
-// ResolveOne — resolves a single PC into one or more StackFrames.
-//
-// Appends to @p output. Must be called with the state mutex held.
-// ---------------------------------------------------------------------------
+} // namespace
 
+//==============================================================================
+// Internal resolution helpers
+//==============================================================================
+
+namespace {
+
+// Resolves a single PC into one or more StackFrames via libbacktrace.
+// Must be called with BacktraceState::mutex held.
 void ResolveOne(
     backtrace_state*         state,
     uintptr_t                pc,
     std::vector<StackFrame>& output)
 {
-    ResolutionContext ctx{&output, static_cast<std::uintptr_t>(pc)};
+    ResolutionContext ctx{&output, static_cast<std::uintptr_t>(pc), /*firstFrame=*/true};
     backtrace_pcinfo(state, pc, FullCallback, ErrorCallback, &ctx);
+}
+
+// Fallback when libbacktrace failed to initialize. Uses backtrace_symbols()
+// for best-effort symbol names; falls back to raw addresses if that fails too.
+[[nodiscard]] std::vector<StackFrame> FallbackResolve(
+    const void* const* addresses,
+    std::size_t        count)
+{
+    char** syms = ::backtrace_symbols(
+        const_cast<void* const*>(addresses),
+        static_cast<int>(count));
+
+    std::vector<StackFrame> frames;
+    frames.reserve(count);
+
+    for (std::size_t i = 0; i < count; ++i)
+    {
+        StackFrame f;
+        f.address    = reinterpret_cast<std::uintptr_t>(addresses[i]);
+        // syms[i]: "module(mangled+offset) [address]" — demangle if present.
+        f.symbolName = syms ? Demangle(syms[i]) : "";
+        frames.push_back(std::move(f));
+    }
+
+    if (syms)
+        free(syms);
+
+    return frames;
 }
 
 } // namespace
 
-// ---------------------------------------------------------------------------
-// Public POSIX API (declared in stack_trace_posix.h)
-// ---------------------------------------------------------------------------
+//==============================================================================
+// Public POSIX API
+//==============================================================================
 
 std::vector<StackFrame> CaptureFrames(unsigned framesToSkip, unsigned maxFrames)
 {
-    // Saturating add: skip CaptureFrames() itself (+1) without overflowing.
-    const unsigned skip = (framesToSkip < std::numeric_limits<unsigned>::max())
-                        ? framesToSkip + 1u
+    constexpr unsigned kOwnFrames    = 1u; // CaptureFrames() itself adds one frame to skip
+    constexpr unsigned kAbsoluteMax  = 128u;
+
+    const unsigned skip = (framesToSkip <= std::numeric_limits<unsigned>::max() - kOwnFrames)
+                        ? framesToSkip + kOwnFrames
                         : framesToSkip;
 
-    constexpr unsigned kAbsoluteMax = 256u;
     const unsigned totalToCapture = std::min(skip + maxFrames, kAbsoluteMax);
 
     std::vector<void*> raw(totalToCapture);
     const int captured = ::backtrace(raw.data(), static_cast<int>(raw.size()));
+
     if (captured <= 0 || static_cast<unsigned>(captured) <= skip)
         return {};
 
     const unsigned start = skip;
     const unsigned end   = std::min(static_cast<unsigned>(captured), start + maxFrames);
 
-    return ResolveAddresses(raw.data() + start, end - start);
+    return ResolveAddresses(
+        const_cast<const void* const*>(raw.data() + start),
+        end - start);
 }
 
 std::vector<StackFrame> ResolveAddresses(
-    void* const* addresses,
-    std::size_t  count)
+    const void* const* addresses,
+    std::size_t        count)
 {
     if (count == 0)
         return {};
 
     BacktraceState& bs = GetState();
+
     if (!bs.state)
-    {
-        // libbacktrace failed to initialize; fall back to raw addresses only.
-        std::vector<StackFrame> frames;
-        frames.reserve(count);
-        for (std::size_t i = 0; i < count; ++i)
-        {
-            StackFrame f;
-            f.address = reinterpret_cast<std::uintptr_t>(addresses[i]);
-            frames.push_back(std::move(f));
-        }
-        return frames;
-    }
+        return FallbackResolve(addresses, count);
 
     std::vector<StackFrame> frames;
-    frames.reserve(count); // will grow when inlined frames are expanded
+    frames.reserve(count); // may grow as inlined frames are expanded
 
-    // Serialize all resolution calls: backtrace_pcinfo() is not reentrant
-    // when the state was created with threaded=0.
+    // Serialize: backtrace_pcinfo() is not reentrant with threaded=0.
     std::lock_guard<std::mutex> lock(bs.mutex);
 
     for (std::size_t i = 0; i < count; ++i)
