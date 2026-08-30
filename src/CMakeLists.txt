@@ -43,7 +43,6 @@ set(VIGIL_HEADERS
   "${VIGIL_INCLUDE_DIR}/vigil/logging/log_limiter.h"
   "${VIGIL_INCLUDE_DIR}/vigil/logging/scoped_logger.h"
   "${VIGIL_INCLUDE_DIR}/vigil/logging/log_level.h"
-  "${VIGIL_INCLUDE_DIR}/vigil/logging/file_mode.h"
   "${VIGIL_INCLUDE_DIR}/vigil/logging/lifecycle_hooks.h"
 
   "${VIGIL_INCLUDE_DIR}/vigil/assert.h"

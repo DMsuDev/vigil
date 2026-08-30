@@ -9,7 +9,6 @@
 #include "vigil/core/smart_pointers.h"
 
 #include "vigil/logging/log_level.h"
-#include "vigil/logging/file_mode.h"
 
 #include <fmt/format.h>
 
