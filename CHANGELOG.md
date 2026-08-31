@@ -68,6 +68,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     parentheses around assertion expressions.
   - Harmonize stderr fallback formatting with the primary LogSystem critical report.
 
+- Include `cstddef` for std::size_t on macOS ([ccdb130](https://github.com/DMsuDev/Vigil/commit/ccdb1305aaefd46ee11f7f3eded46308e2be6462))
+
+  Explicitly include `cstddef` in `debugger.h` to ensure `std::size_t`
+  is declared when building on macOS with Clang.
+
 ### 🚜 Refactor
 
 - Refactor logger_example into modular demos with hooks ([f2fa173](https://github.com/DMsuDev/Vigil/commit/f2fa17332c6b6503ec0b842de94a7e3ad5a7ff14))
