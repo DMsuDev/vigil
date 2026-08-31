@@ -70,7 +70,7 @@ constexpr std::size_t kPointerWidth = sizeof(void*) * 2;
     }
 
     // Append "()" — matches GDB convention for function symbols.
-    if (!result.empty() && !result.ends_with(')'))
+    if (!result.empty() && result.back() != ')')
         result += "()";
 
     return result;
