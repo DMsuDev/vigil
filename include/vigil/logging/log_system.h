@@ -67,10 +67,10 @@ struct LogSystemConfig
     /// Created automatically if it does not exist.
     /// Combined with @ref LogFile to form the final path: `LogDir / LogFile`.
     /// If empty, log files are written to the current working directory.
-    std::string LogDir;
+    std::string LogDir = "";
 
     /// @brief Path to the main log file. Defaults to `Name + ".log"` if left empty.
-    std::string LogFile;
+    std::string LogFile = "";
 
     /// @brief Minimum severity threshold required for messages to be printed to the console.
     std::optional<LogLevel> ConsoleLevel;
@@ -92,10 +92,10 @@ struct LogConfig
     /// Combined with @ref LogFile to form the final path: `LogDir / LogFile`.
     /// If empty, inherits the directory configured in @ref LogSystemConfig, or
     /// falls back to the current working directory.
-    std::string LogDir;
+    std::string LogDir = "";
 
     /// @brief Path to the output log file. Defaults to `Name + ".log"` if left empty.
-    std::string LogFile;
+    std::string LogFile = "";
 
     /// @brief File opening mode (`Append` to retain prior contents, `Truncate` to overwrite).
     FileOpenMode FileMode = FileOpenMode::Append;
