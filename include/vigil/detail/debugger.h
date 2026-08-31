@@ -7,6 +7,8 @@
 
 #include "vigil/detail/platform_detection.h"
 
+#include <cstddef>
+
 #if defined(VIGIL_PLATFORM_WINDOWS)
     #include <Windows.h>
 #elif defined(VIGIL_PLATFORM_LINUX)
