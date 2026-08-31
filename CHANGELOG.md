@@ -73,6 +73,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Explicitly include `cstddef` in `debugger.h` to ensure `std::size_t`
   is declared when building on macOS with Clang.
 
+- Replace string::ends_with with back() for C++17 compatibility ([841c842](https://github.com/DMsuDev/Vigil/commit/841c842f7b56e814249f48aadf93dc056fe9e5d9))
+
+  Replace std::string::ends_with with result.back() in SimplifySymbol
+  to ensure compatibility when compiled under C++17 consuming targets.
+
+- Initialize string fields in LogSystemConfig and LogConfig ([047f1a6](https://github.com/DMsuDev/Vigil/commit/047f1a61d060a7e73f6d5ed4a88baebb1d4dbc89))
+
 ### 🚜 Refactor
 
 - Refactor logger_example into modular demos with hooks ([f2fa173](https://github.com/DMsuDev/Vigil/commit/f2fa17332c6b6503ec0b842de94a7e3ad5a7ff14))
