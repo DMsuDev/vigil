@@ -5,6 +5,115 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-08-31
+
+### 🚀 Features
+
+- Add initialization assertions and auto-create named loggers ([c809843](https://github.com/DMsuDev/Vigil/commit/c809843e81a67cf2a7aca927adcebafbe186d1a4))
+
+  - Integrate `VIGIL_ASSERT_MSG` checks across free logging functions and
+    the `VIGIL_LOG_NAMED` macro to enforce `LogSystem` initialization in Debug builds.
+  - Ensure silent early return in Release builds if logging APIs are called
+    prior to `LogSystem::Init()`.
+  - Update `VIGIL_LOG_NAMED` to automatically create non-existent named loggers
+    on demand via `LogSystem::Create()`.
+
+- Add lifecycle hooks and per-logger level overrides ([92cfd69](https://github.com/DMsuDev/Vigil/commit/92cfd69a84b5f537e1376a7df9c13c3c3d368aa0))
+
+  - Add `LogHooks` with event structures: `LogMessageEvent`, `LevelChangeEvent`, `FlushEvent`
+  - Add `HooksRegistry` for thread-safe hook management with automatic propagation to new loggers
+  - Add `SetLevel` for per-logger level overrides without affecting global state
+  - Expose `SetHooks/ClearHooks` on `LogSystem`
+  - Invoke callbacks outside mutex bounds to prevent re-entrant deadlocks
+
+- Add demo for `LogSystem` hooks usage ([a471ea9](https://github.com/DMsuDev/Vigil/commit/a471ea95d2aa512d2fd98da8406fc2b88b44becf))
+
+- Add manual scope macros and document ScopedLogger API ([d679169](https://github.com/DMsuDev/Vigil/commit/d6791694b7a81053dc28b909037de88f64ef540d))
+
+  Expand `scoped_logger.h` with explicit level and manual block scoping macros,
+  and complete the Doxygen API reference across the header.
+
+  - Add `VIGIL_SCOPE_BEGIN` and `VIGIL_SCOPE_END` for manual block scope tracking.
+  - Add explicit-level scope macros (`VIGIL_SCOPE_LOG_*`) to bypass default info level.
+  - Apply `@hideinitializer` to macro definitions to suppress internal expansion clutter in Doxygen.
+  - Document `stderr` fallback behavior when `LogSystem` is uninitialized or offline.
+
+- Add `LogDir` configuration and refactor internal path handling ([10389e9](https://github.com/DMsuDev/Vigil/commit/10389e9507d2c0b8652cfb28d3cddaf7dc15691c))
+
+  Introduce configurable log output directories across `LogSystemConfig` and `LogConfig`,
+  and refactor `log_system.cpp` helper organization and path resolution.
+
+  - Add `LogDir` field to `LogSystemConfig` and `LogConfig` for explicit directory targeting.
+  - Implement `ResolveLogPath` using `std::filesystem` to handle path joining and automatic directory creation.
+  - Propagate global `LogDir` inheritance to custom loggers when their local `LogDir` is empty.
+  - Refactor internal path helpers and sink factory signatures to take strongly-typed `std::filesystem::path`.
+  - Reorganize internal anonymous namespaces and relocate `Create()` definitions
+
+- Add debugger detection and conditional breakpoint support for `compiler_attributes.h` ([a50007f](https://github.com/DMsuDev/Vigil/commit/a50007ff29200c900411c3a414dab708ccba8f4a))
+
+  Add `IsDebuggerAttached()` utility to query process tracing state across
+  Windows, Linux, and macOS. Introduce `VIGIL_DEBUGBREAK_IF_ATTACHED()` macro
+  to conditionally trigger breakpoints only when an active debugger is present.
+
+  Suppress MSVC CRT abort dialogs in `assert.cpp` during standard runs to prevent
+  blocking UI prompts upon failure.
+
+### 🐛 Bug Fixes
+
+- Normalize path separators and clean macro expression formatting ([20ab227](https://github.com/DMsuDev/Vigil/commit/20ab2273cd3066cf310f202cfa1163e59a328aef))
+
+  - Normalize file paths using '/' separators before trimming in `FormatFilePath`,
+    ensuring consistent multi-platform (Windows/Linux) location formatting.
+  - Move `VIGIL_STRINGIFY` execution to outer assert macros to avoid extra
+    parentheses around assertion expressions.
+  - Harmonize stderr fallback formatting with the primary LogSystem critical report.
+
+### 🚜 Refactor
+
+- Refactor logger_example into modular demos with hooks ([f2fa173](https://github.com/DMsuDev/Vigil/commit/f2fa17332c6b6503ec0b842de94a7e3ad5a7ff14))
+
+  Refactors logger_example.cpp into modular demo functions with clear section
+  banners and isolated Init/Shutdown cycles.
+
+  - Structure code into modular `Demo_*` functions.
+  - Add `Demo_LifecycleHooks` covering `SetHooks` and event handling.
+  - Modernize struct initialization with C++20 designated initializers.
+
+- Modularize ScopedLogger demonstration suite ([8c7245b](https://github.com/DMsuDev/Vigil/commit/8c7245bc3b59352e2661cd520557e75137515116))
+
+  Restructure `scoped_example.cpp` to isolate individual `ScopedLogger` features
+  into dedicated demonstration functions and improve execution flow clarity.
+
+  - Split monolithic example into modular functions (`Demo_FunctionScope`, `Demo_ManualScope`, etc.).
+  - Add explicit lifecycle control (`LogSystem::Init`/`Shutdown`) per demo block.
+  - Add coverage for manual `VIGIL_SCOPE_BEGIN` / `VIGIL_SCOPE_END` nesting.
+
+- Optimize `IsRuntimeFrame` with unordered_set and clean up `Capture function` ([c4443b1](https://github.com/DMsuDev/Vigil/commit/c4443b11b76168cb8cfeae2c855b2ef4d7782156))
+
+- Streamline example runners and assert flag dispatching ([eecc422](https://github.com/DMsuDev/Vigil/commit/eecc422d336a9a46059879e15094789808f66419))
+
+  - Introduce VIGIL_EXAMPLE_INIT helper macros across examples to reduce LogSystem initialization boilerplate and standardize log output directory structure.
+  - Standardize function naming in assert_example to Snake_Case.
+  - Refactor argument parsing in assert_example using a structured dispatch table with terminal-flag metadata.
+  - Add pre-execution CLI flag validation and warnings for conflicting terminal options.
+  - Clean up main entrypoint error handling across example targets.
+
+- Move `FileOpenMode` enum to `log_system.h` and remove `file_mode.h` ([4d0c678](https://github.com/DMsuDev/Vigil/commit/4d0c67877695b5e694e225898641693aa3e17822))
+
+- Unify stack trace backend headers and expand inline frames ([e6f648e](https://github.com/DMsuDev/Vigil/commit/e6f648e6e6f1949a64dd7f9ab1232fe30112423e))
+
+  Consolidate the platform-specific detail headers into a single internal backend header and implement inline frame expansion support for Windows and POSIX trace backends.
+
+  - Rename `stack_trace_win.h` and delete `stack_trace_posix.h` in favor of a unified `stack_trace_backend.h` internal header selected per-platform at build time.
+  - Implement inline frame resolution on Windows via `SymAddrIncludeInlineTrace` and `SymQueryInlineTrace` (DbgHelp 6.x / Win8+).
+  - Support inline frame tracking on POSIX targets within `libbacktrace` callbacks and add fallback address resolution using `backtrace_symbols()`.
+  - Introduce `SimplifySymbol` in `StackTrace::Format` to clean up demangled function names (lambda operators and anonymous namespaces).
+  - Update internal frame bounds, pointer parameter constness, and documentation formatting across the trace subsystem.
+
+### 🛠️ Build System
+
+- Add hooks_example to CMakeLists and ensure C++23 standard ([0624ff4](https://github.com/DMsuDev/Vigil/commit/0624ff488dd9a21fd3475fba3614e085f7c68784))
+
 ## [0.4.1] - 2026-08-24
 
 ### 🐛 Bug Fixes
