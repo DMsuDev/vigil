@@ -74,8 +74,14 @@ namespace vigil::detail {
         std::cerr << "\n" << stackDump << std::endl;
     }
 
+    // Suppress the MSVC "abort() has been called" dialog in non-debugger runs.
+    // The assertion details are already logged; the dialog adds no value.
+    #if defined(VIGIL_PLATFORM_WINDOWS)
+        _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+    #endif
+
     // Break into the debugger if one is attached
-    VIGIL_DEBUGBREAK();
+    VIGIL_DEBUGBREAK_IF_ATTACHED();
 
     // Forcefully terminate the program to prevent execution with an invalid state
     std::abort();

@@ -7,6 +7,7 @@
 
 #include "vigil/detail/platform_detection.h"
 #include "vigil/detail/compiler_features.h"
+#include "vigil/detail/debugger.h"
 
 // MSVC-specific intrinsics (e.g., __assume, __debugbreak)
 #if defined(VIGIL_COMPILER_MSVC)
@@ -348,6 +349,25 @@
     #define VIGIL_DEBUGBREAK() __builtin_trap()
 #else
     #define VIGIL_DEBUGBREAK() ::std::abort()
+#endif
+
+// ==============================================================================
+// Debugger-Aware Breakpoints
+// ==============================================================================
+
+/**
+ * @brief Triggers a debugger breakpoint if a debugger is attached.
+ *
+ * Checks if a debugger is currently attached to the process using
+ * @ref ::vigil::detail::IsDebuggerAttached(), otherwise it does nothing.
+ *
+ * @see VIGIL_DEBUGBREAK
+ */
+#if defined(VIGIL_PLATFORM_WINDOWS) || defined(VIGIL_PLATFORM_LINUX) || defined(VIGIL_PLATFORM_MACOS)
+    #define VIGIL_DEBUGBREAK_IF_ATTACHED() \
+        do { if (::vigil::detail::IsDebuggerAttached()) { VIGIL_DEBUGBREAK(); } } while (0)
+#else
+    #define VIGIL_DEBUGBREAK_IF_ATTACHED() ((void)0)
 #endif
 
 // ============================================================================
