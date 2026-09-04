@@ -70,6 +70,18 @@ source_group(
   FILES ${VIGIL_HEADERS}
 )
 
+source_group(
+  TREE "${VIGIL_INCLUDE_DIR}"
+  PREFIX "Header Files/detail"
+  FILES ${VIGIL_INTERNAL_HEADERS}
+)
+
+source_group(
+  TREE "${VIGIL_GENERATED_INCLUDE_DIR}"
+  PREFIX "Header Files/generated"
+  FILES ${VIGIL_GENERATED_HEADERS}
+)
+
 # ------------------------------------------------------------------------------
 #  Target Initialization & Source Assignments
 # ------------------------------------------------------------------------------
@@ -186,6 +198,12 @@ target_link_libraries(vigil
 # ------------------------------------------------------------------------------
 vigil_enable_warnings(vigil)
 vigil_set_compiler_options(vigil)
+
+# Consumers on MSVC must use the conformant preprocessor to expand
+# Vigil's variadic macros correctly (__VA_OPT__ support).
+target_compile_options(vigil INTERFACE
+  $<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>
+)
 
 # ------------------------------------------------------------------------------
 #  Package System Installation Architecture
