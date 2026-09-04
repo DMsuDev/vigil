@@ -54,6 +54,10 @@
 /// @brief Human-readable version string, e.g. "1.2.3".
 #define VIGIL_VERSION_STRING "@PROJECT_VERSION@"
 
+/// @def VIGIL_VERSION_FULL
+/// @brief Full version string including any prerelease suffix, e.g. "1.2.0-WIP".
+#define VIGIL_VERSION_FULL "@VIGIL_VERSION@"
+
 /// @def VIGIL_VERSION_ENCODE(major, minor, patch)
 /// @brief Packs a MAJOR.MINOR.PATCH triplet into a single comparable integer.
 /// @details Encoding: major*10000 + minor*100 + patch (e.g. 1.2.3 -> 10203).
@@ -99,6 +103,17 @@ inline constexpr std::uint32_t value = VIGIL_VERSION;
 
 /// @brief Human-readable version string (e.g. "1.2.3").
 inline constexpr std::string_view string = VIGIL_VERSION_STRING;
+
+/// @brief Full version string including any prerelease suffix (e.g. "1.2.0-WIP").
+inline constexpr std::string_view full_string = VIGIL_VERSION_FULL;
+
+/// @brief True when this build carries a prerelease suffix (-WIP, -dev).
+inline constexpr bool is_prerelease =
+#ifdef VIGIL_IS_PRERELEASE
+    true;
+#else
+    false;
+#endif // VIGIL_IS_PRERELEASE
 
 /**
  * @brief Encodes a semantic version triplet into Vigil's packed integer format.

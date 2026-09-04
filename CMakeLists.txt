@@ -10,13 +10,6 @@
 
 cmake_minimum_required(VERSION 3.28)
 
-project(Vigil
-  VERSION 0.5.0
-  LANGUAGES CXX
-  DESCRIPTION "Cross-platform diagnostics library for C++."
-)
-message(STATUS "${PROJECT_NAME} version: ${PROJECT_VERSION}")
-
 # ------------------------------------------------------------------------------
 #  Project-Wide Configuration Options
 # ------------------------------------------------------------------------------
@@ -60,13 +53,27 @@ if(VIGIL_INSTALL AND NOT VIGIL_USE_SYSTEM_FMT)
 endif()
 
 # ------------------------------------------------------------------------------
+#  Project configuration
+# ------------------------------------------------------------------------------
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+include(vigil_version)
+vigil_load_version(VIGIL_VERSION VIGIL_PLAIN_VERSION)
+
+project(Vigil
+  LANGUAGES C CXX
+  VERSION ${VIGIL_PLAIN_VERSION}
+  DESCRIPTION "Cross-platform diagnostics library for C++."
+)
+message(STATUS "${PROJECT_NAME} version: ${VIGIL_VERSION}")
+
+# ------------------------------------------------------------------------------
 #  Global Core Modules & System Paths
 # ------------------------------------------------------------------------------
 
 # Standard install directories (bin, lib, include, etc.) with platform-specific defaults.
 include(GNUInstallDirs)
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(compiler_options)
 include(compiler_warnings)
