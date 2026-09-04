@@ -17,8 +17,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: "Version"
-      description: "The version of Vigil you are using."
+      label: "Vigil Version"
+      description: "The Vigil release, tag, or commit where the issue occurs."
       placeholder: "e.g. v0.1.0 or commit hash"
     validations:
       required: true
@@ -27,8 +27,8 @@ body:
     id: environment
     attributes:
       label: "Environment"
-      description: "OS, compiler, and any relevant hardware (e.g. GPU for graphical issues)."
-      placeholder: "e.g. Windows 11 + MSVC 2022, Ubuntu 22.04 + GCC 12"
+      description: "Operating system, compiler and version, CMake version, and any other relevant environment details."
+      placeholder: "e.g. Windows 11 + MSVC 19.50 + CMake 4.1"
     validations:
       required: true
 

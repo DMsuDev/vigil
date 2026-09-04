@@ -429,18 +429,6 @@ Fully worked examples covering every feature are available under [`examples/`](e
 | Scoped logging | [`examples/scoped_example.cpp`](examples/scoped_example.cpp) | Function scope, nested scopes, explicit levels, early return, manual BEGIN/END. |
 | Hooks          | [`examples/hooks_example.cpp`](examples/hooks_example.cpp)   | SetHooks, individual setters, ClearHooks, named logger level change events.     |
 
-## Contributing
-
-Contributions are always welcome! ❤️ Whether you are reporting bugs, fixing issues, adding new examples, or improving the documentation, your help is appreciated.
-
-Before opening a pull request:
-
-- Keep pull requests focused: prefer small, atomic PRs that address a single feature or fix.
-- Write clear commit messages using [Conventional Commits](https://www.conventionalcommits.org/).
-- Ensure the project builds cleanly without introducing new compiler warnings.
-
-For major changes or new features, please open an issue first to discuss what you would like to change.
-
 ## License
 
 Vigil is licensed under the **MIT License**.
