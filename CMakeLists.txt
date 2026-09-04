@@ -16,22 +16,14 @@ cmake_minimum_required(VERSION 3.28)
 # Default behaviors are tied directly to PROJECT_IS_TOP_LEVEL. This prevents
 # subproject builds from altering the consumer's output directory layout.
 
-option(VIGIL_BUILD_SHARED "Build Vigil as a shared library." ${BUILD_SHARED_LIBS})
-option(VIGIL_INSTALL      "Generate the install target." ${PROJECT_IS_TOP_LEVEL})
-
-option(VIGIL_BUILD_EXAMPLES "Build Vigil's example programs." ${PROJECT_IS_TOP_LEVEL})
-option(VIGIL_BUILD_TESTS    "Build Vigil's unit-test suite."  ${PROJECT_IS_TOP_LEVEL})
-
-option(VIGIL_BUILD_WARNINGS     "Enable strict compiler warning suites."  ${PROJECT_IS_TOP_LEVEL})
-option(VIGIL_WARNINGS_AS_ERRORS "Treat compiler warnings as hard errors." OFF)
-
-option(VIGIL_ENABLE_SCOPED_LOG
-    "Enable VIGIL_SCOPED_LOG and VIGIL_SCOPED_LOG_FUNCTION macros. \
-Instruments code blocks with entry/exit trace logging and elapsed time. \
-Incurs per-scope overhead; intended for Debug and profiling builds."
-    OFF
-)
-option(VIGIL_ENABLE_STACK_TRACE "Enable cross-platform call stack capture and symbolication" ON)
+option(VIGIL_BUILD_SHARED       "Build Vigil as a shared library."                                      ${BUILD_SHARED_LIBS}   )
+option(VIGIL_INSTALL            "Generate the install target."                                          ${PROJECT_IS_TOP_LEVEL})
+option(VIGIL_BUILD_EXAMPLES     "Build Vigil's example programs."                                       ${PROJECT_IS_TOP_LEVEL})
+option(VIGIL_BUILD_TESTS        "Build Vigil's unit-test suite."                                        ${PROJECT_IS_TOP_LEVEL})
+option(VIGIL_BUILD_WARNINGS     "Enable strict compiler warning suites."                                ${PROJECT_IS_TOP_LEVEL})
+option(VIGIL_WARNINGS_AS_ERRORS "Treat compiler warnings as hard errors."                               OFF)
+option(VIGIL_ENABLE_SCOPED_LOG  "Instrument scopes with entry/exit trace logging (always ON in Debug)." OFF)
+option(VIGIL_ENABLE_STACK_TRACE "Enable cross-platform call stack capture and symbolication"            ON )
 
 # ------------------------------------------------------------------------------
 #  Dependency Management Options
@@ -52,12 +44,22 @@ if(VIGIL_INSTALL AND NOT VIGIL_USE_SYSTEM_FMT)
   set(VIGIL_USE_SYSTEM_FMT ON CACHE BOOL "Use system-installed fmt library" FORCE)
 endif()
 
+# Scoped Logging on by default in Debug builds if not explicitly defined.
+if(NOT DEFINED VIGIL_ENABLE_SCOPED_LOG)
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR "Debug" IN_LIST CMAKE_CONFIGURATION_TYPES)
+    set(VIGIL_ENABLE_SCOPED_LOG ON CACHE BOOL "" FORCE)
+  endif()
+endif()
+
+# ------------------------------------------------------------------------------
+#  Include Modules & Helpers
+# ------------------------------------------------------------------------------
+set(VIGIL_BASE_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${VIGIL_BASE_FOLDER}/cmake")
+
 # ------------------------------------------------------------------------------
 #  Project configuration
 # ------------------------------------------------------------------------------
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
 include(vigil_version)
 vigil_load_version(VIGIL_VERSION VIGIL_PLAIN_VERSION)
 
@@ -68,12 +70,16 @@ project(Vigil
 )
 message(STATUS "${PROJECT_NAME} version: ${VIGIL_VERSION}")
 
+# IDE Target Grouping
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+if (DEFINED CMAKE_TOOLCHAIN_FILE)
+  message(STATUS "Using toolchain file: \"${CMAKE_TOOLCHAIN_FILE}\"")
+endif()
+
 # ------------------------------------------------------------------------------
 #  Global Core Modules & System Paths
 # ------------------------------------------------------------------------------
-
-# Standard install directories (bin, lib, include, etc.) with platform-specific defaults.
-include(GNUInstallDirs)
 
 include(compiler_options)
 include(compiler_warnings)
@@ -82,10 +88,13 @@ include(copy_runtime_deps)
 # ------------------------------------------------------------------------------
 #  Isolated Target Architecture & Output Layout
 # ------------------------------------------------------------------------------
-
 if(PROJECT_IS_TOP_LEVEL)
+
+  # Standard install directories (bin, lib, include, etc.) with platform-specific defaults.
+  include(GNUInstallDirs)
+
   # Isolate artifact generation inside the local binary footprint
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
 
@@ -100,7 +109,7 @@ endif()
 #  Generated Configuration / Versioning Headers
 # ------------------------------------------------------------------------------
 configure_file(
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/vigil/version.h.in"
+  "${VIGIL_BASE_FOLDER}/include/vigil/version.h.in"
   "${PROJECT_BINARY_DIR}/include/vigil/version.h"
   @ONLY
 )
