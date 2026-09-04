@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] - 2026-09-04
+
+### 🚀 Features
+
+- Organize header files into source groups and add MSVC preprocessor as INTERFACE option ([f9d0c44](https://github.com/DMsuDev/Vigil/commit/f9d0c44ea96acfb15695a3315e75e47362b8fe4f))
+
+- Dynamic version loading from `VERSION` file ([322e48b](https://github.com/DMsuDev/Vigil/commit/322e48bec0b99d9f6bb193266fdb40b1e2b82424))
+
+  - Read raw and plain project version from a root `VERSION` file
+  - Expose `VIGIL_VERSION_FULL` and `VIGIL_IS_PRERELEASE` in CMake and `version.h`
+  - Add C language support to project definition
+  - Configure `CMAKE_CONFIGURE_DEPENDS` to trigger re-configure on `VERSION` change
+
+### 🔧 Maintenance
+
+- Add pull request template and automated prerelease workflow ([85734d4](https://github.com/DMsuDev/Vigil/commit/85734d450c67fe6c0f4cf42e8d08065f1bf463c4))
+
+  - Add `.github/PULL_REQUEST_TEMPLATE.md` to guide community contributions
+  - Add `.github/workflows/pre-release.yml` to generate changelogs via `git-cliff` and publish GitHub prereleases on `v*-WIP` and `v*-dev` tags
+  - Update `VERSION` format to `0.5.1.WIP`
+
 ## [0.5.0] - 2026-08-31
 
 ### 🚀 Features
