@@ -92,6 +92,7 @@ commit_parsers = [
   # Generated release/version commits
   { message = "^chore\\((release|version|bump)\\):", skip = true },
   { message = "^bump\\(version\\):", skip = true },
+  { message = "^build\\(version\\):", skip = true },
 
   # Internal/dependency/PR housekeeping
   { message = "^chore\\(internal\\):", skip = true },
