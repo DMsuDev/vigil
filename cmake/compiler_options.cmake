@@ -21,21 +21,63 @@ function(vigil_set_compiler_options target)
     message(FATAL_ERROR "Vigil: Target '${target}' does not exist. Cannot apply compiler options.")
   endif()
 
-  if(MSVC)
-    target_compile_options(${target} PRIVATE
-      /utf-8    # Treat source and execution character sets as UTF-8.
-      /EHsc     # Standard C++ exception handling; extern "C" never throws.
-      /Zc:preprocessor # Conforming preprocessor (matches GCC/Clang expansion rules).
-    )
+  # ----------------------------------------------------------------------------
+  #  Compile options
+  # ----------------------------------------------------------------------------
+  target_compile_options(${target} PRIVATE
+    # --- MSVC: baseline codegen --------------------------------------------------
+    $<$<CXX_COMPILER_ID:MSVC>:
+      /utf-8
+      /EHsc
+      /Zc:preprocessor
+      /MP
+    >
 
-    # Reasonable release hardening beyond the CMake defaults.
-    target_compile_options(${target} PRIVATE
-      $<$<CONFIG:Release>:/Gy> # Function-level linking, enables safer /OPT:REF.
-    )
-  else()
-    target_compile_options(${target} PRIVATE
-      $<$<CONFIG:Debug>:-fno-omit-frame-pointer> # Keep frame pointers for debugging/profiling.
-      $<$<CONFIG:Release>:-D_FORTIFY_SOURCE=2>   # Buffer overflow checks in libc calls.
-    )
-  endif()
+    # --- GCC/Clang: debug helpers ------------------------------------------------
+    # Preserve frame pointers for debuggers and profilers.
+    $<$<AND:$<CONFIG:Debug>,$<CXX_COMPILER_ID:GNU,Clang,AppleClang>>:
+      -fno-omit-frame-pointer
+    >
+
+    # --- GCC/Clang: dead-code stripping (compile side) ---------------------------
+    $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:GNU,Clang,AppleClang>>:
+      -ffunction-sections
+      -fdata-sections
+    >
+
+    # --- MSVC: dead-code stripping (compile side) --------------------------------
+    $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:
+      /Gy
+    >
+  )
+
+  # ----------------------------------------------------------------------------
+  #  Compile definitions
+  # ----------------------------------------------------------------------------
+  target_compile_definitions(${target} PRIVATE
+    # _FORTIFY_SOURCE requires optimisations to be active; only enable in Release.
+    $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:GNU,Clang,AppleClang>>:
+      _FORTIFY_SOURCE=2
+    >
+  )
+
+  # ----------------------------------------------------------------------------
+  #  Link options - dead-code stripping (linker side)
+  # ----------------------------------------------------------------------------
+  target_link_options(${target} PRIVATE
+    # ld (Linux/ELF): discard unreferenced sections produced by -ffunction/data-sections.
+    $<$<AND:$<CONFIG:Release>,$<PLATFORM_ID:Linux>,$<CXX_COMPILER_ID:GNU,Clang>>:
+      LINKER:--gc-sections
+    >
+
+    # ld64 (macOS/Mach-O): equivalent dead-stripping pass.
+    $<$<AND:$<CONFIG:Release>,$<PLATFORM_ID:Darwin>,$<CXX_COMPILER_ID:Clang,AppleClang>>:
+      LINKER:-dead_strip
+    >
+
+    # MSVC linker: discard unreferenced COMDATs enabled by /Gy.
+    $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:
+      /OPT:REF
+    >
+  )
 endfunction()
