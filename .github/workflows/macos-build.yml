@@ -6,6 +6,8 @@ on:
     paths:
       - "src/**"
       - "include/**"
+      - "examples/**"
+      - "tests/**"
       - "cmake/**"
       - "CMakeLists.txt"
       - ".github/workflows/macos-build.yml"
@@ -15,6 +17,8 @@ on:
     paths:
       - "src/**"
       - "include/**"
+      - "examples/**"
+      - "tests/**"
       - "cmake/**"
       - "CMakeLists.txt"
       - ".github/workflows/macos-build.yml"
@@ -56,6 +60,8 @@ jobs:
             -DCMAKE_CXX_STANDARD_REQUIRED=ON \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DVIGIL_INSTALL=OFF \
+            -DVIGIL_BUILD_EXAMPLES=ON \
+            -DVIGIL_BUILD_TESTS=ON \
             ${{ matrix.shared }}
 
       - name: Build

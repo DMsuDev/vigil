@@ -6,6 +6,8 @@ on:
     paths:
       - "src/**"
       - "include/**"
+      - "examples/**"
+      - "tests/**"
       - "cmake/**"
       - "CMakeLists.txt"
       - ".github/workflows/windows-build.yml"
@@ -15,6 +17,8 @@ on:
     paths:
       - "src/**"
       - "include/**"
+      - "examples/**"
+      - "tests/**"
       - "cmake/**"
       - "CMakeLists.txt"
       - ".github/workflows/windows-build.yml"
@@ -54,6 +58,8 @@ jobs:
             -A ${{ matrix.platform }} `
             -DCMAKE_CXX_STANDARD=${{ matrix.standard }} `
             -DCMAKE_CXX_STANDARD_REQUIRED=ON `
+            -DVIGIL_BUILD_EXAMPLES=ON `
+            -DVIGIL_BUILD_TESTS=ON `
             -DVIGIL_INSTALL=OFF `
             ${{ matrix.shared }}
 

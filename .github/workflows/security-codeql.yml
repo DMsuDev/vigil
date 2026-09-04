@@ -6,6 +6,7 @@ on:
     paths:
       - "src/**"
       - "include/**"
+      - "tests/**"
       - "cmake/**"
       - "CMakeLists.txt"
       - ".github/workflows/security-codeql.yml"
@@ -14,6 +15,7 @@ on:
     paths:
       - "src/**"
       - "include/**"
+      - "tests/**"
       - "cmake/**"
       - "CMakeLists.txt"
       - ".github/workflows/security-codeql.yml"
