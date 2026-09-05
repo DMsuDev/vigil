@@ -113,6 +113,7 @@ repos:
         args: [--fix]
         types: [markdown]
         files: \.md$
+        exclude: ^CHANGELOG\.md$
 
   - repo: https://github.com/google/yamlfmt
     rev: v0.21.0
