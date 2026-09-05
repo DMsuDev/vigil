@@ -157,15 +157,15 @@ recurse_submodules = false
 
 # --- Tags ---
 
-# Regex that tags must match to count as valid versions
-tag_pattern = "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+# Regex that tags must match to count as valid versions (including pre-release and build metadata)
+tag_pattern = "^v[0-9]+\\.[0-9]+\\.[0-9]+([\\.-][A-Za-z][A-Za-z0-9]*)?$"
 
 # Tags that are IGNORED entirely (neither counted nor shown)
-skip_tags = "v0\\.0\\.*|.*-alpha.*|.*-beta.*|.*-rc.*"
+skip_tags = "^v0\\.0\\.\\d+$|.*[-\\.]alpha.*|.*[-\\.]beta.*|.*[-\\.]rc.*"
 
 # Tags that don't get their own section, but whose commits are carried
 # forward into the next valid tag (useful for intermediate test tags)
-ignore_tags = ""
+ignore_tags = ".*[-\\.](?i)(wip|dev).*"
 
 [bump]
 # Initial version if the repo has no tags yet
