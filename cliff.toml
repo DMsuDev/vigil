@@ -18,15 +18,34 @@ body = """
   ## [Unreleased]
 {% endif %}\
 
+{% set breaking_commits = commits | filter(attribute="breaking", value=true) %}
+{%- if breaking_commits | length > 0 %}
+  ### 💥 Breaking Changes
+  {% for commit in breaking_commits %}
+      - {{ commit.message | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/DMsuDev/Vigil/commit/{{ commit.id }}))\
+    {% if commit.body %}
+
+      {{ commit.body | trim | indent(prefix="  ", first=true) }}\
+    {% endif %}\
+    {% if commit.breaking_description and commit.breaking_description != commit.message %}
+
+      {{ '> ⚠️ ' ~ commit.breaking_description | trim | indent(prefix="  ", first=true) }}\
+    {% endif %}\
+  {% endfor %}
+{% endif %}\
+
 {% for group, commits in commits | group_by(attribute="group") %}
+  {%- set non_breaking = commits | filter(attribute="breaking", value=false) %}
+  {%- if non_breaking | length > 0 %}
   ### {{ group | striptags | trim | upper_first }}
-  {% for commit in commits %}
-      - {% if commit.breaking %}**BREAKING:** {% endif %}{{ commit.message | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/DMsuDev/Vigil/commit/{{ commit.id }}))\
+  {% for commit in non_breaking %}
+      - {{ commit.message | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/DMsuDev/Vigil/commit/{{ commit.id }}))\
     {% if commit.body %}
 
       {{ commit.body | trim | indent(prefix="  ", first=true) }}\
     {% endif %}
   {% endfor %}
+  {%- endif %}
 {%- endfor %}
 """
 
@@ -85,9 +104,7 @@ commit_parsers = [
   # ==========================================================================
 
   # Ignore changelog commits
-  { message = "^docs\\(changelog\\):", skip = true },
-  { message = "(?i)^(docs|chore):.*changelog", skip = true },
-  { message = ".*CHANGELOG\\.md.*", skip = true },
+  { message = "(?i)^(docs|chore)\\(changelog\\):|.*CHANGELOG\\.md", skip = true },
 
   # Generated release/version commits
   { message = "^chore\\((release|version|bump)\\):", skip = true },
@@ -107,7 +124,6 @@ commit_parsers = [
   # Commit groups
   # ==========================================================================
 
-  { breaking = true,                 group = "<!-- 00 -->💥 Breaking Changes" },
   { message = "^chore\\(project\\)", group = "<!-- 01 -->🏗️ Project Setup" },
   { message = "^feat",               group = "<!-- 02 -->🚀 Features" },
   { message = "^fix",                group = "<!-- 03 -->🐛 Bug Fixes" },

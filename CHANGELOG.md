@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/)
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### 💥 Breaking Changes
+
+- Rename public logging macros and preprocessor constants ([01f6309](https://github.com/DMsuDev/Vigil/commit/01f6309654df6ae77c52d14d18659968e36499db))
+
+  - Rename main convenience macros (e.g., VIGIL_INFO, VIGIL_WARN) to use the explicit VIGIL_LOG_* prefix.
+  - Standardize preprocessor severity level constants from VIGIL_LOG_LEVEL_* to VIGIL_LEVEL_*.
+  - Introduce a centralized VIGIL_LOG_IMPL dispatch macro leveraging `if constexpr` for compile-time filtering.
+
+  > ⚠️ The main logging macros (such as VIGIL_INFO, VIGIL_WARN, VIGIL_ERROR, etc.) now require the VIGIL_LOG_ prefix (e.g., VIGIL_LOG_INFO), and preprocessor severity constants have been renamed from VIGIL_LOG_LEVEL_* to VIGIL_LEVEL_*, breaking backward compatibility for API consumers.
+
+### 🛠️ Build System
+
+- Optimize CMake configuration structure and option management ([84ed135](https://github.com/DMsuDev/Vigil/commit/84ed13547e41ac05889badc221ac1254731365db))
+
+  - Clean up option alignments and default values for scoped logging and build flags.
+  - Reorganize module inclusion paths, target grouping, and output directory layouts.
+
+- Enhance compiler options and optimize dead-code stripping ([2e4234a](https://github.com/DMsuDev/Vigil/commit/2e4234a6f4b1fa792d0d5a68b95d1bf6235fae68))
+
+  - Add MSVC multi-processor compilation (/MP) flag to accelerate builds.
+  - Implement cross-platform dead-code stripping via compile and link options for GCC, Clang, and MSVC.
+  - Scope _FORTIFY_SOURCE=2 strictly to Release builds under GCC and Clang.
+  - Restructure compiler options using generator expressions.
+
+### 🔧 Maintenance
+
+- Ensure complete test and example coverage in CI ([dc01926](https://github.com/DMsuDev/Vigil/commit/dc01926781d820e3e154c834eabe8dd815eaffae))
+
 ## [0.5.1] - 2026-09-04
 
 ### 🚀 Features
@@ -268,6 +298,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [0.3.0] - 2026-08-11
 
+### 💥 Breaking Changes
+
+- Replace `LoggerRegistry` with `LogSystem` ([7fca087](https://github.com/DMsuDev/Vigil/commit/7fca087557eee6ce6726cdda1be302f21eb9d497))
+
+  - Reworks the logging API around `LogSystem` and updates its consumers and tests accordingly.
+  - Renames the registry implementation and related test files to reflect the new architecture.
+
 ### 🚀 Features
 
 - Add `ScopedLogger` RAII utility and scoped log macros ([5d5e0e6](https://github.com/DMsuDev/Vigil/commit/5d5e0e6e881e3d09f7bb0efd4102d7f9fbfddf02))
@@ -298,11 +335,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
   - Trigger the workflow on published releases instead of tag pushes
   - Remove unnecessary fmt system dependency installation since `VIGIL_USE_SYSTEM_FMT` is disabled
-
-- **BREAKING:** Replace `LoggerRegistry` with `LogSystem` ([7fca087](https://github.com/DMsuDev/Vigil/commit/7fca087557eee6ce6726cdda1be302f21eb9d497))
-
-  - Reworks the logging API around `LogSystem` and updates its consumers and tests accordingly.
-  - Renames the registry implementation and related test files to reflect the new architecture.
 
 ### ⚡ Performance
 
