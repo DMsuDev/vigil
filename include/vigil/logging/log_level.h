@@ -11,36 +11,38 @@
 
 /**
  * @file log_level.h
- * @brief Severity levels, plain-macro form (preprocessor) and enum form (runtime).
+ * @brief Severity levels in preprocessor form (compile-time) and enum form (runtime).
  *
- * The preprocessor cannot evaluate scoped enum values in #if, so the
- * VIGIL_LOG_LEVEL_* macros exist purely for compile-time gating. LogLevel
- * is defined in terms of them so both stay in sync by construction.
+ * The preprocessor cannot evaluate scoped enum values in `#if` directives, so
+ * the `VIGIL_LEVEL_*` integer macros exist solely for compile-time gating.
+ * `LogLevel` is defined in terms of them so both representations stay in sync
+ * by construction.
  */
 
-#define VIGIL_LOG_LEVEL_TRACE    0
-#define VIGIL_LOG_LEVEL_DEBUG    1
-#define VIGIL_LOG_LEVEL_INFO     2
-#define VIGIL_LOG_LEVEL_WARN     3
-#define VIGIL_LOG_LEVEL_ERROR    4
-#define VIGIL_LOG_LEVEL_CRITICAL 5
-#define VIGIL_LOG_LEVEL_OFF      6
+// Preprocessor-only severity constants (for #if gating).
+#define VIGIL_LEVEL_TRACE    0
+#define VIGIL_LEVEL_DEBUG    1
+#define VIGIL_LEVEL_INFO     2
+#define VIGIL_LEVEL_WARN     3
+#define VIGIL_LEVEL_ERROR    4
+#define VIGIL_LEVEL_CRITICAL 5
+#define VIGIL_LEVEL_OFF      6
 
 #ifndef VIGIL_ACTIVE_LOG_LEVEL
-    #define VIGIL_ACTIVE_LOG_LEVEL VIGIL_LOG_LEVEL_TRACE
+    #define VIGIL_ACTIVE_LOG_LEVEL VIGIL_LEVEL_TRACE
 #endif
 
 namespace vigil {
 
 /// @brief Severity level for a log message. Lower values are more verbose.
 enum class LogLevel : uint8_t {
-    Trace    = VIGIL_LOG_LEVEL_TRACE,    ///< Highly detailed, per-call diagnostic output.
-    Debug    = VIGIL_LOG_LEVEL_DEBUG,    ///< Debug-level messages, typically for development.
-    Info     = VIGIL_LOG_LEVEL_INFO,     ///< General informational messages.
-    Warn     = VIGIL_LOG_LEVEL_WARN,     ///< Warnings about potential issues.
-    Error    = VIGIL_LOG_LEVEL_ERROR,    ///< Error events that might still allow the application to continue.
-    Critical = VIGIL_LOG_LEVEL_CRITICAL, ///< Critical errors causing premature termination.
-    Off      = VIGIL_LOG_LEVEL_OFF,      ///< Logging disabled.
+    Trace    = VIGIL_LEVEL_TRACE,    ///< Highly detailed, per-call diagnostic output.
+    Debug    = VIGIL_LEVEL_DEBUG,    ///< Development-time diagnostics.
+    Info     = VIGIL_LEVEL_INFO,     ///< General informational messages.
+    Warn     = VIGIL_LEVEL_WARN,     ///< Warnings about potential issues.
+    Error    = VIGIL_LEVEL_ERROR,    ///< Recoverable errors.
+    Critical = VIGIL_LEVEL_CRITICAL, ///< Fatal errors causing premature termination.
+    Off      = VIGIL_LEVEL_OFF,      ///< Logging disabled.
 };
 
 VIGIL_PRAGMA_PUSH_WARNING
@@ -48,15 +50,12 @@ VIGIL_DISABLE_WARNING_MSVC(4296)
 VIGIL_DISABLE_WARNING_GNU("-Wtype-limits")
 
 /**
- * @brief Checks whether a severity level survives the compile-time gate (@ref VIGIL_ACTIVE_LOG_LEVEL).
+ * @brief Returns @c true if @p level survives the compile-time gate.
  *
- * @details Mirrors the condition used by the `VIGIL_*` macros, for call sites that build a message
- *          manually (e.g. to avoid expensive formatting) instead of going through a macro.
- *
- * @param level Severity level to check.
- * @return @c true if @p level is enabled by the active compile-time gate.
+ * Mirrors the condition used by the `VIGIL_LOG_*` macros for call sites that
+ * construct a message manually to avoid expensive formatting.
  */
-constexpr bool IsLevelActive(LogLevel level) noexcept
+[[nodiscard]] constexpr bool IsLevelActive(LogLevel level) noexcept
 {
     return static_cast<uint8_t>(level) >= static_cast<uint8_t>(VIGIL_ACTIVE_LOG_LEVEL);
 }

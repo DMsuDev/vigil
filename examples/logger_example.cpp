@@ -88,8 +88,7 @@ static void Demo_BasicLogging()
 
     VIGIL_EXAMPLE_INIT;
 
-    vigil::Info("Thanks for trying Vigil version {}.{}.{} !",
-        VIGIL_VERSION_MAJOR, VIGIL_VERSION_MINOR, VIGIL_VERSION_PATCH);
+    vigil::Info("Thanks for trying Vigil version {}!", VIGIL_VERSION_FULL);
 
     vigil::Warn("Easy padding in numbers like {:08d}", 42);
     vigil::Error("Support for int: {0:d};  hex: {0:x};  oct: {0:o}; bin: {0:b}", 42);
@@ -98,13 +97,13 @@ static void Demo_BasicLogging()
     vigil::Info("{:>8} aligned, {:<8} aligned", "right", "left");
 
     // Convenience macros that forward all calls to the main logger.
-    VIGIL_INFO("Application '{}' started successfully.", "Vigil Demo");
-    VIGIL_WARN("Configuration file '{}' was not found. Using default settings.", "config.toml");
-    VIGIL_ERROR("Failed to connect to '{}:{}'.", "127.0.0.1", 5432);
+    VIGIL_LOG_INFO("Application '{}' started successfully.", "Vigil Demo");
+    VIGIL_LOG_WARN("Configuration file '{}' was not found. Using default settings.", "config.toml");
+    VIGIL_LOG_ERROR("Failed to connect to '{}:{}'.", "127.0.0.1", 5432);
 
-    VIGIL_INFO("Hex: 0x{:X}, Binary: {:b}", 255, 255);
-    VIGIL_INFO("Pi ≈ {:.3f}", 3.1415926535);
-    VIGIL_INFO("Build number: {:06}", 42);
+    VIGIL_LOG_INFO("Hex: 0x{:X}, Binary: {:b}", 255, 255);
+    VIGIL_LOG_INFO("Pi ≈ {:.3f}", 3.1415926535);
+    VIGIL_LOG_INFO("Build number: {:06}", 42);
 
     // Check whether a log level is enabled before paying the formatting cost.
     if (vigil::IsLevelActive(vigil::LogLevel::Debug))
@@ -144,7 +143,7 @@ static void Demo_NamedLoggers()
     if (auto* audio = vigil::LogSystem::Find("Audio"))
         audio->Info("Audio subsystem ready.");
     else
-        VIGIL_WARN("No 'Audio' logger registered yet.");
+        VIGIL_LOG_WARN("No 'Audio' logger registered yet.");
 
     vigil::LogSystem::Shutdown();
 }
@@ -190,15 +189,15 @@ static void Demo_LevelControl()
 
     // Per-logger level: raise the bar so Debug is filtered, then restore.
     logger.SetLevel(vigil::LogLevel::Info);
-    VIGIL_DEBUG("This message should not be displayed!");
+    VIGIL_LOG_DEBUG("This message should not be displayed!");
     logger.SetLevel(vigil::LogLevel::Trace);
-    VIGIL_DEBUG("This message should be displayed.");
+    VIGIL_LOG_DEBUG("This message should be displayed.");
 
     // SetGlobalLevel() applies the same change to every registered logger at once.
     vigil::LogSystem::SetGlobalLevel(vigil::LogLevel::Info);
-    VIGIL_DEBUG("This message should not be displayed either!");
+    VIGIL_LOG_DEBUG("This message should not be displayed either!");
     vigil::LogSystem::SetGlobalLevel(vigil::LogLevel::Trace);
-    VIGIL_DEBUG("This message should be displayed again.");
+    VIGIL_LOG_DEBUG("This message should be displayed again.");
 
     vigil::LogSystem::Shutdown();
 }
@@ -219,9 +218,9 @@ static void Demo_FlushControl()
     // Per-sink level filtering: file sink raised to Warn, console to Info.
     vigil::LogSystem::SetGlobalFileLevel(vigil::LogLevel::Warn);
     vigil::LogSystem::SetConsoleLevel(vigil::LogLevel::Info);
-    VIGIL_TRACE("Dropped by both sinks.");
-    VIGIL_INFO("Shown on the console; dropped by the file sink.");
-    VIGIL_WARN("Shown on console and written to file.");
+    VIGIL_LOG_TRACE("Dropped by both sinks.");
+    VIGIL_LOG_INFO("Shown on the console; dropped by the file sink.");
+    VIGIL_LOG_WARN("Shown on console and written to file.");
 
     // Restore levels and explicitly flush individual and all loggers.
     vigil::LogSystem::SetGlobalLevel(vigil::LogLevel::Trace);
@@ -290,7 +289,7 @@ static void Demo_LoggerLifecycle()
 
     // Promote a named logger to replace Main().
     vigil::LogSystem::SetMain("Temporary");
-    VIGIL_INFO("This now goes through the promoted 'Temporary' logger.");
+    VIGIL_LOG_INFO("This now goes through the promoted 'Temporary' logger.");
 
     // Remove loggers whose sinks are no longer needed.
     // Find() returning nullptr confirms removal was effective.

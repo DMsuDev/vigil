@@ -61,8 +61,7 @@ int main(int argc, char* argv[])
         .ConsoleLevel = vigil::LogLevel::Trace
     });
 
-    vigil::Info("Vigil Assertion Example v{}.{}.{}",
-        VIGIL_VERSION_MAJOR, VIGIL_VERSION_MINOR, VIGIL_VERSION_PATCH);
+    vigil::Info("Vigil Assertion Example v{}!", VIGIL_VERSION_FULL);
 
 #if !defined(VIGIL_ENABLE_ASSERTS)
     vigil::Warn("Assertions are DISABLED in this build.");

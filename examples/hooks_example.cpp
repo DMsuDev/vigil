@@ -107,9 +107,9 @@ static void Demo_SetHooks()
     });
 
     // Basic logging — OnMessage should fire for each
-    VIGIL_INFO("Application started");
-    VIGIL_WARN("Low memory warning: {} MB remaining", 128);
-    VIGIL_ERROR("Failed to load asset: {}", "texture_diffuse.png");
+    VIGIL_LOG_INFO("Application started");
+    VIGIL_LOG_WARN("Low memory warning: {} MB remaining", 128);
+    VIGIL_LOG_ERROR("Failed to load asset: {}", "texture_diffuse.png");
 
     // Named logger — OnMessage should still fire
     auto& net = vigil::LogSystem::Create("Network");
@@ -121,12 +121,12 @@ static void Demo_SetHooks()
     vigil::LogSystem::SetGlobalLevel(vigil::LogLevel::Warn);
 
     // These should be filtered out (below Warn)
-    VIGIL_INFO("This should NOT appear");
-    VIGIL_DEBUG("This should NOT appear either");
+    VIGIL_LOG_INFO("This should NOT appear");
+    VIGIL_LOG_DEBUG("This should NOT appear either");
 
     // These should pass through
-    VIGIL_WARN("This should appear");
-    VIGIL_ERROR("This should appear too");
+    VIGIL_LOG_WARN("This should appear");
+    VIGIL_LOG_ERROR("This should appear too");
 
     // Flush — OnFlush should fire
     vigil::LogSystem::FlushAll();
@@ -145,29 +145,31 @@ static void Demo_IndividualSetters()
 
     VIGIL_EXAMPLE_INIT("IndividualDemo");
 
+    vigil::Info("Vigil Individual Setters Demo v{}!", VIGIL_VERSION_FULL);
+
     // Register only what you need
     vigil::LogSystem::SetOnMessage([](const vigil::LogMessageEvent& e) {
         if (e.Level >= vigil::LogLevel::Error)
             std::cout << "[ALERT] Critical message from '" << e.LoggerName << "': " << e.Message << "\n";
     });
 
-    VIGIL_INFO("This is info — no alert");
-    VIGIL_WARN("This is a warning — no alert");
-    VIGIL_ERROR("This is an error — ALERT should fire");
-    VIGIL_CRITICAL("This is critical — ALERT should fire");
+    VIGIL_LOG_INFO("This is info — no alert");
+    VIGIL_LOG_WARN("This is a warning — no alert");
+    VIGIL_LOG_ERROR("This is an error — ALERT should fire");
+    VIGIL_LOG_CRITICAL("This is critical — ALERT should fire");
 
     // Replace OnMessage mid-run — now capture everything
     vigil::LogSystem::SetOnMessage([](const vigil::LogMessageEvent& e) {
         std::cout << "[NewCallback] " << LevelToString(e.Level) << ": " << e.Message << "\n";
     });
 
-    VIGIL_INFO("Now captured by the new callback");
-    VIGIL_WARN("This too");
+    VIGIL_LOG_INFO("Now captured by the new callback");
+    VIGIL_LOG_WARN("This too");
 
     // Clear only OnMessage — other hooks remain (none registered here, but pattern is valid)
     vigil::LogSystem::SetOnMessage(nullptr);
 
-    VIGIL_INFO("This fires no callback — silently logged to file only");
+    VIGIL_LOG_INFO("This fires no callback — silently logged to file only");
 
     vigil::LogSystem::Shutdown();
 }
@@ -186,13 +188,13 @@ static void Demo_ClearHooks()
         std::cout << "[Before clear] " << e.Message << "\n";
     });
 
-    VIGIL_INFO("Hook active — this should print");
-    VIGIL_WARN("Hook active — this should print too");
+    VIGIL_LOG_INFO("Hook active — this should print");
+    VIGIL_LOG_WARN("Hook active — this should print too");
 
     vigil::LogSystem::ClearHooks();
 
-    VIGIL_INFO("Hook cleared — no callback output");
-    VIGIL_ERROR("Hook cleared — no callback output");
+    VIGIL_LOG_INFO("Hook cleared — no callback output");
+    VIGIL_LOG_ERROR("Hook cleared — no callback output");
 
     vigil::LogSystem::Shutdown();
 }

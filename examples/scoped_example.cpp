@@ -81,8 +81,7 @@ static void Demo_FunctionScope()
     {
         VIGIL_SCOPED_LOG_FUNCTION();
 
-        vigil::Info("Vigil Scoped Logger Example v{}.{}.{}",
-            VIGIL_VERSION_MAJOR, VIGIL_VERSION_MINOR, VIGIL_VERSION_PATCH);
+        vigil::Info("Vigil Scoped Logger Example v{}!", VIGIL_VERSION_FULL);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(120));
         vigil::Info("Doing work inside Demo_FunctionScope.");

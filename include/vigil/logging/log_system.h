@@ -9,6 +9,7 @@
 #include "vigil/logging/lifecycle_hooks.h"
 
 #include "vigil/detail/symbol_export.h"
+#include "vigil/detail/preprocessor_utils.h"
 
 #if defined(VIGIL_ENABLE_ASSERTS)
 #include "vigil/assert.h"
@@ -460,96 +461,61 @@ void Log(LogLevel level, detail::FormatString<Args...> message, Args&&... args)
  * @name Main Logger Macros
  * @brief Convenience macros for logging through the application's main logger.
  *
- * Provides compile-time filtering based on @ref VIGIL_ACTIVE_LOG_LEVEL.
+ * Provides compile-time filtering via @ref VIGIL_ACTIVE_LOG_LEVEL. Log
+ * statements disabled at compile time expand to `((void)0)` with zero
+ * runtime cost and no argument evaluation.
  *
- * @note These macros forward log requests to @ref LogSystem::Main.
- * Log statements disabled by the active log level are completely eliminated
- * at compile time with zero runtime overhead.
+ * @note These macros forward to @ref LogSystem::Main via the `vigil::Log`
+ *       free function. For named loggers, use @ref VIGIL_LOG_NAMED.
  * @{
  */
 
- /**
+/**
  * @internal
- * @def VIGIL_LOG_COMMON
- * @brief Logs a message at the associated severity level with compile-time filtering.
+ * @def VIGIL_LOG_IMPL(level_upper, level, ...)
+ * @brief Internal dispatch macro. Do not use directly.
  *
- * @details Forwards all arguments to the corresponding vigil::Trace/Debug/Info/Warn/Error/Critical
- *          free function, which logs through the main logger instance. Accepts either a plain
- *          message or a format string with arguments.
- *
- * @note When the severity level associated with this macro is disabled by
- *       @ref VIGIL_ACTIVE_LOG_LEVEL, the macro expands to @c ((void)0) and
- *       none of its arguments are evaluated.
- *
- * @param ... The message to log, optionally followed by arguments to interpolate.
+ * Calls `::vigil::Log(::vigil::LogLevel::level, __VA_ARGS__)` when
+ * `VIGIL_LEVEL_##level_upper >= VIGIL_ACTIVE_LOG_LEVEL`, otherwise no-ops.
  * @endinternal
  */
+#define VIGIL_LOG_IMPL(level_upper, level, ...)                            \
+    do {                                                                   \
+        if constexpr (VIGIL_LEVEL_##level_upper >= VIGIL_ACTIVE_LOG_LEVEL) \
+        {                                                                  \
+            ::vigil::Log(::vigil::LogLevel::level, __VA_ARGS__);           \
+        }                                                                  \
+    } while (0)
 
-/// @def VIGIL_TRACE
-/// @copydoc VIGIL_LOG_COMMON
-/// @brief Logs a Trace severity message using the main logger.
-#if VIGIL_ACTIVE_LOG_LEVEL <= VIGIL_LOG_LEVEL_TRACE
-    #define VIGIL_TRACE(...) ::vigil::Trace(__VA_ARGS__)
-#else
-    #define VIGIL_TRACE(...) ((void)0)
-#endif
+/// @def VIGIL_LOG_TRACE
+/// @brief Logs a Trace severity message through the main logger.
+#define VIGIL_LOG_TRACE(...)    VIGIL_LOG_IMPL(TRACE,    Trace,    __VA_ARGS__)
 
-/// @def VIGIL_DEBUG
-/// @copydoc VIGIL_LOG_COMMON
-/// @brief Logs a Debug severity message using the main logger.
-#if VIGIL_ACTIVE_LOG_LEVEL <= VIGIL_LOG_LEVEL_DEBUG
-    #define VIGIL_DEBUG(...) ::vigil::Debug(__VA_ARGS__)
-#else
-    #define VIGIL_DEBUG(...) ((void)0)
-#endif
+/// @def VIGIL_LOG_DEBUG
+/// @brief Logs a Debug severity message through the main logger.
+#define VIGIL_LOG_DEBUG(...)    VIGIL_LOG_IMPL(DEBUG,    Debug,    __VA_ARGS__)
 
-/// @def VIGIL_INFO
-/// @copydoc VIGIL_LOG_COMMON
-/// @brief Logs an Info severity message using the main logger.
-#if VIGIL_ACTIVE_LOG_LEVEL <= VIGIL_LOG_LEVEL_INFO
-    #define VIGIL_INFO(...) ::vigil::Info(__VA_ARGS__)
-#else
-    #define VIGIL_INFO(...) ((void)0)
-#endif
+/// @def VIGIL_LOG_INFO
+/// @brief Logs an Info severity message through the main logger.
+#define VIGIL_LOG_INFO(...)     VIGIL_LOG_IMPL(INFO,     Info,     __VA_ARGS__)
 
-/// @def VIGIL_WARN
-/// @copydoc VIGIL_LOG_COMMON
-/// @brief Logs a Warn severity message using the main logger.
-#if VIGIL_ACTIVE_LOG_LEVEL <= VIGIL_LOG_LEVEL_WARN
-    #define VIGIL_WARN(...) ::vigil::Warn(__VA_ARGS__)
-#else
-    #define VIGIL_WARN(...) ((void)0)
-#endif
+/// @def VIGIL_LOG_WARN
+/// @brief Logs a Warn severity message through the main logger.
+#define VIGIL_LOG_WARN(...)     VIGIL_LOG_IMPL(WARN,     Warn,     __VA_ARGS__)
 
-/// @def VIGIL_ERROR
-/// @copydoc VIGIL_LOG_COMMON
-/// @brief Logs an Error severity message using the main logger.
-#if VIGIL_ACTIVE_LOG_LEVEL <= VIGIL_LOG_LEVEL_ERROR
-    #define VIGIL_ERROR(...) ::vigil::Error(__VA_ARGS__)
-#else
-    #define VIGIL_ERROR(...) ((void)0)
-#endif
+/// @def VIGIL_LOG_ERROR
+/// @brief Logs an Error severity message through the main logger.
+#define VIGIL_LOG_ERROR(...)    VIGIL_LOG_IMPL(ERROR,    Error,    __VA_ARGS__)
 
-/// @def VIGIL_CRITICAL
-/// @copydoc VIGIL_LOG_COMMON
-/// @brief Logs a Critical severity message using the main logger.
-#if VIGIL_ACTIVE_LOG_LEVEL <= VIGIL_LOG_LEVEL_CRITICAL
-    #define VIGIL_CRITICAL(...) ::vigil::Critical(__VA_ARGS__)
-#else
-    #define VIGIL_CRITICAL(...) ((void)0)
-#endif
+/// @def VIGIL_LOG_CRITICAL
+/// @brief Logs a Critical severity message through the main logger.
+#define VIGIL_LOG_CRITICAL(...) VIGIL_LOG_IMPL(CRITICAL, Critical, __VA_ARGS__)
 
 /** @} */
 
 /**
  * @name Named Logger Macros
  * @brief Convenience macros for logging through named loggers.
- *
- * These macros retrieve (or create) a logger identified by @p name and
- * forward the message using the supplied runtime severity level.
- *
- * Unlike the main logger macros, the log level is supplied at runtime,
- * allowing a single call site to emit messages at different severities.
  * @{
  */
 
@@ -558,14 +524,15 @@ void Log(LogLevel level, detail::FormatString<Args...> message, Args&&... args)
  * @brief Emits a log message through a specific named logger instance.
  *
  * Retrieves (or creates) a named logger via @ref LogSystem::Create and logs
- * the payload if the specified @p level satisfies the compile-time gate (`VIGIL_ACTIVE_LOG_LEVEL`).
+ * the message if @p level satisfies @ref IsLevelActive at runtime.
+ *
+ * The level is a runtime value here — use `VIGIL_LOG_*` macros instead when
+ * the level is known at compile time, as they eliminate the call entirely via
+ * `if constexpr`.
  *
  * @param name  Unique string identifier for the target subsystem logger.
- * @param level Runtime severity level (@ref vigil::LogLevel) for this entry.
- * @param ...   Format string (`fmt` syntax) followed by formatting arguments.
- *
- * @note Because @p level is evaluated at runtime, plain runtime checks are used instead of
- *       `if constexpr` to support dynamic severity levels.
+ * @param level Runtime @ref vigil::LogLevel for this entry.
+ * @param ...   Format string (`fmt` syntax) followed by arguments.
  */
 #define VIGIL_LOG_NAMED(name, level, ...)                             \
     do {                                                              \
