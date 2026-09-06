@@ -7,8 +7,7 @@ header = """
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Conventional Commits](https://www.conventionalcommits.org/)
-and this project adheres to [Semantic Versioning](https://semver.org/).
+The format is based on [Conventional Commits](https://www.conventionalcommits.org/) and this project adheres to [Semantic Versioning](https://semver.org/).
 """
 
 body = """
@@ -29,7 +28,7 @@ body = """
     {% endif %}\
     {% if commit.breaking_description and commit.breaking_description != commit.message %}
 
-      {{ '> ⚠️ ' ~ commit.breaking_description | trim | indent(prefix="  ", first=true) }}\
+      {{ '> ⚠️ ' ~ commit.breaking_description | trim | indent(prefix="", first=true) }}\
     {% endif %}\
   {% endfor %}
 {% endif %}\
