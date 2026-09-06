@@ -18,40 +18,16 @@
  * @details Provides a unified interface for capturing source-code location
  * metadata (file path, line number, column, and function signature) across supported C++ standards.
  *
- * - **C++20 and later:** Alias to `std::source_location`.
- * - **C++17:** Lightweight fallback with a compatible interface.
+ * - **C++20 and later:** Captured from `std::source_location`.
+ * - **C++17:** Captured from compiler-provided macros.
  *
  * @see VIGIL_CURRENT_LOC()
  */
 
 namespace vigil {
 
-#if defined(VIGIL_CPP20)
-
-    /**
-     * @typedef SourceLocation
-     * @brief Alias for `std::source_location`.
-     */
-    using SourceLocation = std::source_location;
-
-    /**
-     * @def VIGIL_CURRENT_LOC()
-     * @brief Captures the current caller's source code location.
-     *
-     * Expands to `std::source_location::current()` and is intended for use as
-     * a default function argument or directly at the call site.
-     */
-    #define VIGIL_CURRENT_LOC() ::vigil::SourceLocation::current()
-
-#else // C++17 Fallback
-
-    /**
-     * @struct SourceLocation
-     * @brief Lightweight fallback emulating `std::source_location` for C++17 compilers.
-     *
-     * Provides a compatible subset of the C++20 `std::source_location` interface,
-     * allowing the same API to be used across C++17 and C++20 codebases.
-     */
+    /// @struct SourceLocation
+    /// @brief Represents a location in the source code.
     struct SourceLocation {
         /// @brief Constructs an empty source location
         constexpr SourceLocation(
@@ -82,16 +58,15 @@ namespace vigil {
         const char* m_Function; ///< Function signature literal.
     };
 
-    /**
-     * @def VIGIL_CURRENT_LOC()
-     * @brief Captures the current caller's source code location (C++17 Fallback).
-     *
-     * @details Expands preprocessor macros at the call-site to construct a
-     * `vigil::SourceLocation` value object.
-     */
+#if defined(VIGIL_CPP20)
+    #define VIGIL_CURRENT_LOC()   \
+        ::vigil::SourceLocation{  \
+            std::source_location::current().file_name(), \
+            std::source_location::current().line(),      \
+            std::source_location::current().function_name()}
+#else
     #define VIGIL_CURRENT_LOC() \
         ::vigil::SourceLocation{__FILE__, static_cast<unsigned>(__LINE__), VIGIL_CURRENT_FUNCTION}
-
 #endif
 
 } // namespace vigil
