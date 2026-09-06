@@ -54,7 +54,7 @@ jobs:
           echo "tag=${PREV}" >> "$GITHUB_OUTPUT"
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@7b8d4719ee4aaa279bdf55df38dacb9ebfe12a6c # 2.87.6
         with:
           tool: git-cliff
 
@@ -72,6 +72,6 @@ jobs:
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: ${{ github.ref_name }}
-          name: "${{ github.ref_name }} (prerelease)"
+          name: "${{ github.ref_name }}"
           body_path: CHANGES.md
           prerelease: true
