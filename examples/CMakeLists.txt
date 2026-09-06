@@ -26,7 +26,9 @@ function(vigil_add_example name)
       vigil::vigil
   )
 
-  target_compile_features(vigil PUBLIC cxx_std_23)
+  # Examples intentionally target C++20 to use designated initializers, even
+  # though the vigil library itself only requires C++17.
+  target_compile_features(${name} PRIVATE cxx_std_20)
 
   vigil_enable_warnings(${name})
   vigil_set_compiler_options(${name})
