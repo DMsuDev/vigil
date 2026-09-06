@@ -238,11 +238,11 @@ auto AllSpdLoggers()
     loggers.reserve(1 + g_NamedLoggers.size());
 
     if (g_MainLogger)
-        loggers.push_back(g_MainLogger->Impl().m_Logger);
+        loggers.push_back(g_MainLogger->Impl().SpdLogger());
 
     for (auto& [_, handle] : g_NamedLoggers)
         if (handle)
-            loggers.push_back(handle->Impl().m_Logger);
+            loggers.push_back(handle->Impl().SpdLogger());
 
     return loggers;
 }
@@ -284,7 +284,7 @@ void LogSystem::Init(const LogSystemConfig& config)
 
         auto impl    = CreateLoggerImpl(config.Name, g_ConsoleSink, g_SharedFileSink, g_Async);
         g_MainLogger = CreateShared<Logger>(impl);
-        spdlog::set_default_logger(impl->m_Logger);
+        spdlog::set_default_logger(impl->SpdLogger());
 
         if (g_Async)
             spdlog::flush_every(std::chrono::seconds(1));
@@ -393,7 +393,7 @@ Logger& LogSystem::Create(std::string_view name)
         return *it->second;
 
     auto impl = CreateLoggerImpl(key, g_ConsoleSink, g_SharedFileSink, g_Async);
-    g_Hooks.AttachSinkTo(impl->m_Logger);
+    g_Hooks.AttachSinkTo(impl->SpdLogger());
 
     auto handle      = CreateShared<Logger>(impl);
     auto [it, _]     = g_NamedLoggers.emplace(std::move(key), std::move(handle));
@@ -427,7 +427,7 @@ Logger& LogSystem::Create(const LogConfig& config)
         EnsureAsyncThreadPool(config.AsyncQueueSize.value_or(8192));
 
     auto impl    = CreateLoggerImpl(key, g_ConsoleSink, fileSink, effectiveAsync);
-    g_Hooks.AttachSinkTo(impl->m_Logger);
+    g_Hooks.AttachSinkTo(impl->SpdLogger());
 
     auto handle  = CreateShared<Logger>(impl);
     auto [it, _] = g_NamedLoggers.emplace(std::move(key), std::move(handle));
@@ -456,7 +456,7 @@ void LogSystem::SetMain(std::string_view name)
 
     g_MainLogger = std::move(it->second);
     g_NamedLoggers.erase(it);
-    spdlog::set_default_logger(g_MainLogger->Impl().m_Logger);
+    spdlog::set_default_logger(g_MainLogger->Impl().SpdLogger());
 }
 
 //==============================================================================
@@ -532,7 +532,7 @@ void LogSystem::SetGlobalFileLevel(LogLevel level)
 
     for (auto& [_, handle] : g_NamedLoggers)
     {
-        auto sink = handle->Impl().m_FileSink;
+        auto sink = handle->Impl().FileSink();
         if (sink && sink != g_SharedFileSink)
             sink->set_level(spdLevel);
     }

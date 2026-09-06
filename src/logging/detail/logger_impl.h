@@ -13,25 +13,18 @@
 
 #include "vigil/logging/log_level.h"
 #include "vigil/core/smart_pointers.h"
+#include "vigil/detail/symbol_export.h"
 
-#include <string>
+#include <string_view>
 
 namespace vigil::detail {
 
 /// @brief Wraps a single @c spdlog::logger instance and its associated sinks.
 class LoggerImpl {
 public:
-    Shared<spdlog::logger> m_Logger;
-    spdlog::sink_ptr m_ConsoleSink;
-    spdlog::sink_ptr m_FileSink;
-
     LoggerImpl(Shared<spdlog::logger> logger,
-               spdlog::sink_ptr consoleSink,
-               spdlog::sink_ptr fileSink)
-        : m_Logger(std::move(logger))
-        , m_ConsoleSink(std::move(consoleSink))
-        , m_FileSink(std::move(fileSink))
-    {}
+               spdlog::sink_ptr       consoleSink,
+               spdlog::sink_ptr       fileSink);
 
     LoggerImpl(const LoggerImpl&)            = delete;
     LoggerImpl& operator=(const LoggerImpl&) = delete;
@@ -39,7 +32,7 @@ public:
     LoggerImpl& operator=(LoggerImpl&&)      = delete;
 
     /// @brief Logs a raw, already-formatted message at the given level.
-    void Log(LogLevel level, const std::string_view & message);
+    void Log(LogLevel level, std::string_view message);
 
     /// @brief Sets the runtime filtering level.
     void SetLevel(LogLevel level);
@@ -49,6 +42,21 @@ public:
 
     /// @brief Flushes all sinks immediately.
     void Flush();
+
+    /// @brief Attaches an arbitrary sink to the underlying logger.
+    /// Intended for white-box tests only. Not for general use.
+    VIGIL_API void AttachSink(Shared<spdlog::sinks::sink> sink);
+
+    [[nodiscard]] Shared<spdlog::logger> SpdLogger() const noexcept;
+    [[nodiscard]] spdlog::sink_ptr FileSink() const noexcept;
+    [[nodiscard]] spdlog::sink_ptr ConsoleSink() const noexcept;
+
+    VIGIL_API [[nodiscard]] std::string_view Name() const noexcept;
+
+private:
+    Shared<spdlog::logger> m_Logger;
+    spdlog::sink_ptr       m_ConsoleSink;
+    spdlog::sink_ptr       m_FileSink;
 };
 
 } // namespace vigil::detail

@@ -16,7 +16,7 @@ Logger::Logger(Shared<detail::LoggerImpl> impl) noexcept
 
 std::string_view Logger::GetName() const noexcept
 {
-    return m_Impl->m_Logger->name();
+    return m_Impl->Name();
 }
 
 void Logger::SetLevel(LogLevel level)
