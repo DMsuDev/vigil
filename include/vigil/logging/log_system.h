@@ -11,9 +11,7 @@
 #include "vigil/detail/symbol_export.h"
 #include "vigil/detail/preprocessor_utils.h"
 
-#if defined(VIGIL_ENABLE_ASSERTS)
 #include "vigil/assert.h"
-#endif
 
 #include <optional>
 #include <utility>
