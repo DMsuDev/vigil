@@ -4,10 +4,12 @@
 // -----------------------------------------------------------------------------
 
 #include "vigil/logging/log_system.h"
+#include "vigil/core/smart_pointers.h"
 
 #include "logging/detail/logger_impl.h"
 #include "logging/detail/spd_convert.h"
 #include "logging/detail/hooks_registry.h"
+#include "logging/detail/lazy_file_sink.h"
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
@@ -18,7 +20,6 @@
 #include <unordered_map>
 #include <mutex>
 #include <stdexcept>
-#include <assert.h>
 
 namespace vigil {
 
@@ -36,8 +37,12 @@ namespace {
 // operation is still holding this lock. Using std::mutex would deadlock in that
 // scenario.
 std::recursive_mutex g_Mutex;
-bool g_Initialized = false;
-bool g_Async       = false;
+bool g_Initialized   = false;
+bool g_Async         = false;
+
+// spdlog only ever has one shared thread pool; it is created lazily the
+// first time any logger (main or named) actually resolves to asynchronous.
+bool g_AsyncPoolReady = false;
 
 detail::HooksRegistry g_Hooks;
 
@@ -53,7 +58,16 @@ spdlog::sink_ptr g_ConsoleSink;
 // own LogDir is empty.
 std::string g_GlobalLogDir;
 
-static bool IsInitializedUnsafe() noexcept { return g_Initialized; }
+bool IsInitializedUnsafe() noexcept { return g_Initialized; }
+
+/// @brief Lazily creates spdlog's shared background thread pool, if not already done.
+void EnsureAsyncThreadPool(uint32_t queueSize)
+{
+    if (g_AsyncPoolReady)
+        return;
+    spdlog::init_thread_pool(queueSize, 1);
+    g_AsyncPoolReady = true;
+}
 
 void EnsureInitialized(const char* function)
 {
@@ -101,9 +115,7 @@ std::filesystem::path ResolveLogPath(
     if (logDir.empty())
         return file;
 
-    const std::filesystem::path dir(logDir);
-    std::filesystem::create_directories(dir); // no-op if already exists
-    return dir / file;
+    return std::filesystem::path(logDir) / file;
 }
 
 } // namespace
@@ -115,58 +127,71 @@ std::filesystem::path ResolveLogPath(
 namespace {
 
 /// @brief Creates a console sink filtering at @p level.
-std::shared_ptr<spdlog::sinks::stdout_color_sink_mt> MakeConsoleSink(LogLevel level)
+Shared<spdlog::sinks::stdout_color_sink_mt> MakeConsoleSink(LogLevel level)
 {
-    auto sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    auto sink = CreateShared<spdlog::sinks::stdout_color_sink_mt>();
     sink->set_level(detail::ToSpdLevel(level));
     sink->set_pattern("%^[%T] [%n] %v%$");
     return sink;
 }
 
 /// @brief Creates a file sink (rotating or truncating) for @p filePath, filtering at @p level.
+///
+/// The underlying file is not created until the first message that passes
+/// @p level is actually logged, avoiding empty `.log` files.
 spdlog::sink_ptr MakeFileSink(
     const std::filesystem::path& filePath,
     FileOpenMode                 fileMode,
     LogLevel                     level)
 {
-    spdlog::sink_ptr sink;
-
-    if (fileMode == FileOpenMode::Truncate)
+    auto factory = [filePath, fileMode]() -> spdlog::sink_ptr
     {
-        sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
-            filePath.string(), /*truncate=*/true);
-    }
-    else
-    {
-        // 10 MiB per file, keep up to 5 rotating files.
-        sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
-            filePath.string(), 1024 * 1024 * 10, 5);
-    }
+        if (filePath.has_parent_path())
+            std::filesystem::create_directories(filePath.parent_path());
 
-    sink->set_level(detail::ToSpdLevel(level));
-    sink->set_pattern("[%T] [%l] %n: %v");
-    return sink;
+        spdlog::sink_ptr sink;
+
+        if (fileMode == FileOpenMode::Truncate)
+        {
+            sink = CreateShared<spdlog::sinks::basic_file_sink_st>(
+                filePath.string(), /*truncate=*/true);
+        }
+        else
+        {
+            // 10 MiB per file, keep up to 5 rotating files.
+            sink = CreateShared<spdlog::sinks::rotating_file_sink_st>(
+                filePath.string(), 1024 * 1024 * 10, 5);
+        }
+
+        sink->set_pattern("[%T] [%l] %n: %v");
+        return sink;
+    };
+
+    auto lazySink = CreateShared<detail::LazyFileSink_mt>(std::move(factory));
+    lazySink->set_level(detail::ToSpdLevel(level));
+    return lazySink;
 }
 
 /// @brief Builds an spdlog logger (sync or async) from the provided sinks.
-std::shared_ptr<spdlog::logger> MakeSpdLogger(
+Shared<spdlog::logger> MakeSpdLogger(
     std::string_view              name,
-    std::vector<spdlog::sink_ptr> sinks)
+    std::vector<spdlog::sink_ptr> sinks,
+    bool                          async)
 {
-    std::shared_ptr<spdlog::logger> logger;
+    Shared<spdlog::logger> logger;
 
-    if (g_Async)
+    if (async)
     {
-        logger = std::make_shared<spdlog::async_logger>(
-            name.data(),
+        logger = CreateShared<spdlog::async_logger>(
+            std::string{name},
             sinks.begin(), sinks.end(),
             spdlog::thread_pool(),
             spdlog::async_overflow_policy::overrun_oldest);
     }
     else
     {
-        logger = std::make_shared<spdlog::logger>(
-            name.data(),
+        logger = CreateShared<spdlog::logger>(
+            std::string{name},
             sinks.begin(), sinks.end());
     }
 
@@ -181,19 +206,18 @@ std::shared_ptr<spdlog::logger> MakeSpdLogger(
 Shared<detail::LoggerImpl> CreateLoggerImpl(
     std::string_view name,
     spdlog::sink_ptr consoleSink,
-    spdlog::sink_ptr fileSink)
+    spdlog::sink_ptr fileSink,
+    bool             async)
 {
-    assert(consoleSink && "CreateLoggerImpl: console sink must not be null");
-
     std::vector<spdlog::sink_ptr> sinks;
     sinks.reserve(fileSink ? 2 : 1);
     sinks.push_back(consoleSink);
     if (fileSink)
         sinks.push_back(fileSink);
 
-    auto spdLogger = MakeSpdLogger(name, std::move(sinks));
+    auto spdLogger = MakeSpdLogger(name, std::move(sinks), async);
 
-    return std::make_shared<detail::LoggerImpl>(
+    return CreateShared<detail::LoggerImpl>(
         std::move(spdLogger),
         std::move(consoleSink),
         std::move(fileSink));
@@ -210,7 +234,7 @@ namespace {
 /// @brief Retrieves all spdlog logger handles across main and named loggers.
 auto AllSpdLoggers()
 {
-    std::vector<std::shared_ptr<spdlog::logger>> loggers;
+    std::vector<Shared<spdlog::logger>> loggers;
     loggers.reserve(1 + g_NamedLoggers.size());
 
     if (g_MainLogger)
@@ -240,7 +264,7 @@ void LogSystem::Init(const LogSystemConfig& config)
     {
         g_Async = config.Async;
         if (g_Async)
-            spdlog::init_thread_pool(config.AsyncQueueSize, 1);
+            EnsureAsyncThreadPool(config.AsyncQueueSize);
 
         const LogLevel consoleLevel = config.ConsoleLevel.value_or(
         #if defined(VIGIL_BUILD_DEBUG)
@@ -258,8 +282,8 @@ void LogSystem::Init(const LogSystemConfig& config)
         const auto logPath = ResolveLogPath(config.LogDir, config.LogFile, config.Name);
         g_SharedFileSink   = MakeFileSink(logPath, FileOpenMode::Append, LogLevel::Trace);
 
-        auto impl    = CreateLoggerImpl(config.Name, g_ConsoleSink, g_SharedFileSink);
-        g_MainLogger = std::make_shared<Logger>(impl);
+        auto impl    = CreateLoggerImpl(config.Name, g_ConsoleSink, g_SharedFileSink, g_Async);
+        g_MainLogger = CreateShared<Logger>(impl);
         spdlog::set_default_logger(impl->m_Logger);
 
         if (g_Async)
@@ -294,8 +318,10 @@ void LogSystem::Shutdown()
         g_ConsoleSink.reset();
         g_SharedFileSink.reset();
         g_GlobalLogDir.clear();
-        g_Hooks       = {};
-        g_Initialized = false;
+        g_Hooks          = {};
+        g_Initialized    = false;
+        g_Async          = false;
+        g_AsyncPoolReady = false;
     }
 }
 
@@ -366,10 +392,10 @@ Logger& LogSystem::Create(std::string_view name)
     if (auto it = g_NamedLoggers.find(key); it != g_NamedLoggers.end())
         return *it->second;
 
-    auto impl = CreateLoggerImpl(key, g_ConsoleSink, g_SharedFileSink);
+    auto impl = CreateLoggerImpl(key, g_ConsoleSink, g_SharedFileSink, g_Async);
     g_Hooks.AttachSinkTo(impl->m_Logger);
 
-    auto handle      = std::make_shared<Logger>(impl);
+    auto handle      = CreateShared<Logger>(impl);
     auto [it, _]     = g_NamedLoggers.emplace(std::move(key), std::move(handle));
     return *it->second;
 }
@@ -395,10 +421,15 @@ Logger& LogSystem::Create(const LogConfig& config)
         fileSink = MakeFileSink(logPath, config.FileMode, fileLevel);
     }
 
-    auto impl    = CreateLoggerImpl(key, g_ConsoleSink, fileSink);
+    // Falls back to the global async setting when the logger doesn't override it.
+    const bool effectiveAsync = config.Async.value_or(g_Async);
+    if (effectiveAsync)
+        EnsureAsyncThreadPool(config.AsyncQueueSize.value_or(8192));
+
+    auto impl    = CreateLoggerImpl(key, g_ConsoleSink, fileSink, effectiveAsync);
     g_Hooks.AttachSinkTo(impl->m_Logger);
 
-    auto handle  = std::make_shared<Logger>(impl);
+    auto handle  = CreateShared<Logger>(impl);
     auto [it, _] = g_NamedLoggers.emplace(std::move(key), std::move(handle));
     return *it->second;
 }

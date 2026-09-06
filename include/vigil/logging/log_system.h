@@ -103,6 +103,17 @@ struct LogConfig
 
     /// @brief Minimum severity threshold required for messages to be written to the log file.
     std::optional<LogLevel> FileLevel;
+
+    /// @brief Overrides @ref LogSystemConfig::Async for this logger.
+    /// Left unset, the logger inherits the global asynchronous setting.
+    std::optional<bool> Async;
+
+    /// @brief Overrides @ref LogSystemConfig::AsyncQueueSize for this logger.
+    ///
+    /// Only takes effect the first time the shared background thread pool is
+    /// created; spdlog uses a single thread pool for all async loggers, so this
+    /// is ignored once that pool already exists.
+    std::optional<uint32_t> AsyncQueueSize;
 };
 
 /**
