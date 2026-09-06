@@ -17,6 +17,7 @@
 #include <chrono>
 #include <cstring>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <vector>
@@ -25,9 +26,9 @@ namespace vigil::test {
 
 template <class Mutex>
 class TestSink : public spdlog::sinks::base_sink<Mutex> {
-    const size_t lines_to_save = 100;
-
 public:
+    static constexpr size_t kMaxLines = 100;
+
     size_t msg_counter()
     {
         std::lock_guard<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
@@ -38,6 +39,13 @@ public:
     {
         std::lock_guard<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
         return flush_counter_;
+    }
+
+    // Returns the level of the last received message, or nullopt if none.
+    std::optional<spdlog::level::level_enum> last_level()
+    {
+        std::lock_guard<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
+        return last_level_;
     }
 
     void set_delay(std::chrono::milliseconds delay)
@@ -60,19 +68,20 @@ protected:
         spdlog::sinks::base_sink<Mutex>::formatter_->format(msg, formatted);
         auto eol_len = strlen(spdlog::details::os::default_eol);
         using diff_t = typename std::iterator_traits<decltype(formatted.end())>::difference_type;
-        if (lines_.size() < lines_to_save) {
+        if (lines_.size() < kMaxLines)
             lines_.emplace_back(formatted.begin(), formatted.end() - static_cast<diff_t>(eol_len));
-        }
+        last_level_ = msg.level;
         msg_counter_++;
         std::this_thread::sleep_for(delay_);
     }
 
     void flush_() override { flush_counter_++; }
 
-    size_t msg_counter_{0};
-    size_t flush_counter_{0};
-    std::chrono::milliseconds delay_{std::chrono::milliseconds::zero()};
-    std::vector<std::string> lines_;
+    size_t                                   msg_counter_{0};
+    size_t                                   flush_counter_{0};
+    std::optional<spdlog::level::level_enum> last_level_;
+    std::chrono::milliseconds                delay_{std::chrono::milliseconds::zero()};
+    std::vector<std::string>                 lines_;
 };
 
 using TestSinkMt = TestSink<std::mutex>;

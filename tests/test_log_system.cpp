@@ -9,17 +9,23 @@
 
 #include <gtest/gtest.h>
 
+#include <filesystem>
+
 using namespace vigil;
 
-TEST(LogSystemTest, IsInitializedReflectsInitShutdownCalls)
+// =============================================================================
+// Initialization / Shutdown
+// =============================================================================
+
+TEST(LogSystemTest, IsInitializedReflectsInitAndShutdownCycles)
 {
     LogSystem::Shutdown();
     ASSERT_FALSE(LogSystem::IsInitialized());
 
     LogSystemConfig config;
-    config.Name = "registry_init_test";
-    config.LogFile = (vigil::test::kLogDir / "test_registry_init.log").string();
+    config.Name         = "init_cycle_test";
     config.ConsoleLevel = LogLevel::Off;
+    config.LogDir       = vigil::test::kLogDir.string();
     LogSystem::Init(config);
     ASSERT_TRUE(LogSystem::IsInitialized());
 
@@ -27,67 +33,81 @@ TEST(LogSystemTest, IsInitializedReflectsInitShutdownCalls)
     ASSERT_FALSE(LogSystem::IsInitialized());
 }
 
-TEST(LogSystemTest, ASecondInitCallIsIgnoredWhileAlreadyInitialized)
+TEST(LogSystemTest, SecondInitCallIsIgnoredWhileAlreadyInitialized)
 {
     LogSystemConfig first;
-    first.Name = "registry_reinit_first";
-    first.LogFile = "test_registry_reinit_first.log";
+    first.Name = "reinit_first";
     vigil::test::ScopedRegistry registry(first);
 
     LogSystemConfig second;
-    second.Name = "registry_reinit_second";
-    second.LogFile = "test_registry_reinit_second.log";
+    second.Name = "reinit_second";
     LogSystem::Init(second);
 
     // The first Init() call wins; the second is a documented no-op.
-    ASSERT_EQ(LogSystem::Main().GetName(), "registry_reinit_first");
+    EXPECT_EQ(LogSystem::Main().GetName(), "reinit_first");
 }
 
-TEST(LogSystemTest, AccessingLoggersBeforeInitThrows)
+TEST(LogSystemTest, ShutdownIsIdempotent)
+{
+    vigil::test::ScopedRegistry registry({});
+    LogSystem::Shutdown();
+    ASSERT_NO_THROW(LogSystem::Shutdown()); // second call must not throw or crash
+    ASSERT_FALSE(LogSystem::IsInitialized());
+}
+
+// =============================================================================
+// Pre-init guards
+// =============================================================================
+
+TEST(LogSystemTest, AccessingLoggersBeforeInitThrowsLogicError)
 {
     LogSystem::Shutdown();
 
-    ASSERT_THROW((void)LogSystem::Main(), std::logic_error);
-    ASSERT_THROW((void)LogSystem::Create("whatever"), std::logic_error);
-    ASSERT_THROW((void)LogSystem::Get("whatever"), std::logic_error);
-
-    // Find() is explicitly documented to never throw.
-    ASSERT_EQ(LogSystem::Find("whatever"), nullptr);
+    ASSERT_THROW((void)LogSystem::Main(),            std::logic_error);
+    ASSERT_THROW((void)LogSystem::Create("x"),       std::logic_error);
+    ASSERT_THROW((void)LogSystem::Get("x"),          std::logic_error);
 }
 
-TEST(LogSystemTest, CreateReturnsTheSameInstanceForARepeatedName)
+TEST(LogSystemTest, FindReturnsNullptrBeforeInit)
 {
-    LogSystemConfig config;
-    config.Name = "registry_create_test";
-    config.LogFile = "test_registry_create.log";
-    vigil::test::ScopedRegistry registry(config);
+    LogSystem::Shutdown();
+    // Find() is explicitly documented to never throw.
+    ASSERT_EQ(LogSystem::Find("x"), nullptr);
+}
 
-    auto& first = LogSystem::Create("worker");
+// =============================================================================
+// Named logger lifecycle
+// =============================================================================
+
+TEST(LogSystemTest, CreateReturnsSameInstanceForDuplicateName)
+{
+    vigil::test::ScopedRegistry registry({});
+
+    auto& first  = LogSystem::Create("worker");
     auto& second = LogSystem::Create("worker");
     ASSERT_EQ(&first, &second);
 }
 
-TEST(LogSystemTest, GetThrowsForAnUnknownLoggerNameFindReturnsNullptrInstead)
+TEST(LogSystemTest, GetThrowsForUnknownName)
 {
-    LogSystemConfig config;
-    config.Name = "registry_get_find_test";
-    config.LogFile = "test_registry_get_find.log";
-    vigil::test::ScopedRegistry registry(config);
-
+    vigil::test::ScopedRegistry registry({});
     ASSERT_THROW((void)LogSystem::Get("does_not_exist"), std::runtime_error);
-    ASSERT_EQ(LogSystem::Find("does_not_exist"), nullptr);
+}
+
+TEST(LogSystemTest, FindReturnsNullptrForUnknownNameAndValidPtrAfterCreate)
+{
+    vigil::test::ScopedRegistry registry({});
+
+    ASSERT_EQ(LogSystem::Find("known"), nullptr);
 
     (void)LogSystem::Create("known");
     ASSERT_NE(LogSystem::Find("known"), nullptr);
     ASSERT_EQ(&LogSystem::Get("known"), LogSystem::Find("known"));
 }
 
-TEST(LogSystemTest, RemoveDropsANamedLoggerFromTheRegistry)
+TEST(LogSystemTest, RemoveDropsNamedLoggerFromRegistry)
 {
-    LogSystemConfig config;
-    config.Name = "registry_remove_test";
-    config.LogFile = "test_registry_remove.log";
-    vigil::test::ScopedRegistry registry(config);
+    vigil::test::ScopedRegistry registry({});
 
     LogSystem::Create("temporary");
     ASSERT_NE(LogSystem::Find("temporary"), nullptr);
@@ -96,89 +116,162 @@ TEST(LogSystemTest, RemoveDropsANamedLoggerFromTheRegistry)
     ASSERT_EQ(LogSystem::Find("temporary"), nullptr);
 }
 
-TEST(LogSystemTest, RemoveIsANoOpForANameThatWasNeverRegistered)
+TEST(LogSystemTest, RemoveIsNoOpForNeverRegisteredName)
 {
-    LogSystemConfig config;
-    config.Name = "registry_remove_missing_test";
-    config.LogFile = "test_registry_remove_missing.log";
-    vigil::test::ScopedRegistry registry(config);
+    vigil::test::ScopedRegistry registry({});
 
-    // Should not throw, and should not disturb the main logger.
-    LogSystem::Remove("never_existed");
-    ASSERT_EQ(LogSystem::Main().GetName(), "registry_remove_missing_test");
+    // Must not throw and must not disturb the main logger.
+    ASSERT_NO_THROW(LogSystem::Remove("never_existed"));
+    ASSERT_TRUE(LogSystem::IsInitialized());
 }
 
-TEST(LogSystemTest, SetMainPromotesANamedLoggerAndRemovesItFromTheNamedMap)
+TEST(LogSystemTest, SetMainPromotesNamedLoggerAndRemovesItFromNamedMap)
 {
     LogSystemConfig config;
-    config.Name = "registry_setmain_test";
-    config.LogFile = "test_registry_setmain.log";
+    config.Name = "setmain_host";
     vigil::test::ScopedRegistry registry(config);
 
     LogSystem::Create("promoted");
     LogSystem::SetMain("promoted");
 
-    ASSERT_EQ(LogSystem::Main().GetName(), "promoted");
-    // Promotion removes the logger from the named registry.
-    ASSERT_EQ(LogSystem::Find("promoted"), nullptr);
+    EXPECT_EQ(LogSystem::Main().GetName(), "promoted");
+    EXPECT_EQ(LogSystem::Find("promoted"), nullptr); // no longer in named map
 }
 
-TEST(LogSystemTest, SetMainIsANoOpForANameThatWasNeverRegistered)
+TEST(LogSystemTest, SetMainIsNoOpForNeverRegisteredName)
 {
     LogSystemConfig config;
-    config.Name = "registry_setmain_missing_test";
-    config.LogFile = "test_registry_setmain_missing.log";
+    config.Name = "setmain_noop_host";
     vigil::test::ScopedRegistry registry(config);
 
     LogSystem::SetMain("never_existed");
-    ASSERT_EQ(LogSystem::Main().GetName(), "registry_setmain_missing_test");
+    EXPECT_EQ(LogSystem::Main().GetName(), "setmain_noop_host");
 }
 
-TEST(LogSystemTest, SetGlobalLevelAppliesToTheMainLoggerAndEveryNamedLogger)
+// =============================================================================
+// Global level control
+// =============================================================================
+
+TEST(LogSystemTest, SetGlobalLevelAppliesToMainAndAllNamedLoggers)
 {
-    LogSystemConfig config;
-    config.Name = "registry_global_level_test";
-    config.LogFile = "test_registry_global_level.log";
-    vigil::test::ScopedRegistry registry(config);
+    vigil::test::ScopedRegistry registry({});
 
     auto& named = LogSystem::Create("named");
 
     LogSystem::SetGlobalLevel(LogLevel::Error);
 
-    ASSERT_EQ(LogSystem::Main().GetLevel(), LogLevel::Error);
-    ASSERT_EQ(named.GetLevel(), LogLevel::Error);
+    EXPECT_EQ(LogSystem::Main().GetLevel(), LogLevel::Error);
+    EXPECT_EQ(named.GetLevel(), LogLevel::Error);
 }
 
-TEST(LogSystemTest, FlushAllFlushesTheMainLoggerAndEveryNamedLogger)
+TEST(LogSystemTest, SetLevelOnlyAffectsTheTargetedLogger)
 {
-    LogSystemConfig config;
-    config.Name = "registry_flush_all_test";
-    config.LogFile = "test_registry_flush_all.log";
-    vigil::test::ScopedRegistry registry(config);
+    vigil::test::ScopedRegistry registry({});
 
-    auto& named = LogSystem::Create("named");
-    auto mainSink = vigil::test::AttachTestSink(LogSystem::Main());
+    auto& named = LogSystem::Create("targeted");
+    LogSystem::SetLevel("targeted", LogLevel::Critical);
+
+    EXPECT_EQ(named.GetLevel(), LogLevel::Critical);
+    // Main logger must be untouched.
+    EXPECT_NE(LogSystem::Main().GetLevel(), LogLevel::Critical);
+}
+
+// =============================================================================
+// Flush
+// =============================================================================
+
+TEST(LogSystemTest, FlushAllFlushesMainAndEveryNamedLogger)
+{
+    vigil::test::ScopedRegistry registry({});
+
+    auto& named    = LogSystem::Create("named");
+    auto mainSink  = vigil::test::AttachTestSink(LogSystem::Main());
     auto namedSink = vigil::test::AttachTestSink(named);
 
     LogSystem::FlushAll();
 
-    ASSERT_EQ(mainSink->flush_counter(), 1u);
-    ASSERT_EQ(namedSink->flush_counter(), 1u);
+    EXPECT_EQ(mainSink->flush_counter(),  1u);
+    EXPECT_EQ(namedSink->flush_counter(), 1u);
 }
 
-TEST(LogSystemTest, FlushByNameOnlyFlushesTheRequestedNamedLogger)
+TEST(LogSystemTest, FlushByNameOnlyFlushesTheRequestedLogger)
 {
-    LogSystemConfig config;
-    config.Name = "registry_flush_named_test";
-    config.LogFile = "test_registry_flush_named.log";
-    vigil::test::ScopedRegistry registry(config);
+    vigil::test::ScopedRegistry registry({});
 
-    auto& named = LogSystem::Create("named");
-    auto mainSink = vigil::test::AttachTestSink(LogSystem::Main());
+    auto& named    = LogSystem::Create("named");
+    auto mainSink  = vigil::test::AttachTestSink(LogSystem::Main());
     auto namedSink = vigil::test::AttachTestSink(named);
 
     LogSystem::Flush("named");
 
-    ASSERT_EQ(namedSink->flush_counter(), 1u);
-    ASSERT_EQ(mainSink->flush_counter(), 0u);
+    EXPECT_EQ(namedSink->flush_counter(), 1u);
+    EXPECT_EQ(mainSink->flush_counter(),  0u);
+}
+
+TEST(LogSystemTest, FlushByNameIsNoOpForUnknownLogger)
+{
+    vigil::test::ScopedRegistry registry({});
+
+    auto mainSink = vigil::test::AttachTestSink(LogSystem::Main());
+    ASSERT_NO_THROW(LogSystem::Flush("never_existed"));
+    EXPECT_EQ(mainSink->flush_counter(), 0u);
+}
+
+// =============================================================================
+// Lazy file creation
+// =============================================================================
+
+TEST(LogSystemTest, LogFileIsNotCreatedWhenNothingIsLogged)
+{
+    const auto logPath = vigil::test::kLogDir / "lazy_empty.log";
+    std::filesystem::remove(logPath);
+
+    LogSystemConfig config;
+    config.Name    = "lazy_empty";
+    config.LogFile = "lazy_empty.log";
+    vigil::test::ScopedRegistry registry(config);
+
+    LogSystem::FlushAll(); // flush with nothing written must not create the file
+
+    ASSERT_FALSE(std::filesystem::exists(logPath));
+}
+
+TEST(LogSystemTest, LogFileIsCreatedOnceFirstMessageIsLogged)
+{
+    const auto logPath = vigil::test::kLogDir / "lazy_create.log";
+    std::filesystem::remove(logPath);
+
+    LogSystemConfig config;
+    config.Name    = "lazy_create";
+    config.LogFile = "lazy_create.log";
+    vigil::test::ScopedRegistry registry(config);
+
+    ASSERT_FALSE(std::filesystem::exists(logPath));
+
+    LogSystem::Main().Info("this message creates the file");
+
+    ASSERT_TRUE(std::filesystem::exists(logPath));
+}
+
+TEST(LogSystemTest, MessagesBelowFileLevelDoNotCreateTheLogFile)
+{
+    const auto logPath = vigil::test::kLogDir / "lazy_filter.log";
+    std::filesystem::remove(logPath);
+
+    LogSystemConfig config;
+    config.Name    = "lazy_filter";
+    config.LogFile = "lazy_filter.log";
+    vigil::test::ScopedRegistry registry(config);
+
+    // File sink defaults to Trace, so set it to Error to filter Debug/Info.
+    LogSystem::SetGlobalFileLevel(LogLevel::Error);
+
+    LogSystem::Main().Debug("below filter — must not create file");
+    LogSystem::Main().Info("below filter — must not create file");
+
+    ASSERT_FALSE(std::filesystem::exists(logPath))
+        << "File was created despite all messages being below the file-level filter";
+
+    LogSystem::Main().Error("above filter — must create file");
+    ASSERT_TRUE(std::filesystem::exists(logPath));
 }

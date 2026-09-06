@@ -45,9 +45,11 @@ include(GoogleTest)
 set(VIGIL_GTEST_SOURCES
   test_assert.cpp
   test_async.cpp
+  test_hooks.cpp
   test_log_limiter.cpp
-  test_logger.cpp
   test_log_system.cpp
+  test_logger.cpp
+  test_logging_macros.cpp
   test_scoped_logger.cpp
 )
 
@@ -90,4 +92,5 @@ set_target_properties(vigil_tests PROPERTIES
 gtest_discover_tests(vigil_tests
   PROPERTIES
     LABELS "vigil"
+  DISCOVERY_TIMEOUT 30
 )

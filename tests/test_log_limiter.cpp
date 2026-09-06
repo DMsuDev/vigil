@@ -15,78 +15,119 @@
 
 using namespace vigil;
 
-// NOTE: LogOncePolicy/LogTTLPolicy track keys in process-wide static state
-// that is never reset between tests (there is no public Reset()), so every
-// TEST below uses a key unique to itself to stay independent from the
-// others regardless of run order.
+// NOTE: LogOncePolicy and LogTTLPolicy store state in process-wide statics
+// with no public Reset(). Every test therefore uses a key derived from the
+// test name (via __func__) to stay independent of run order.
 
-TEST(LogLimiterTest, LogOnceShouldLogIsTrueOnlyTheFirstTimeAKeyIsSeen)
+// =============================================================================
+// LogOncePolicy
+// =============================================================================
+
+TEST(LogLimiterTest, LogOnceShouldLogReturnsTrueOnlyOnFirstCall)
 {
-    const std::string key = "log_once_should_log_key";
+    const std::string key = "LogOnceShouldLogReturnsTrueOnlyOnFirstCall";
 
-    ASSERT_TRUE(LogOncePolicy::ShouldLog(key));
-    ASSERT_FALSE(LogOncePolicy::ShouldLog(key));
-    ASSERT_FALSE(LogOncePolicy::ShouldLog(key));
+    EXPECT_TRUE(LogOncePolicy::ShouldLog(key));
+    EXPECT_FALSE(LogOncePolicy::ShouldLog(key));
+    EXPECT_FALSE(LogOncePolicy::ShouldLog(key));
 }
 
-TEST(LogLimiterTest, LogOnceShouldLogTracksEachKeyIndependently)
+TEST(LogLimiterTest, LogOnceTracksEachKeyIndependently)
 {
-    const std::string keyA = "log_once_independent_key_a";
-    const std::string keyB = "log_once_independent_key_b";
+    const std::string keyA = "LogOnceTracksEachKeyIndependently_A";
+    const std::string keyB = "LogOnceTracksEachKeyIndependently_B";
 
-    ASSERT_TRUE(LogOncePolicy::ShouldLog(keyA));
-    ASSERT_TRUE(LogOncePolicy::ShouldLog(keyB));
-    ASSERT_FALSE(LogOncePolicy::ShouldLog(keyA));
+    EXPECT_TRUE(LogOncePolicy::ShouldLog(keyA));
+    EXPECT_TRUE(LogOncePolicy::ShouldLog(keyB));
+    EXPECT_FALSE(LogOncePolicy::ShouldLog(keyA));
+    EXPECT_FALSE(LogOncePolicy::ShouldLog(keyB));
 }
 
-TEST(LogLimiterTest, LogOnceWritesThroughTheMainLoggerOnlyOncePerKey)
+TEST(LogLimiterTest, LogOnceWritesExactlyOneMessageRegardlessOfCallCount)
 {
-    LogSystemConfig config;
-    config.Name = "log_once_write_test";
-    config.LogFile = "test_log_once_write.log";
-    vigil::test::ScopedRegistry registry(config);
-
+    vigil::test::ScopedRegistry registry({});
     auto sink = vigil::test::AttachTestSink(LogSystem::Main());
-    const std::string key = "log_once_write_test_key";
 
+    const std::string key = "LogOnceWritesExactlyOneMessage";
     LogOncePolicy::LogOnce(key, LogLevel::Info, "first");
     LogOncePolicy::LogOnce(key, LogLevel::Info, "second");
     LogOncePolicy::LogOnce(key, LogLevel::Info, "third");
 
-    ASSERT_EQ(sink->msg_counter(), 1u);
+    EXPECT_EQ(sink->msg_counter(), 1u);
 }
 
-TEST(LogLimiterTest, LogTTLShouldLogBlocksRepeatsUntilTheTTLExpires)
+TEST(LogLimiterTest, LogOnceMessageContentIsPreservedOnFirstWrite)
 {
-    const std::string key = "log_ttl_should_log_key";
-
-    // Large TTL relative to the test's own runtime, so it cannot expire mid-test.
-    ASSERT_TRUE(LogTTLPolicy::ShouldLog(key, 100.0));
-    ASSERT_FALSE(LogTTLPolicy::ShouldLog(key, 100.0));
-}
-
-TEST(LogLimiterTest, LogTTLShouldLogAllowsLoggingAgainOnceTheTTLHasElapsed)
-{
-    const std::string key = "log_ttl_expiry_key";
-    constexpr double ttlSeconds = 0.05;
-
-    ASSERT_TRUE(LogTTLPolicy::ShouldLog(key, ttlSeconds));
-    std::this_thread::sleep_for(std::chrono::milliseconds(150));
-    ASSERT_TRUE(LogTTLPolicy::ShouldLog(key, ttlSeconds));
-}
-
-TEST(LogLimiterTest, LogTTLWritesThroughTheMainLoggerOncePerTTLWindow)
-{
-    LogSystemConfig config;
-    config.Name = "log_ttl_write_test";
-    config.LogFile = "test_log_ttl_write.log";
-    vigil::test::ScopedRegistry registry(config);
-
+    vigil::test::ScopedRegistry registry({});
     auto sink = vigil::test::AttachTestSink(LogSystem::Main());
-    const std::string key = "log_ttl_write_test_key";
 
+    const std::string key = "LogOnceMessageContentIsPreserved";
+    LogOncePolicy::LogOnce(key, LogLevel::Info, "expected content");
+    LogOncePolicy::LogOnce(key, LogLevel::Info, "must not appear");
+
+    const auto lines = sink->lines();
+    ASSERT_EQ(lines.size(), 1u);
+    EXPECT_NE(lines[0].find("expected content"), std::string::npos);
+}
+
+// =============================================================================
+// LogTTLPolicy
+// =============================================================================
+
+TEST(LogLimiterTest, LogTTLShouldLogBlocksRepeatsWithinTTLWindow)
+{
+    const std::string key = "LogTTLShouldLogBlocksRepeats";
+
+    EXPECT_TRUE(LogTTLPolicy::ShouldLog(key, 100.0)); // large TTL, cannot expire
+    EXPECT_FALSE(LogTTLPolicy::ShouldLog(key, 100.0));
+}
+
+TEST(LogLimiterTest, LogTTLShouldLogAllowsLoggingAfterTTLExpires)
+{
+    const std::string key       = "LogTTLShouldLogAllowsAfterExpiry";
+    constexpr double  kTTL      = 0.05; // 50 ms
+    constexpr auto    kWait     = std::chrono::milliseconds{150};
+
+    EXPECT_TRUE(LogTTLPolicy::ShouldLog(key, kTTL));
+    std::this_thread::sleep_for(kWait);
+    EXPECT_TRUE(LogTTLPolicy::ShouldLog(key, kTTL));
+}
+
+TEST(LogLimiterTest, LogTTLWritesExactlyOneMessagePerWindow)
+{
+    vigil::test::ScopedRegistry registry({});
+    auto sink = vigil::test::AttachTestSink(LogSystem::Main());
+
+    const std::string key = "LogTTLWritesExactlyOneMessagePerWindow";
     LogTTLPolicy::LogTTL(key, 100.0, LogLevel::Warn, "first");
     LogTTLPolicy::LogTTL(key, 100.0, LogLevel::Warn, "second");
 
-    ASSERT_EQ(sink->msg_counter(), 1u);
+    EXPECT_EQ(sink->msg_counter(), 1u);
+}
+
+TEST(LogLimiterTest, LogTTLTracksEachKeyIndependently)
+{
+    const std::string keyA = "LogTTLTracksEachKeyIndependently_A";
+    const std::string keyB = "LogTTLTracksEachKeyIndependently_B";
+
+    EXPECT_TRUE(LogTTLPolicy::ShouldLog(keyA, 100.0));
+    EXPECT_TRUE(LogTTLPolicy::ShouldLog(keyB, 100.0));
+    EXPECT_FALSE(LogTTLPolicy::ShouldLog(keyA, 100.0));
+    EXPECT_FALSE(LogTTLPolicy::ShouldLog(keyB, 100.0));
+}
+
+TEST(LogLimiterTest, LogTTLWritesTwoMessagesAcrossTwoWindows)
+{
+    vigil::test::ScopedRegistry registry({});
+    auto sink = vigil::test::AttachTestSink(LogSystem::Main());
+
+    const std::string key   = "LogTTLWritesTwoMessagesAcrossTwoWindows";
+    constexpr double  kTTL  = 0.05;
+    constexpr auto    kWait = std::chrono::milliseconds{150};
+
+    LogTTLPolicy::LogTTL(key, kTTL, LogLevel::Info, "window 1");
+    std::this_thread::sleep_for(kWait);
+    LogTTLPolicy::LogTTL(key, kTTL, LogLevel::Info, "window 2");
+
+    EXPECT_EQ(sink->msg_counter(), 2u);
 }

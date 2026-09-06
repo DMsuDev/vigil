@@ -18,6 +18,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <string>
 
 namespace vigil::test {
 
@@ -39,18 +40,35 @@ public:
 inline ::testing::Environment* const g_LogDirEnvironment =
     ::testing::AddGlobalTestEnvironment(new LogDirEnvironment);
 
+/// @brief Returns a log file path scoped to the current test case and name,
+///        guaranteeing no collisions between tests even when run in parallel.
+///
+/// Example: "test_logs/LogSystemTest_IsInitialized.log"
+inline std::filesystem::path UniqueLogPath()
+{
+    const auto* info = ::testing::UnitTest::GetInstance()->current_test_info();
+    std::string name = info ? (std::string{info->test_suite_name()} + "_" + info->name())
+                            : "unknown_test";
+    return kLogDir / (name + ".log");
+}
+
 /// @brief RAII guard that provides each test with an isolated LogSystem state.
 ///
-/// Console output is suppressed by default. The log file is always written
-/// into @ref kLogDir; @p config.LogFile must be provided and must include
-/// the @c .log extension.
+/// Console output is suppressed by default. Log files are always written into
+/// @ref kLogDir unless @p config.LogDir is already set. If config.LogFile is
+/// empty it is derived automatically from the running test name via
+/// @ref UniqueLogPath(), eliminating the need for per-test manual file names.
 struct ScopedRegistry {
     explicit ScopedRegistry(vigil::LogSystemConfig config = {})
     {
         if (!config.ConsoleLevel.has_value())
             config.ConsoleLevel = vigil::LogLevel::Off;
 
-        config.LogFile = (kLogDir / (config.LogFile.empty() ? config.Name : config.LogFile)).string();
+        if (config.LogDir.empty())
+            config.LogDir = kLogDir.string();
+
+        if (config.LogFile.empty())
+            config.LogFile = UniqueLogPath().filename().string();
 
         vigil::LogSystem::Shutdown();
         vigil::LogSystem::Init(config);
@@ -62,11 +80,11 @@ struct ScopedRegistry {
     ScopedRegistry& operator=(const ScopedRegistry&) = delete;
 };
 
-/// @brief Attaches a fresh TestSink to @p logger and returns it for inspection.
+/// @brief Attaches a fresh TestSinkMt to @p logger and returns it for inspection.
 inline std::shared_ptr<TestSinkMt> AttachTestSink(vigil::Logger& logger)
 {
     auto sink = std::make_shared<TestSinkMt>();
-    logger.Impl().m_Logger->sinks().push_back(sink);
+    logger.Impl().AttachSink(sink);
     return sink;
 }
 

@@ -9,178 +9,194 @@
 
 #include <gtest/gtest.h>
 
-#include <thread>
 #include <chrono>
+#include <thread>
 
 using namespace vigil;
 
 #ifdef VIGIL_ENABLE_SCOPED_LOG
 
-TEST(ScopedLoggerTest, EmitsEntryAndExitMessagesWithElapsedTime)
-{
-    LogSystemConfig config;
-    config.Name = "scoped_logger_test";
-    config.LogFile = "test_scoped_logger.log";
-    vigil::test::ScopedRegistry registry(config);
+// =============================================================================
+// Basic behaviour
+// =============================================================================
 
+TEST(ScopedLoggerTest, EmitsEntryAndExitMessages)
+{
+    vigil::test::ScopedRegistry registry({});
+    auto sink = vigil::test::AttachTestSink(LogSystem::Main());
+
+    { ScopedLogger scope("BasicScope"); }
+
+    ASSERT_EQ(sink->msg_counter(), 2u);
+    const auto lines = sink->lines();
+    EXPECT_NE(lines[0].find(">>"),          std::string::npos);
+    EXPECT_NE(lines[0].find("BasicScope"),  std::string::npos);
+    EXPECT_NE(lines[1].find("<<"),          std::string::npos);
+    EXPECT_NE(lines[1].find("BasicScope"),  std::string::npos);
+}
+
+TEST(ScopedLoggerTest, ExitMessageContainsElapsedTimeInMs)
+{
+    vigil::test::ScopedRegistry registry({});
     auto sink = vigil::test::AttachTestSink(LogSystem::Main());
 
     {
-        ScopedLogger scope("TestScope");
-        // Simulate some work
+        ScopedLogger scope("TimedScope");
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    // Entry message + exit message = 2
-    ASSERT_EQ(sink->msg_counter(), 2u);
-
-    auto lines = sink->lines();
+    const auto lines = sink->lines();
     ASSERT_EQ(lines.size(), 2u);
-
-    // Entry message contains ">>"
-    ASSERT_NE(lines[0].find(">>"), std::string::npos);
-    ASSERT_NE(lines[0].find("TestScope"), std::string::npos);
-
-    // Exit message contains "<<" and elapsed time in ms
-    ASSERT_NE(lines[1].find("<<"), std::string::npos);
-    ASSERT_NE(lines[1].find("TestScope"), std::string::npos);
-    ASSERT_NE(lines[1].find("ms"), std::string::npos);
+    EXPECT_NE(lines[1].find("ms"), std::string::npos);
 }
 
-TEST(ScopedLoggerTest, RespectsCustomLogLevel)
-{
-    LogSystemConfig config;
-    config.Name = "scoped_logger_level_test";
-    config.LogFile = "test_scoped_logger_level.log";
-    vigil::test::ScopedRegistry registry(config);
+// =============================================================================
+// Level filtering
+// =============================================================================
 
+TEST(ScopedLoggerTest, ScopeBelowActiveLevelProducesNoMessages)
+{
+    vigil::test::ScopedRegistry registry({});
     auto& logger = LogSystem::Main();
-    auto sink = vigil::test::AttachTestSink(logger);
+    auto  sink   = vigil::test::AttachTestSink(logger);
 
-    // Set logger level to Warn, so Trace messages should be filtered out
     logger.SetLevel(LogLevel::Warn);
+    { ScopedLogger scope("FilteredScope", LogLevel::Trace); } // Trace < Warn
 
-    {
-        // This should be filtered out (Trace < Warn)
-        ScopedLogger scope("FilteredScope", LogLevel::Trace);
-    }
-
-    ASSERT_EQ(sink->msg_counter(), 0u);
-
-    {
-        // This should go through (Warn >= Warn)
-        ScopedLogger scope("VisibleScope", LogLevel::Warn);
-    }
-
-    // Entry + exit = 2
-    ASSERT_EQ(sink->msg_counter(), 2u);
+    EXPECT_EQ(sink->msg_counter(), 0u);
 }
 
-TEST(ScopedLoggerTest, SupportsNestedScopes)
+TEST(ScopedLoggerTest, ScopeAtActiveLevelProducesBothMessages)
 {
-    LogSystemConfig config;
-    config.Name = "scoped_logger_nested_test";
-    config.LogFile = "test_scoped_logger_nested.log";
-    vigil::test::ScopedRegistry registry(config);
+    vigil::test::ScopedRegistry registry({});
+    auto& logger = LogSystem::Main();
+    auto  sink   = vigil::test::AttachTestSink(logger);
 
+    logger.SetLevel(LogLevel::Warn);
+    { ScopedLogger scope("VisibleScope", LogLevel::Warn); } // Warn >= Warn
+
+    EXPECT_EQ(sink->msg_counter(), 2u);
+}
+
+// =============================================================================
+// Nesting
+// =============================================================================
+
+TEST(ScopedLoggerTest, NestedScopesProduceMessagesInCorrectOrder)
+{
+    vigil::test::ScopedRegistry registry({});
     auto sink = vigil::test::AttachTestSink(LogSystem::Main());
 
     {
         ScopedLogger outer("OuterScope");
-        {
-            ScopedLogger inner("InnerScope");
-        }
+        { ScopedLogger inner("InnerScope"); }
     }
 
-    // Outer entry, inner entry, inner exit, outer exit = 4
+    // Expected order: outer>>, inner>>, inner<<, outer<<
     ASSERT_EQ(sink->msg_counter(), 4u);
-
-    auto lines = sink->lines();
-    ASSERT_EQ(lines.size(), 4u);
-
-    // Verify ordering: outer entry -> inner entry -> inner exit -> outer exit
-    ASSERT_NE(lines[0].find(">> OuterScope"), std::string::npos);
-    ASSERT_NE(lines[1].find(">> InnerScope"), std::string::npos);
-    ASSERT_NE(lines[2].find("<< InnerScope"), std::string::npos);
-    ASSERT_NE(lines[3].find("<< OuterScope"), std::string::npos);
+    const auto lines = sink->lines();
+    EXPECT_NE(lines[0].find(">> OuterScope"), std::string::npos);
+    EXPECT_NE(lines[1].find(">> InnerScope"), std::string::npos);
+    EXPECT_NE(lines[2].find("<< InnerScope"), std::string::npos);
+    EXPECT_NE(lines[3].find("<< OuterScope"), std::string::npos);
 }
 
-TEST(ScopedLoggerTest, MacroVIGIL_SCOPED_LOGWorks)
-{
-    LogSystemConfig config;
-    config.Name = "scoped_logger_macro_test";
-    config.LogFile = "test_scoped_logger_macro.log";
-    vigil::test::ScopedRegistry registry(config);
+// =============================================================================
+// Macros
+// =============================================================================
 
+TEST(ScopedLoggerTest, VIGIL_SCOPED_LOGEmitsEntryAndExit)
+{
+    vigil::test::ScopedRegistry registry({});
     auto sink = vigil::test::AttachTestSink(LogSystem::Main());
 
-    {
-        VIGIL_SCOPED_LOG("MacroScope");
-    }
+    { VIGIL_SCOPED_LOG("MacroScope"); }
 
     ASSERT_EQ(sink->msg_counter(), 2u);
-
-    auto lines = sink->lines();
-    ASSERT_NE(lines[0].find(">> MacroScope"), std::string::npos);
-    ASSERT_NE(lines[1].find("<< MacroScope"), std::string::npos);
+    const auto lines = sink->lines();
+    EXPECT_NE(lines[0].find(">> MacroScope"), std::string::npos);
+    EXPECT_NE(lines[1].find("<< MacroScope"), std::string::npos);
 }
 
-static void TestFunctionForScopedLog()
+static void HelperForFunctionMacroTest()
 {
     VIGIL_SCOPED_LOG_FUNCTION();
 }
 
-TEST(ScopedLoggerTest, MacroVIGIL_SCOPED_LOG_FUNCTIONWorks)
+TEST(ScopedLoggerTest, VIGIL_SCOPED_LOG_FUNCTIONIncludesFunctionName)
 {
-    LogSystemConfig config;
-    config.Name = "scoped_logger_func_macro_test";
-    config.LogFile = "test_scoped_logger_func_macro.log";
-    vigil::test::ScopedRegistry registry(config);
-
+    vigil::test::ScopedRegistry registry({});
     auto sink = vigil::test::AttachTestSink(LogSystem::Main());
 
-    TestFunctionForScopedLog();
+    HelperForFunctionMacroTest();
 
     ASSERT_EQ(sink->msg_counter(), 2u);
-
-    auto lines = sink->lines();
-    // Function name should appear in both entry and exit
-    ASSERT_NE(lines[0].find(">>"), std::string::npos);
-    ASSERT_NE(lines[0].find("TestFunctionForScopedLog"), std::string::npos);
-    ASSERT_NE(lines[1].find("<<"), std::string::npos);
-    ASSERT_NE(lines[1].find("TestFunctionForScopedLog"), std::string::npos);
+    const auto lines = sink->lines();
+    EXPECT_NE(lines[0].find("HelperForFunctionMacroTest"), std::string::npos);
+    EXPECT_NE(lines[1].find("HelperForFunctionMacroTest"), std::string::npos);
+    EXPECT_NE(lines[0].find(">>"), std::string::npos);
+    EXPECT_NE(lines[1].find("<<"), std::string::npos);
 }
 
-TEST(ScopedLoggerTest, OwningStringConstructorWorks)
+TEST(ScopedLoggerTest, VIGIL_SCOPED_LOG_LEVELUsesExplicitLevel)
 {
-    LogSystemConfig config;
-    config.Name = "scoped_logger_owning_test";
-    config.LogFile = "test_scoped_logger_owning.log";
-    vigil::test::ScopedRegistry registry(config);
+    vigil::test::ScopedRegistry registry({});
+    auto& logger = LogSystem::Main();
+    auto  sink   = vigil::test::AttachTestSink(logger);
 
+    logger.SetLevel(LogLevel::Warn);
+
+    { VIGIL_SCOPED_LOG_LEVEL("Filtered",  LogLevel::Debug); } // Debug < Warn — dropped
+    { VIGIL_SCOPED_LOG_LEVEL("Visible",   LogLevel::Warn);  } // Warn >= Warn — kept
+
+    ASSERT_EQ(sink->msg_counter(), 2u); // only the second scope's two messages
+    const auto lines = sink->lines();
+    EXPECT_NE(lines[0].find("Visible"), std::string::npos);
+}
+
+TEST(ScopedLoggerTest, VIGIL_SCOPE_BEGIN_ENDPairBehavesLikeTheObjectForm)
+{
+    vigil::test::ScopedRegistry registry({});
     auto sink = vigil::test::AttachTestSink(LogSystem::Main());
 
     {
-        std::string scopeName = "DynamicScope";
-        ScopedLogger scope(std::move(scopeName));
+        VIGIL_SCOPE_BEGIN_LEVEL("ManualScope", LogLevel::Info);
+        VIGIL_SCOPE_END();
     }
 
     ASSERT_EQ(sink->msg_counter(), 2u);
+    const auto lines = sink->lines();
+    EXPECT_NE(lines[0].find(">> ManualScope"), std::string::npos);
+    EXPECT_NE(lines[1].find("<< ManualScope"), std::string::npos);
+}
 
-    auto lines = sink->lines();
-    ASSERT_NE(lines[0].find(">> DynamicScope"), std::string::npos);
-    ASSERT_NE(lines[1].find("<< DynamicScope"), std::string::npos);
+// =============================================================================
+// Owning string constructor
+// =============================================================================
+
+TEST(ScopedLoggerTest, OwningStringConstructorPreservesName)
+{
+    vigil::test::ScopedRegistry registry({});
+    auto sink = vigil::test::AttachTestSink(LogSystem::Main());
+
+    {
+        std::string name = "DynamicScope";
+        ScopedLogger scope(std::move(name));
+    }
+
+    ASSERT_EQ(sink->msg_counter(), 2u);
+    const auto lines = sink->lines();
+    EXPECT_NE(lines[0].find(">> DynamicScope"), std::string::npos);
+    EXPECT_NE(lines[1].find("<< DynamicScope"), std::string::npos);
 }
 
 #else // !VIGIL_ENABLE_SCOPED_LOG
 
-TEST(ScopedLoggerTest, DisabledWhenFeatureIsOff)
+TEST(ScopedLoggerTest, MacrosAreNoOpsWhenFeatureIsDisabled)
 {
-    // When VIGIL_ENABLE_SCOPED_LOG is not defined, the macros should expand to ((void)0)
-    // This test just verifies the code compiles without the feature enabled.
-    VIGIL_SCOPED_LOG("Should be no-op");
+    VIGIL_SCOPED_LOG("noop");
     VIGIL_SCOPED_LOG_FUNCTION();
-    SUCCEED() << "Macros compile to no-op when VIGIL_ENABLE_SCOPED_LOG is disabled.";
+    SUCCEED() << "Macros compile to no-op when VIGIL_ENABLE_SCOPED_LOG is not defined.";
 }
 
 #endif // VIGIL_ENABLE_SCOPED_LOG
