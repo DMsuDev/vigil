@@ -45,13 +45,13 @@ public:
 
     /// @brief Attaches an arbitrary sink to the underlying logger.
     /// Intended for white-box tests only. Not for general use.
-    VIGIL_API void AttachSink(Shared<spdlog::sinks::sink> sink);
+    VIGIL_API void AttachSink(spdlog::sink_ptr sink);
 
     [[nodiscard]] Shared<spdlog::logger> SpdLogger() const noexcept;
     [[nodiscard]] spdlog::sink_ptr FileSink() const noexcept;
     [[nodiscard]] spdlog::sink_ptr ConsoleSink() const noexcept;
 
-    VIGIL_API [[nodiscard]] std::string_view Name() const noexcept;
+    [[nodiscard]] VIGIL_API std::string_view Name() const noexcept;
 
 private:
     Shared<spdlog::logger> m_Logger;

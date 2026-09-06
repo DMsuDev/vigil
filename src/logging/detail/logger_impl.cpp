@@ -36,7 +36,7 @@ void LoggerImpl::Flush()
     m_Logger->flush();
 }
 
-VIGIL_API void LoggerImpl::AttachSink(spdlog::sink_ptr sink)
+void LoggerImpl::AttachSink(spdlog::sink_ptr sink)
 {
     m_Logger->sinks().push_back(std::move(sink));
 }
