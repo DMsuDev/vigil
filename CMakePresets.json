@@ -31,6 +31,30 @@
         "VIGIL_USE_SYSTEM_FMT": true
       }
     },
+    {
+      "name": "base-install-tests-full",
+      "hidden": true,
+      "cacheVariables": {
+        "VIGIL_BUILD_TESTS":           false,
+        "VIGIL_BUILD_EXAMPLES":        false,
+        "VIGIL_INSTALL":               true,
+        "VIGIL_CONSUMER_TESTS":        true,
+        "VIGIL_INSTALL_TESTS_CLEANUP": false,
+        "VIGIL_USE_SYSTEM_FMT":        true
+      }
+    },
+    {
+      "name": "base-install-tests-no-import",
+      "hidden": true,
+      "cacheVariables": {
+        "VIGIL_BUILD_TESTS":           false,
+        "VIGIL_BUILD_EXAMPLES":        false,
+        "VIGIL_INSTALL":               false,
+        "VIGIL_CONSUMER_TESTS":        true,
+        "VIGIL_INSTALL_TESTS_CLEANUP": false,
+        "VIGIL_USE_SYSTEM_FMT":        false
+      }
+    },
 
     {
       "name": "windows-vs",

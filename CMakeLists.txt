@@ -40,15 +40,17 @@ message(STATUS "${PROJECT_NAME} version: ${VIGIL_VERSION}")
 # Defaults are tied to PROJECT_IS_TOP_LEVEL so that consumer builds are never
 # affected by Vigil's own development settings.
 
-option(VIGIL_BUILD_SHARED        "Build Vigil as a shared library."                              ${BUILD_SHARED_LIBS})
-option(VIGIL_INSTALL             "Generate the install target."                                  OFF)
-option(VIGIL_BUILD_TESTS         "Build Vigil's unit-test suite."                                ${PROJECT_IS_TOP_LEVEL})
-option(VIGIL_BUILD_EXAMPLES      "Build Vigil's example programs."                               ${PROJECT_IS_TOP_LEVEL})
-option(VIGIL_BUILD_WARNINGS      "Enable strict compiler warning suites."                        ${PROJECT_IS_TOP_LEVEL})
-option(VIGIL_WARNINGS_AS_ERRORS  "Treat compiler warnings as hard errors."                       OFF)
-option(VIGIL_ENABLE_STACK_TRACE  "Enable cross-platform call stack capture and symbolication"    ON )
-option(VIGIL_ENABLE_SCOPED_LOG   "Instrument scopes with entry/exit trace logging ."             OFF)
-option(VIGIL_USE_SYSTEM_FMT      "Use system-installed fmt library"                               ${VIGIL_INSTALL})
+option(VIGIL_BUILD_SHARED          "Build Vigil as a shared library."                                  ${BUILD_SHARED_LIBS})
+option(VIGIL_INSTALL               "Generate the install target."                                      OFF)
+option(VIGIL_CONSUMER_TESTS        "Enable CMake consumer integration tests."                          OFF)
+option(VIGIL_INSTALL_TESTS_CLEANUP "Delete generated consumer project dirs after install tests run."   ON )
+option(VIGIL_BUILD_TESTS           "Build Vigil's unit-test suite."                                    ${PROJECT_IS_TOP_LEVEL})
+option(VIGIL_BUILD_EXAMPLES        "Build Vigil's example programs."                                   ${PROJECT_IS_TOP_LEVEL})
+option(VIGIL_BUILD_WARNINGS        "Enable strict compiler warning suites."                            ${PROJECT_IS_TOP_LEVEL})
+option(VIGIL_WARNINGS_AS_ERRORS    "Treat compiler warnings as hard errors."                           OFF)
+option(VIGIL_ENABLE_STACK_TRACE    "Enable cross-platform call stack capture and symbolication"        ON )
+option(VIGIL_ENABLE_SCOPED_LOG     "Instrument scopes with entry/exit trace logging ."                 OFF)
+option(VIGIL_USE_SYSTEM_FMT        "Use system-installed fmt library"                                   ${VIGIL_INSTALL})
 
 # ------------------------------------------------------------------------------
 #  Option Validation & Derived Settings
@@ -65,6 +67,12 @@ if(VIGIL_INSTALL AND NOT VIGIL_USE_SYSTEM_FMT)
     "[Vigil] VIGIL_USE_SYSTEM_FMT=OFF is incompatible with VIGIL_INSTALL=ON "
     "(fmt appears in Vigil's public headers). Forcing VIGIL_USE_SYSTEM_FMT=ON.")
   set(VIGIL_USE_SYSTEM_FMT ON CACHE BOOL "Use system-installed fmt instead of the vendored copy." FORCE)
+endif()
+
+if(VIGIL_CONSUMER_TESTS AND NOT VIGIL_INSTALL)
+  message(WARNING
+    "[Vigil] VIGIL_CONSUMER_TESTS=ON has no effect without VIGIL_INSTALL=ON. "
+    "The cmake_import test will be skipped.")
 endif()
 
 # Enable scoped logging automatically in Debug builds unless explicitly set.
@@ -137,7 +145,7 @@ if(VIGIL_BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif()
 
-if(VIGIL_BUILD_TESTS)
+if(VIGIL_BUILD_TESTS OR VIGIL_CONSUMER_TESTS)
   message(STATUS "Vigil: Test suite execution is enabled.")
   enable_testing()
   add_subdirectory(tests)

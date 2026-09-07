@@ -1,8 +1,10 @@
 # ==============================================================================
 #  TEST SUITE ORCHESTRATOR
 # ==============================================================================
-#  Description: Wires up Vigil's two test tiers:
-#     unit/  ->  Fast GoogleTest unit tests (VIGIL_BUILD_TESTS).
+#  Orchestrates test execution across two tiers:
+#    - Unit (unit/)         : Fast GoogleTest suite (VIGIL_BUILD_TESTS)
+#    - Integration (cmake_*): CMake consumer tests (VIGIL_CONSUMER_TESTS)
+#
 #   _    __ __ _____ ___ __
 #  | |  / /  _/ ____/  _/ /
 #  | | / // // / __ / // /     Logging and Diagnostics for C++
@@ -13,4 +15,23 @@
 #  See LICENSE file in the project root for full license text.
 # ==============================================================================
 
-add_subdirectory(unit)
+if(VIGIL_BUILD_TESTS)
+  add_subdirectory(unit)
+endif()
+
+# ------------------------------------------------------------------------------
+#  Install / Consumer Integration Tests (opt-in, slow)
+# ------------------------------------------------------------------------------
+
+if(VIGIL_CONSUMER_TESTS)
+  message(STATUS "Vigil: Registering install/consumer integration tests.")
+
+  add_subdirectory(cmake_fetch_content)
+  add_subdirectory(cmake_add_subdirectory)
+
+  if(VIGIL_INSTALL)
+    add_subdirectory(cmake_import)
+  else()
+    message(STATUS "Vigil: Skipping cmake_import test (requires VIGIL_INSTALL=ON).")
+  endif()
+endif()
