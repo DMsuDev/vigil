@@ -1,0 +1,191 @@
+name: "Install Integration Tests"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "vendor/**"
+      - "cmake/**"
+      - "tests/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/install-tests.yml"
+
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "vendor/**"
+      - "cmake/**"
+      - "tests/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/install-tests.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: install-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_DIR: build
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: Consumer Tests (No Install)
+  #        FetchContent + add_subdirectory using embedded dependencies.
+  # ---------------------------------------------------------------------------
+  install-tests-no-install:
+    name: Consumer tests without install (${{ matrix.platform }})
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+
+          - os: windows-latest
+            platform: windows-x64
+
+          - os: macos-latest
+            platform: macos-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Configure (Linux / macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cmake \
+            -S . \
+            -B ${{ env.BUILD_DIR }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DVIGIL_INSTALL=OFF \
+            -DVIGIL_CONSUMER_TESTS=ON \
+            -DVIGIL_INSTALL_TESTS_CLEANUP=ON \
+            -DVIGIL_BUILD_TESTS=OFF \
+            -DVIGIL_BUILD_EXAMPLES=OFF \
+            -DVIGIL_USE_SYSTEM_FMT=OFF
+
+      - name: Configure (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          cmake `
+            -S . `
+            -B ${{ env.BUILD_DIR }} `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DVIGIL_INSTALL=OFF `
+            -DVIGIL_CONSUMER_TESTS=ON `
+            -DVIGIL_INSTALL_TESTS_CLEANUP=ON `
+            -DVIGIL_BUILD_TESTS=OFF `
+            -DVIGIL_BUILD_EXAMPLES=OFF `
+            -DBUILD_SHARED_LIBS=OFF `
+            -DVIGIL_USE_SYSTEM_FMT=OFF
+
+      - name: Build
+        shell: bash
+        run: cmake --build ${{ env.BUILD_DIR }} --config Release --parallel
+
+      - name: Run consumer tests (fetch_content + add_subdirectory)
+        shell: bash
+        run: |
+          ctest \
+            --test-dir ${{ env.BUILD_DIR }} \
+            -C Release \
+            -L install \
+            --exclude-regex cmake_import \
+            --output-on-failure \
+            --timeout 600
+
+  # ---------------------------------------------------------------------------
+  # Job 2: Consumer Tests (With Install)
+  #        Full integration flow requiring system-installed fmt.
+  # ---------------------------------------------------------------------------
+  install-tests-full:
+    name: Full consumer tests with install (${{ matrix.platform }})
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+
+          - os: windows-latest
+            platform: windows-x64
+
+          - os: macos-latest
+            platform: macos-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install fmt (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y libfmt-dev
+
+      - name: Install fmt (macOS)
+        if: matrix.os == 'macos-latest'
+        run: brew install fmt
+
+      - name: Install fmt (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: vcpkg install fmt:x64-windows-static
+
+      - name: Configure (Linux / macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cmake \
+            -S . \
+            -B ${{ env.BUILD_DIR }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DVIGIL_USE_SYSTEM_FMT=ON \
+            -DVIGIL_INSTALL=ON \
+            -DVIGIL_CONSUMER_TESTS=ON \
+            -DVIGIL_INSTALL_TESTS_CLEANUP=ON \
+            -DVIGIL_BUILD_TESTS=OFF \
+            -DVIGIL_BUILD_EXAMPLES=OFF
+
+      - name: Configure (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          cmake `
+            -S . `
+            -B ${{ env.BUILD_DIR }} `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static `
+            -DVIGIL_USE_SYSTEM_FMT=ON `
+            -DVIGIL_INSTALL=ON `
+            -DVIGIL_CONSUMER_TESTS=ON `
+            -DVIGIL_INSTALL_TESTS_CLEANUP=ON `
+            -DVIGIL_BUILD_TESTS=OFF `
+            -DVIGIL_BUILD_EXAMPLES=OFF `
+            -DBUILD_SHARED_LIBS=OFF
+
+      - name: Build
+        shell: bash
+        run: cmake --build ${{ env.BUILD_DIR }} --config Release --parallel
+
+      - name: Run full consumer tests (fetch_content + add_subdirectory + import)
+        shell: bash
+        run: |
+          ctest \
+            --test-dir ${{ env.BUILD_DIR }} \
+            -C Release \
+            -L install \
+            --output-on-failure \
+            --timeout 600
