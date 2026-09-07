@@ -1,14 +1,15 @@
 // -----------------------------------------------------------------------------
+//   _    __ __ _____ ___ __
+//  | |  / /  _/ ____/  _/ /
+//  | | / // // / __ / // /     Logging and Diagnostics for C++
+//  | |/ // // /_/ // // /___   https://github.com/DMsuDev/vigil
+//  |___/___/\____/___/_____/
+//
 //  Copyright (c) 2026 @DMsuDev. Licensed under the MIT License.
 //  See LICENSE file in the project root for full license text.
 // -----------------------------------------------------------------------------
 
 #pragma once
-
-// NOTE: adapted from spdlog's own vendor/spdlog/tests/test_sink.h. Vigil hides
-// spdlog from its public API, but its tests are white-box: they reach into
-// Logger::Impl() to attach this sink directly to the underlying spdlog::logger,
-// the same way spdlog's own test suite does with spdlog::sinks::test_sink.
 
 #include <spdlog/details/null_mutex.h>
 #include <spdlog/details/os.h>
