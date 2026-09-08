@@ -2,10 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Conventional Commits](https://www.conventionalcommits.org/)
-and this project adheres to [Semantic Versioning](https://semver.org/).
+The format is based on [Conventional Commits](https://www.conventionalcommits.org/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.6.0] - 2026-09-08
 
 ### 💥 Breaking Changes
 
@@ -15,7 +14,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Standardize preprocessor severity level constants from VIGIL_LOG_LEVEL_* to VIGIL_LEVEL_*.
   - Introduce a centralized VIGIL_LOG_IMPL dispatch macro leveraging `if constexpr` for compile-time filtering.
 
-  > ⚠️ The main logging macros (such as VIGIL_INFO, VIGIL_WARN, VIGIL_ERROR, etc.) now require the VIGIL_LOG_ prefix (e.g., VIGIL_LOG_INFO), and preprocessor severity constants have been renamed from VIGIL_LOG_LEVEL_* to VIGIL_LEVEL_*, breaking backward compatibility for API consumers.
+> ⚠️ The main logging macros (such as VIGIL_INFO, VIGIL_WARN, VIGIL_ERROR, etc.) now require the VIGIL_LOG_ prefix (e.g., VIGIL_LOG_INFO), and preprocessor severity constants have been renamed from VIGIL_LOG_LEVEL_* to VIGIL_LEVEL_*, breaking backward compatibility for API consumers.
+
+### 🚀 Features
+
+- Add lazy file sinks and per-logger async configuration ([49ad6e9](https://github.com/DMsuDev/Vigil/commit/49ad6e9a9c5c9d580f0d21dde81c4ca402ce3b17))
+
+  - Introduce `LazyFileSink` to defer physical file creation until the first log message is written
+  - Extend `LogConfig` with optional `Async` and `AsyncQueueSize` overrides for individual loggers
+  - Implement lazy initialization of the global `spdlog` thread pool via `EnsureAsyncThreadPool`
+  - Standardize pointer allocations across the logging subsystem using custom `SmartPointers` utilities
+
+### 🐛 Bug Fixes
+
+- Ensure assertion header is always included for release builds ([3a67ce5](https://github.com/DMsuDev/Vigil/commit/3a67ce55083f9efd06f99e6b59805e1daac8bc73))
+
+  - Remove the `#if defined(VIGIL_ENABLE_ASSERTS)` conditional guard around `#include "vigil/assert.h"` in `log_system.h`
+  - Prevent compilation errors in `Release` builds caused by missing assertion macros required by the logging system logic
+
+- Correct VIGIL_API placement and sink type consistency in LoggerImpl ([a5f630a](https://github.com/DMsuDev/Vigil/commit/a5f630a7c53cf69031bece696e1c24c3ef7070e1))
+
+### 🚜 Refactor
+
+- Decouple SourceLocation from std::source_location alias in C++20 ([54d2aef](https://github.com/DMsuDev/Vigil/commit/54d2aefdcbcb3b32a21f4372d7af6663310622ac))
+
+- Encapsulate LoggerImpl members and add public accessors ([4fa69b6](https://github.com/DMsuDev/Vigil/commit/4fa69b61df58fb7352ac4d2d5c7374214a500160))
+
+  - Make `m_Logger`, `m_ConsoleSink`, and `m_FileSink` private inside `LoggerImpl` to improve data hiding
+  - Expose controlled getter methods (`SpdLogger()`, `FileSink()`, `ConsoleSink()`, and `Name()`)
+  - Add `AttachSink()` method to `LoggerImpl` for white-box testing support
+
+- Streamline project configuration options and dependency flow ([49e6770](https://github.com/DMsuDev/Vigil/commit/49e6770f68f0f595d33d117db75bf5061a46d825))
+
+  - Reorganize option definitions, default values, and build-type setup logic in CMakeLists.txt.
+  - Add validation rule to force system fmt configuration when installation targets are enabled.
+  - Optimize `vigil_copy_runtime_dependencies` to gracefully skip execution for static libraries and non-Windows targets, relying on proper RPATH configuration on UNIX platforms.
+
+- Organize unit tests into dedicated subdirectory structure ([1cb739f](https://github.com/DMsuDev/Vigil/commit/1cb739f3d1eebcce961aabb128bd22d9e089f6a2))
+
+  - Move unit test suite configuration and source files into `tests/unit/` folder.
+  - Simplify root `tests/CMakeLists.txt` to act as a test tier orchestrator via `add_subdirectory(...)`.
+  - Update test discovery labels and configuration settings to cleanly separate unit testing targets.
+  - Added new test for recent new features
 
 ### 🛠️ Build System
 
@@ -31,9 +71,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Scope _FORTIFY_SOURCE=2 strictly to Release builds under GCC and Clang.
   - Restructure compiler options using generator expressions.
 
+- Correct C++ standard target for example executables to C++20 ([7894d54](https://github.com/DMsuDev/Vigil/commit/7894d54fe86d6ffbad68f32b73a95e6bea804282))
+
 ### 🔧 Maintenance
 
 - Ensure complete test and example coverage in CI ([dc01926](https://github.com/DMsuDev/Vigil/commit/dc01926781d820e3e154c834eabe8dd815eaffae))
+
+- Update git-cliff action version and adjust release name format ([9839540](https://github.com/DMsuDev/Vigil/commit/98395407b2289aa3abf7e6ff5b426f18efb1a58d))
+
+- Update workflow to trigger on workflow_dispatch and improve version handling ([796ea20](https://github.com/DMsuDev/Vigil/commit/796ea2095981d69ab4ea9b8572cf9d1b4738e6f7))
+
+  - Improve `cliff.toml` configuration
+
+- Expand and improve test suite for assertions, async, hooks, and registry ([22a64c0](https://github.com/DMsuDev/Vigil/commit/22a64c02a352bceec37f6abe03455288b19302e0))
+
+  - Add test for `VIGIL_VERIFY`, `VIGIL_ASSERT`, and related pointer/range validation macros
+  - Introduce robust asynchronous logging tests verifying delivery guarantees and configuration overrides
+  - Implement dedicated unit tests for all event hooks (`OnMessage`, `OnLevelChange`, `OnFlush`, `OnShutdown`)
+  - Improve test helpers with `UniqueLogPath()` to guarantee test isolation and prevent file collisions
+
+- Add consumer integration tests for install and vendoring ([ce106fb](https://github.com/DMsuDev/Vigil/commit/ce106fb4a1448f3648845d948ebbaf3265fd1fd9))
+
+  Add a new CMake test suite tier (`VIGIL_CONSUMER_TESTS`) to validate
+  different ways external consumers consume the Vigil library.
+
+  - Add options `VIGIL_CONSUMER_TESTS` and `VIGIL_INSTALL_TESTS_CLEANUP`.
+  - Add test harnesses using `ctest --build-and-test` for:
+    - `cmake_add_subdirectory`: Vendoring via subfolder.
+    - `cmake_fetch_content`: Consumption via CMake's FetchContent.
+    - `cmake_import`: Installed package lookup via `find_package(Vigil CONFIG)`.
+  - Configure test fixtures and cleanup steps using CTest properties.
+  - Add preset configurations in `CMakePresets.json` to facilitate integration testing.
+
+- Add GitHub Actions workflow for install integration tests ([9e18651](https://github.com/DMsuDev/Vigil/commit/9e186510506eec4d9b4c8811d44cdfb3496811b9))
+
+- Allow non-conventional commits in changelog generation ([a6e9f32](https://github.com/DMsuDev/Vigil/commit/a6e9f324e8ea66796770be76c121b97becfeecdb))
 
 ## [0.5.1] - 2026-09-04
 
