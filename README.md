@@ -35,6 +35,7 @@ Supports **C++17 and later** on **Linux**, **Windows**, and **macOS**.
 - Cross-platform stack trace capture (DWARF on POSIX, PDB on Windows)
 - RAII scope instrumentation with entry/exit logging and elapsed time
 - Lifecycle hooks for observing log events without modifying the pipeline
+- Thread-safe logging, assertions, and stack trace capture
 
 ## Stability notice
 
