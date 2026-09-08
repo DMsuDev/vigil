@@ -36,6 +36,12 @@ The format is based on [Conventional Commits](https://www.conventionalcommits.or
 
 - Add debugger.h to `VIGIL_INTERNAL_HEADERS` install set ([c6769eb](https://github.com/DMsuDev/Vigil/commit/c6769eb9af19566a1d49efa04bed01bcac298e10))
 
+- Propagate CMAKE_PREFIX_PATH in cmake_import test to include existing paths ([5da908b](https://github.com/DMsuDev/Vigil/commit/5da908ba9c26a38c5ee4373078237014f3833ce1))
+
+  - On Windows, VigilConfig.cmake calls find_dependency(fmt) but the
+  cmake_import consumer project had no knowledge of the vcpkg prefix,
+  causing find_package to fail.
+
 ### 🚜 Refactor
 
 - Decouple SourceLocation from std::source_location alias in C++20 ([54d2aef](https://github.com/DMsuDev/Vigil/commit/54d2aefdcbcb3b32a21f4372d7af6663310622ac))
