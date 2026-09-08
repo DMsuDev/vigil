@@ -34,6 +34,8 @@ The format is based on [Conventional Commits](https://www.conventionalcommits.or
 
 - Correct VIGIL_API placement and sink type consistency in LoggerImpl ([a5f630a](https://github.com/DMsuDev/Vigil/commit/a5f630a7c53cf69031bece696e1c24c3ef7070e1))
 
+- Add debugger.h to `VIGIL_INTERNAL_HEADERS` install set ([c6769eb](https://github.com/DMsuDev/Vigil/commit/c6769eb9af19566a1d49efa04bed01bcac298e10))
+
 ### 🚜 Refactor
 
 - Decouple SourceLocation from std::source_location alias in C++20 ([54d2aef](https://github.com/DMsuDev/Vigil/commit/54d2aefdcbcb3b32a21f4372d7af6663310622ac))
