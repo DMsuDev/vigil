@@ -1,4 +1,10 @@
 // -----------------------------------------------------------------------------
+//   _    __ __ _____ ___ __
+//  | |  / /  _/ ____/  _/ /
+//  | | / // // / __ / // /     Logging and Diagnostics for C++
+//  | |/ // // /_/ // // /___   https://github.com/DMsuDev/vigil
+//  |___/___/\____/___/_____/
+//
 //  Copyright (c) 2026 @DMsuDev. Licensed under the MIT License.
 //  See LICENSE file in the project root for full license text.
 // -----------------------------------------------------------------------------
@@ -42,7 +48,7 @@
  *     .Name = "Editor",
  * });
  *
- * VIGIL_INFO("Application initialized successfully");
+ * VIGIL_LOG_INFO("Application initialized successfully");
  *
  * auto& netLogger = vigil::LogSystem::Create("Network");
  * VIGIL_LOG_NAMED("Network", vigil::LogLevel::Warn, "Connection retry attempt #{}", attempt);
@@ -373,7 +379,7 @@ public:
  * @name Free-Function Logging API
  * @brief `spdlog`-style free functions that log through @ref LogSystem::Main.
  *
- * Equivalent in behavior to the @ref VIGIL_TRACE "main logger macros", provided
+ * Equivalent in behavior to the @ref VIGIL_LOG_TRACE "main logger macros", provided
  * as plain functions for call sites that prefer to avoid macros. Both forms are
  * fully supported and interchangeable.
  * @{
