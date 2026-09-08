@@ -55,7 +55,7 @@ add_test(NAME cmake_import
     --build-generator "${CMAKE_GENERATOR}"
     --build-config    "${CMAKE_BUILD_TYPE}"
     --build-options
-      "-DCMAKE_PREFIX_PATH=${VIGIL_INSTALL_TEST_PREFIX}"
+      "-DCMAKE_PREFIX_PATH=${VIGIL_INSTALL_TEST_PREFIX};${CMAKE_PREFIX_PATH}"
       "-DCMAKE_GENERATOR_PLATFORM=${CMAKE_GENERATOR_PLATFORM}"
       "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
     --test-command "${cmake_import_binary_dir}/bin/vigil_smoke"
