@@ -1,49 +1,36 @@
 // -----------------------------------------------------------------------------
+//   _    __ __ _____ ___ __
+//  | |  / / _/ ____/ _/ /
+//  | | / // // / __ / // /     Logging and Diagnostics for C++
+//  | |/ // // /_/ // // /___   https://github.com/DMsuDev/vigil
+//  |___/___/\____/___/_____/
+//
 //  Copyright (c) 2026 @DMsuDev. Licensed under the MIT License.
 //  See LICENSE file in the project root for full license text.
 // -----------------------------------------------------------------------------
 
 #include "vigil/vigil.h"
 
+#include <chrono>
 #include <iostream>
 #include <thread>
-#include <chrono>
 
 // Demonstrates Vigil's logging API: initialization, formatting, runtime level
 // control, named loggers, rate limiting, lifecycle hooks, and flush control.
 
 // ============================================================================
-// Helpers
-// ============================================================================
-
-static const char* LevelName(vigil::LogLevel level)
-{
-    switch (level)
-    {
-        case vigil::LogLevel::Trace:    return "Trace";
-        case vigil::LogLevel::Debug:    return "Debug";
-        case vigil::LogLevel::Info:     return "Info";
-        case vigil::LogLevel::Warn:     return "Warn";
-        case vigil::LogLevel::Error:    return "Error";
-        case vigil::LogLevel::Critical: return "Critical";
-        case vigil::LogLevel::Off:      return "Off";
-    }
-    return "Unknown";
-}
-
-// ============================================================================
 // Example Initialization Macro
 // ============================================================================
 
-#define VIGIL_EXAMPLE_INIT                     \
-    vigil::LogSystem::Init({                   \
-        .Name         = "Example",             \
-        .LogDir       = "logs/named",          \
+#define VIGIL_EXAMPLE_INIT                    \
+    vigil::LogSystem::Init({                  \
+        .Name         = "Example",            \
+        .LogDir       = "logs/named",         \
         .ConsoleLevel = vigil::LogLevel::Trace \
     });
 
 // ============================================================================
-// Demos for various logging features
+// Demos
 // ============================================================================
 
 static void Demo_BasicLogging();
@@ -55,11 +42,15 @@ static void Demo_LifecycleHooks();
 static void Demo_LoggerLifecycle();
 
 // ============================================================================
-// Entry point
+// Entry Point
 // ============================================================================
 
 int main()
 {
+    std::cout << "==========================================\n";
+    std::cout << "        Vigil Logging API Examples        \n";
+    std::cout << "==========================================\n";
+
     if (!vigil::EnableUTF8Console())
     {
         std::fprintf(stderr,
@@ -79,12 +70,12 @@ int main()
 }
 
 // ============================================================================
-// Demo: Basic Logging
+// Demo 1: Basic Logging
 // ============================================================================
 
 static void Demo_BasicLogging()
 {
-    std::cout << "\n========== Demo Basic Logging ==========\n";
+    std::cout << "\n--- Demo 1: Basic Logging ---\n";
 
     VIGIL_EXAMPLE_INIT;
 
@@ -113,12 +104,12 @@ static void Demo_BasicLogging()
 }
 
 // ============================================================================
-// Demo: Named Loggers
+// Demo 2: Named Loggers
 // ============================================================================
 
 static void Demo_NamedLoggers()
 {
-    std::cout << "\n========== Demo Named Loggers ==========\n";
+    std::cout << "\n--- Demo 2: Named Loggers ---\n";
 
     VIGIL_EXAMPLE_INIT;
 
@@ -149,12 +140,12 @@ static void Demo_NamedLoggers()
 }
 
 // ============================================================================
-// Demo: Rate Limiting
+// Demo 3: Rate Limiting
 // ============================================================================
 
 static void Demo_RateLimiting()
 {
-    std::cout << "\n========== Demo Rate Limiting ==========\n";
+    std::cout << "\n--- Demo 3: Rate Limiting ---\n";
 
     VIGIL_EXAMPLE_INIT;
 
@@ -175,17 +166,17 @@ static void Demo_RateLimiting()
 }
 
 // ============================================================================
-// Demo: Level Control
+// Demo 4: Level Control
 // ============================================================================
 
 static void Demo_LevelControl()
 {
-    std::cout << "\n========== Demo Level Control ==========\n";
+    std::cout << "\n--- Demo 4: Level Control ---\n";
 
     VIGIL_EXAMPLE_INIT;
 
     auto& logger = vigil::LogSystem::Main();
-    vigil::Info("Current level: {}", LevelName(logger.GetLevel()));
+    vigil::Info("Current level: {}", vigil::ToString(logger.GetLevel()));
 
     // Per-logger level: raise the bar so Debug is filtered, then restore.
     logger.SetLevel(vigil::LogLevel::Info);
@@ -203,12 +194,12 @@ static void Demo_LevelControl()
 }
 
 // ============================================================================
-// Demo: Flush Control
+// Demo 5: Flush Control
 // ============================================================================
 
 static void Demo_FlushControl()
 {
-    std::cout << "\n========== Demo Flush Control ==========\n";
+    std::cout << "\n--- Demo 5: Flush Control ---\n";
 
     VIGIL_EXAMPLE_INIT;
 
@@ -231,12 +222,12 @@ static void Demo_FlushControl()
 }
 
 // ============================================================================
-// Demo: Lifecycle Hooks
+// Demo 6: Lifecycle Hooks
 // ============================================================================
 
 static void Demo_LifecycleHooks()
 {
-    std::cout << "\n========== Demo Lifecycle Hooks ==========\n";
+    std::cout << "\n--- Demo 6: Lifecycle Hooks ---\n";
 
     VIGIL_EXAMPLE_INIT;
 
@@ -245,12 +236,12 @@ static void Demo_LifecycleHooks()
         .OnMessage = [](const vigil::LogMessageEvent& e)
         {
             std::cout << "[Hook] Message captured at level "
-                      << LevelName(e.Level) << ": " << e.Message << "\n";
+                      << vigil::ToString(e.Level) << ": " << e.Message << "\n";
         },
         .OnLevelChange = [](const vigil::LevelChangeEvent& e)
         {
             std::cout << "[Hook] Logger '" << e.LoggerName << "' level changed from "
-                      << LevelName(e.OldLevel) << " to " << LevelName(e.NewLevel) << ".\n";
+                      << vigil::ToString(e.OldLevel) << " to " << vigil::ToString(e.NewLevel) << ".\n";
         },
         .OnFlush = [](const vigil::FlushEvent& e)
         {
@@ -275,12 +266,12 @@ static void Demo_LifecycleHooks()
 }
 
 // ============================================================================
-// Demo: Logger Lifecycle
+// Demo 7: Logger Lifecycle
 // ============================================================================
 
 static void Demo_LoggerLifecycle()
 {
-    std::cout << "\n========== Demo Logger Lifecycle ==========\n";
+    std::cout << "\n--- Demo 7: Logger Lifecycle ---\n";
 
     VIGIL_EXAMPLE_INIT;
 

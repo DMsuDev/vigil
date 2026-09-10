@@ -1,13 +1,19 @@
 // -----------------------------------------------------------------------------
+//   _    __ __ _____ ___ __
+//  | |  / / _/ ____/ _/ /
+//  | | / // // / __ / // /     Logging and Diagnostics for C++
+//  | |/ // // /_/ // // /___   https://github.com/DMsuDev/vigil
+//  |___/___/\____/___/_____/
+//
 //  Copyright (c) 2026 @DMsuDev. Licensed under the MIT License.
 //  See LICENSE file in the project root for full license text.
 // -----------------------------------------------------------------------------
 
 #include "vigil/vigil.h"
 
+#include <cstring>
 #include <filesystem>
 #include <iostream>
-#include <cstring>
 #include <vector>
 
 // Demonstrates Vigil's assertion macros: VIGIL_ASSERT, VIGIL_VERIFY,
@@ -16,9 +22,8 @@
 // Safe cases run by default; failure cases must be requested explicitly and
 // will abort the process by design — do not combine them with other flags.
 
-
 // ============================================================================
-// Safe demos
+// Safe Demos
 // ============================================================================
 
 static void Demo_BasicAssert();
@@ -28,7 +33,7 @@ static void Demo_RangeCheck();
 static void Demo_Unreachable();
 
 // ============================================================================
-// Intentional failure cases — these abort the process
+// Intentional Failure Cases (Abort Process)
 // ============================================================================
 
 static void Fail_BasicAssert();
@@ -43,11 +48,15 @@ static void Fail_Unreachable();
 static void PrintUsage(const char* program);
 
 // ============================================================================
-// Entry point
+// Entry Point
 // ============================================================================
 
 int main(int argc, char* argv[])
 {
+    std::cout << "==========================================\n";
+    std::cout << "        Vigil Assertion Examples          \n";
+    std::cout << "==========================================\n";
+
     if (!vigil::EnableUTF8Console())
     {
         std::fprintf(stderr,
@@ -86,7 +95,7 @@ int main(int argc, char* argv[])
     }
 
     // -------------------------------------------------------------------------
-    // Dispatch table
+    // Dispatch Table
     // -------------------------------------------------------------------------
 
     using Fn = void(*)();
@@ -99,19 +108,19 @@ int main(int argc, char* argv[])
     };
 
     const Entry entries[] = {
-        { "--basic",             Demo_BasicAssert,  false },
-        { "--verify",            Demo_Verify,       false },
-        { "--null",              Demo_NullCheck,    false },
-        { "--range",             Demo_RangeCheck,   false },
-        { "--unreachable",       Demo_Unreachable,  false },
-        { "--fail-basic",        Fail_BasicAssert,  true  },
-        { "--fail-null",         Fail_NullCheck,    true  },
-        { "--fail-range",        Fail_RangeCheck,   true  },
-        { "--fail-unreachable",  Fail_Unreachable,  true  },
+        { "--basic",            Demo_BasicAssert,  false },
+        { "--verify",           Demo_Verify,       false },
+        { "--null",             Demo_NullCheck,    false },
+        { "--range",            Demo_RangeCheck,   false },
+        { "--unreachable",      Demo_Unreachable,  false },
+        { "--fail-basic",       Fail_BasicAssert,  true  },
+        { "--fail-null",        Fail_NullCheck,    true  },
+        { "--fail-range",       Fail_RangeCheck,   true  },
+        { "--fail-unreachable", Fail_Unreachable,  true  },
     };
 
     // -------------------------------------------------------------------------
-    // Default: run all safe cases
+    // Default: Run all safe cases
     // -------------------------------------------------------------------------
 
     if (args.empty() || (args.size() == 1 && std::strcmp(args[0], "--all") == 0))
@@ -134,11 +143,9 @@ int main(int argc, char* argv[])
     }
 
     // -------------------------------------------------------------------------
-    // Explicit flags
+    // Explicit Flags
     // -------------------------------------------------------------------------
 
-    // Validate all flags before executing any, so the user gets a clean error
-    // rather than a partial run followed by an unknown-option message.
     for (const char* arg : args)
     {
         bool known = false;
@@ -155,8 +162,6 @@ int main(int argc, char* argv[])
         }
     }
 
-    // Warn if the user combined a terminal case with other flags — it will
-    // abort before the rest can run.
     bool hasTerminal = false;
     for (const char* arg : args)
         for (const auto& e : entries)
@@ -187,12 +192,12 @@ int main(int argc, char* argv[])
 }
 
 // ============================================================================
-// Safe demos
+// Demo 1: Basic Assert
 // ============================================================================
 
 static void Demo_BasicAssert()
 {
-    vigil::Info("== Basic assertions =========================================");
+    std::cout << "\n--- Demo 1: Basic Assertions ---\n";
 
     VIGIL_ASSERT_MSG(true, "Unconditional pass.");
 
@@ -200,14 +205,18 @@ static void Demo_BasicAssert()
     VIGIL_ASSERT_MSG(x == 42, "Expected x == 42, got {}", x);
     VIGIL_ASSERT(x > 0);
 
-    vigil::Info("  All basic assertions passed  (x = {}).", x);
+    vigil::Info("All basic assertions passed (x = {}).", x);
 }
+
+// ============================================================================
+// Demo 2: Verify
+// ============================================================================
 
 static void Demo_Verify()
 {
-    vigil::Info("== VIGIL_VERIFY =============================================");
-    vigil::Info("  Unlike VIGIL_ASSERT, the expression is ALWAYS evaluated,");
-    vigil::Info("  even when assertions are compiled out.");
+    std::cout << "\n--- Demo 2: VIGIL_VERIFY ---\n";
+    vigil::Info("Unlike VIGIL_ASSERT, the expression is ALWAYS evaluated,");
+    vigil::Info("even when assertions are compiled out.");
 
     int counter = 0;
     auto increment = [&counter]() { ++counter; return true; };
@@ -216,12 +225,16 @@ static void Demo_Verify()
     VIGIL_ASSERT_MSG(counter == 1,
         "counter should be 1 after VIGIL_VERIFY, got {}", counter);
 
-    vigil::Info("  Side effect confirmed: counter = {}.", counter);
+    vigil::Info("Side effect confirmed: counter = {}.", counter);
 }
+
+// ============================================================================
+// Demo 3: Null Check
+// ============================================================================
 
 static void Demo_NullCheck()
 {
-    vigil::Info("== Null pointer checks ======================================");
+    std::cout << "\n--- Demo 3: Null Pointer Checks ---\n";
 
     int  value  = 100;
     int* valid  = &value;
@@ -231,15 +244,18 @@ static void Demo_NullCheck()
     VIGIL_ASSERT_MSG(*valid == 100,
         "Dereferenced value should be 100, got {}", *valid);
 
-    // Confirming the null is null (passing case — no abort).
     VIGIL_ASSERT_MSG(null_p == nullptr, "Null pointer correctly identified.");
 
-    vigil::Info("  Pointer checks passed  (value = {}).", *valid);
+    vigil::Info("Pointer checks passed (value = {}).", *valid);
 }
+
+// ============================================================================
+// Demo 4: Range Check
+// ============================================================================
 
 static void Demo_RangeCheck()
 {
-    vigil::Info("== Range validation =========================================");
+    std::cout << "\n--- Demo 4: Range Validation ---\n";
 
     int    age   = 25;
     double temp  = 22.5;
@@ -249,32 +265,35 @@ static void Demo_RangeCheck()
     VIGIL_ASSERT_IN_RANGE(temp, -50.0, 50.0);
     VIGIL_ASSERT_IN_RANGE(index, 0,    9);
 
-    vigil::Info("  All ranges valid  (age={}, temp={:.1f}, index={}).",
+    vigil::Info("All ranges valid (age={}, temp={:.1f}, index={}).",
         age, temp, index);
 }
 
+// ============================================================================
+// Demo 5: Unreachable
+// ============================================================================
+
 static void Demo_Unreachable()
 {
-    vigil::Info("== Unreachable code detection ================================");
-    vigil::Info("  VIGIL_UNREACHABLE_ASSERT() guards switch default branches.");
-    vigil::Info("  Adding a new enum value without a case triggers it at runtime.");
+    std::cout << "\n--- Demo 5: Unreachable Code Detection ---\n";
+    vigil::Info("VIGIL_UNREACHABLE_ASSERT() guards switch default branches.");
+    vigil::Info("Adding a new enum value without a case triggers it at runtime.");
 
     enum class State { Starting, Running, Stopped };
     const State state = State::Running;
 
     switch (state)
     {
-        case State::Starting: vigil::Info("  State: Starting."); break;
-        case State::Running:  vigil::Info("  State: Running.");  break;
-        case State::Stopped:  vigil::Info("  State: Stopped.");  break;
-        // default: VIGIL_UNREACHABLE_ASSERT();
+        case State::Starting: vigil::Info("State: Starting."); break;
+        case State::Running:  vigil::Info("State: Running.");  break;
+        case State::Stopped:  vigil::Info("State: Stopped.");  break;
     }
 
-    vigil::Info("  No unreachable paths hit for State::Running.");
+    vigil::Info("No unreachable paths hit for State::Running.");
 }
 
 // ============================================================================
-// Intentional failure cases (abort by design)
+// Failure Cases (Abort by Design)
 // ============================================================================
 
 static void Fail_BasicAssert()
@@ -305,7 +324,7 @@ static void Fail_Unreachable()
 }
 
 // ============================================================================
-// Usage
+// Helpers
 // ============================================================================
 
 static void PrintUsage(const char* program)

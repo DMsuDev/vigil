@@ -1,4 +1,10 @@
 // -----------------------------------------------------------------------------
+//   _    __ __ _____ ___ __
+//  | |  / / _/ ____/ _/ /
+//  | | / // // / __ / // /     Logging and Diagnostics for C++
+//  | |/ // // /_/ // // /___   https://github.com/DMsuDev/vigil
+//  |___/___/\____/___/_____/
+//
 //  Copyright (c) 2026 @DMsuDev. Licensed under the MIT License.
 //  See LICENSE file in the project root for full license text.
 // -----------------------------------------------------------------------------
@@ -8,12 +14,23 @@
 // ScopedLogger is included transitively via "vigil/vigil.h".
 // #include "vigil/logging/scoped_logger.h"
 
+#include <chrono>
 #include <iostream>
 #include <thread>
-#include <chrono>
 
 // Demonstrates ScopedLogger: automatic entry/exit trace logging with elapsed
 // time for both named scopes and function instrumentation.
+
+// ============================================================================
+// Example Initialization Macro
+// ============================================================================
+
+#define VIGIL_EXAMPLE_INIT                    \
+    vigil::LogSystem::Init({                  \
+        .Name         = "ScopedExample",       \
+        .LogDir       = "logs/scoped",         \
+        .ConsoleLevel = vigil::LogLevel::Trace \
+    });
 
 // ============================================================================
 // Demos
@@ -26,22 +43,15 @@ static void Demo_EarlyReturn();
 static void Demo_ManualScope();
 
 // ============================================================================
-// Example Initialization Macro
-// ============================================================================
-
-#define VIGIL_EXAMPLE_INIT                     \
-    vigil::LogSystem::Init({                   \
-        .Name         = "ScopedExample",       \
-        .LogDir       = "logs/scoped",         \
-        .ConsoleLevel = vigil::LogLevel::Trace \
-    });
-
-// ============================================================================
-// Entry point
+// Entry Point
 // ============================================================================
 
 int main()
 {
+    std::cout << "==========================================\n";
+    std::cout << "       Vigil Scoped Logger Examples       \n";
+    std::cout << "==========================================\n";
+
     if (!vigil::EnableUTF8Console())
     {
         std::fprintf(stderr,
@@ -66,7 +76,7 @@ int main()
 }
 
 // ============================================================================
-// Demo: Function Scope
+// Demo 1: Function Scope
 // ============================================================================
 
 // Instruments an entire function using the compiler-provided signature.
@@ -74,7 +84,7 @@ int main()
 // emitting entry and exit messages with elapsed time automatically.
 static void Demo_FunctionScope()
 {
-    std::cout << "\n========== Demo: Function Scope ==========\n";
+    std::cout << "\n--- Demo 1: Function Scope ---\n";
 
     VIGIL_EXAMPLE_INIT;
 
@@ -91,7 +101,7 @@ static void Demo_FunctionScope()
 }
 
 // ============================================================================
-// Demo: Nested Scopes
+// Demo 2: Nested Scopes
 // ============================================================================
 
 // Demonstrates hierarchical output from nested VIGIL_SCOPED_LOG blocks.
@@ -99,7 +109,7 @@ static void Demo_FunctionScope()
 // which sub-step dominates the total duration.
 static void Demo_NestedScopes()
 {
-    std::cout << "\n========== Demo: Nested Scopes ==========\n";
+    std::cout << "\n--- Demo 2: Nested Scopes ---\n";
 
     VIGIL_EXAMPLE_INIT;
 
@@ -131,7 +141,7 @@ static void Demo_NestedScopes()
 }
 
 // ============================================================================
-// Demo: Explicit Level
+// Demo 3: Explicit Level
 // ============================================================================
 
 // Demonstrates scoped logging at non-default severity levels.
@@ -139,7 +149,7 @@ static void Demo_NestedScopes()
 // Trace is filtered out but scope boundaries on hot paths must remain visible.
 static void Demo_ExplicitLevel()
 {
-    std::cout << "\n========== Demo: Explicit Level ==========\n";
+    std::cout << "\n--- Demo 3: Explicit Level ---\n";
 
     VIGIL_EXAMPLE_INIT;
 
@@ -157,7 +167,7 @@ static void Demo_ExplicitLevel()
 }
 
 // ============================================================================
-// Demo: Early Return
+// Demo 4: Early Return
 // ============================================================================
 
 // Demonstrates the shutdown fallback: if the function returns before
@@ -165,7 +175,7 @@ static void Demo_ExplicitLevel()
 // directly to stderr so timing data is never silently lost.
 static void Demo_EarlyReturn()
 {
-    std::cout << "\n========== Demo: Early Return ==========\n";
+    std::cout << "\n--- Demo 4: Early Return ---\n";
 
     VIGIL_EXAMPLE_INIT;
 
@@ -191,7 +201,7 @@ static void Demo_EarlyReturn()
 }
 
 // ============================================================================
-// Demo: Manual Scope
+// Demo 5: Manual Scope
 // ============================================================================
 
 // Demonstrates VIGIL_SCOPE_BEGIN / VIGIL_SCOPE_END for cases where a named
@@ -202,7 +212,7 @@ static void Demo_EarlyReturn()
 // supported — __COUNTER__ ensures unique variable names per expansion.
 static void Demo_ManualScope()
 {
-    std::cout << "\n========== Demo: Manual Scope ==========\n";
+    std::cout << "\n--- Demo 5: Manual Scope ---\n";
 
     VIGIL_EXAMPLE_INIT;
 
