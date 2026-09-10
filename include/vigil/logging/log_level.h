@@ -1,4 +1,10 @@
 // -----------------------------------------------------------------------------
+//   _    __ __ _____ ___ __
+//  | |  / /  _/ ____/  _/ /
+//  | | / // // / __ / // /     Logging and Diagnostics for C++
+//  | |/ // // /_/ // // /___   https://github.com/DMsuDev/vigil
+//  |___/___/\____/___/_____/
+//
 //  Copyright (c) 2026 @DMsuDev. Licensed under the MIT License.
 //  See LICENSE file in the project root for full license text.
 // -----------------------------------------------------------------------------
@@ -6,6 +12,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 
 #include "vigil/detail/compiler_attributes.h"
 
@@ -28,6 +35,8 @@
 #define VIGIL_LEVEL_CRITICAL 5
 #define VIGIL_LEVEL_OFF      6
 
+/// @def VIGIL_ACTIVE_LOG_LEVEL
+/// @brief Minimum compile-time severity level retained by logging macros.
 #ifndef VIGIL_ACTIVE_LOG_LEVEL
     #define VIGIL_ACTIVE_LOG_LEVEL VIGIL_LEVEL_TRACE
 #endif
@@ -45,6 +54,26 @@ enum class LogLevel : uint8_t {
     Off      = VIGIL_LEVEL_OFF,      ///< Logging disabled.
 };
 
+/**
+ * @brief Returns the stable display name for @p level.
+ * @param level Severity level to convert.
+ * @return The display name, or `"Unknown"` for an invalid value.
+ */
+[[nodiscard]] constexpr std::string_view ToString(LogLevel level) noexcept
+{
+    switch (level)
+    {
+        case LogLevel::Trace:    return "Trace";
+        case LogLevel::Debug:    return "Debug";
+        case LogLevel::Info:     return "Info";
+        case LogLevel::Warn:     return "Warn";
+        case LogLevel::Error:    return "Error";
+        case LogLevel::Critical: return "Critical";
+        case LogLevel::Off:      return "Off";
+        default:                 return "Unknown";
+    }
+}
+
 VIGIL_PRAGMA_PUSH_WARNING
 VIGIL_DISABLE_WARNING_MSVC(4296)
 VIGIL_DISABLE_WARNING_GNU("-Wtype-limits")
@@ -54,6 +83,9 @@ VIGIL_DISABLE_WARNING_GNU("-Wtype-limits")
  *
  * Mirrors the condition used by the `VIGIL_LOG_*` macros for call sites that
  * construct a message manually to avoid expensive formatting.
+ *
+ * @param level Severity level to test.
+ * @return @c true when the level is enabled by the compile-time gate.
  */
 [[nodiscard]] constexpr bool IsLevelActive(LogLevel level) noexcept
 {
