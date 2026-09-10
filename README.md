@@ -25,17 +25,13 @@
 
 Supports **C++17 and later** on **Linux**, **Windows**, and **macOS**.
 
-**Features at a glance:**
+## Features
 
-- `fmt`-style structured logging with compile-time level filtering
-- Main and named loggers for subsystem-oriented diagnostics
-- Configurable console and rotating file sinks
-- One-shot and TTL-based rate limiting to prevent log spam
-- Assertion macros with source-location capture and stack traces
-- Cross-platform stack trace capture (DWARF on POSIX, PDB on Windows)
-- RAII scope instrumentation with entry/exit logging and elapsed time
-- Lifecycle hooks for observing log events without modifying the pipeline
-- Thread-safe logging, assertions, and stack trace capture
+- **Structured Logging:** `fmt`-style messages, compile-time filtering, main and named loggers, console/rotating file sinks, and thread-safe output.
+- **Lifecycle Hooks:** Event callbacks for mirroring messages to in-app consoles, telemetry, or test assertions.
+- **Rate Limiting:** One-shot (`LogOncePolicy::LogOnce`) and TTL-based (`LogTTLPolicy::LogTTL`) policies for high-frequency log paths.
+- **Diagnostics & Assertions:** Rich assertions with source locations, cross-platform stack traces, and thread-safe failure reporting.
+- **Scoped Instrumentation:** Optional RAII entry/exit logging with elapsed-time measurement and adaptive microsecond/millisecond formatting.
 
 ## Stability notice
 
@@ -430,17 +426,17 @@ int main()
 
 Fully worked examples covering every feature are available under [`examples/`](examples/):
 
-| Example        | Source                                                       | Covers                                                                    |
-| :------------- | :----------------------------------------------------------- | :------------------------------------------------------------------------ |
-| Logging        | [`examples/logger_example.cpp`](examples/logger_example.cpp) | Basic logging, named loggers, rate limiting, level control, hooks, flush. |
-| Assertions     | [`examples/assert_example.cpp`](examples/assert_example.cpp) | All assertion macros, safe and intentional-failure cases, CLI dispatch.   |
-| Scoped logging | [`examples/scoped_example.cpp`](examples/scoped_example.cpp) | Function scope, nested scopes, explicit levels, manual BEGIN/END.         |
-| Hooks          | [`examples/hooks_example.cpp`](examples/hooks_example.cpp)   | SetHooks, individual setters, ClearHooks, named logger events.            |
+| Example        | Source                                                                               | Covers                                                                    |
+| :------------- | :----------------------------------------------------------------------------------- | :------------------------------------------------------------------------ |
+| Logging        | [`examples/logging/logger_example.cpp`](examples/logging/logger_example.cpp)         | Basic logging, named loggers, rate limiting, level control, hooks, flush. |
+| Assertions     | [`examples/diagnostics/assert_example.cpp`](examples/diagnostics/assert_example.cpp) | All assertion macros, safe and intentional-failure cases, CLI dispatch.   |
+| Scoped logging | [`examples/logging/scoped_example.cpp`](examples/logging/scoped_example.cpp)         | Function scope, nested scopes, explicit levels, manual BEGIN/END.         |
+| Hooks          | [`examples/logging/hooks_example.cpp`](examples/logging/hooks_example.cpp)           | SetHooks, individual setters, ClearHooks, named logger events.            |
 
 > [!NOTE]
 > Examples are built with `VIGIL_BUILD_EXAMPLES=ON` and require **C++20** (for designated initializers), even though Vigil itself only requires C++17. They are compiled against whichever Vigil version/commit is checked out, so pin to a release tag to match the API shown above.
 
 ## License
 
-Vigil is licensed under the **MIT License**.
+Vigil is licensed under the **MIT License**.<br>
 See [LICENSE](LICENSE) for more information.
