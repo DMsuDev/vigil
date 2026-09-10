@@ -1,4 +1,10 @@
 // -----------------------------------------------------------------------------
+//   _    __ __ _____ ___ __
+//  | |  / /  _/ ____/  _/ /
+//  | | / // // / __ / // /     Logging and Diagnostics for C++
+//  | |/ // // /_/ // // /___   https://github.com/DMsuDev/vigil
+//  |___/___/\____/___/_____/
+//
 //  Copyright (c) 2026 @DMsuDev. Licensed under the MIT License.
 //  See LICENSE file in the project root for full license text.
 // -----------------------------------------------------------------------------
@@ -10,10 +16,8 @@
 #include <functional>
 #include <string_view>
 
-/**
- * @file lifecycle_hooks.h
- * @brief Callback types and event structs for LogSystem hook points.
- */
+/// @file lifecycle_hooks.h
+/// @brief Callback types and event structs for LogSystem hook points.
 
 namespace vigil {
 
@@ -66,22 +70,6 @@ using LifecycleCallback   = std::function<void()>;
  *
  * Pass an instance to @ref LogSystem::SetHooks to register all hooks at once.
  * Any field left default-constructed (nullptr) is treated as "not registered".
- *
- * ### C++20
- * @code{.cpp}
- * vigil::LogSystem::SetHooks({
- *     .OnMessage  = [&](const vigil::LogMessageEvent& e) { ui.Push(e.Message); },
- *     .OnShutdown = [] { RS_INFO("Vigil shutting down"); },
- * });
- * @endcode
- *
- * ### C++17
- * @code{.cpp}
- * vigil::LogHooks hooks;
- * hooks.OnMessage  = [&](const vigil::LogMessageEvent& e) { ui.Push(e.Message); };
- * hooks.OnShutdown = [] { RS_INFO("Vigil shutting down"); };
- * vigil::LogSystem::SetHooks(std::move(hooks));
- * @endcode
  */
 struct LogHooks {
     /// @brief Fired on every emitted log message.

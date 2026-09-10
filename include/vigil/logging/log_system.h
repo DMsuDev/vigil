@@ -220,7 +220,6 @@ public:
      * @param name Unique identifier for this logger.
      *
      * @return Reference to the existing or newly created logger.
-     *
      * @throws std::logic_error if called before @ref Init.
      */
     static Logger& Create(std::string_view name);
@@ -385,28 +384,38 @@ public:
  * @{
  */
 
-/// @copydoc Logger::Trace(std::string_view)
+/// @brief Logs a message verbatim at Trace severity through the main logger.
+/// @param message Message to emit.
 inline void Trace(std::string_view message) { VIGIL_LOG_GUARD(); LogSystem::Main().Trace(message); }
 
-/// @copydoc Logger::Debug(std::string_view)
+/// @brief Logs a message verbatim at Debug severity through the main logger.
+/// @param message Message to emit.
 inline void Debug(std::string_view message) { VIGIL_LOG_GUARD(); LogSystem::Main().Debug(message); }
 
-/// @copydoc Logger::Info(std::string_view)
+/// @brief Logs a message verbatim at Info severity through the main logger.
+/// @param message Message to emit.
 inline void Info(std::string_view message) { VIGIL_LOG_GUARD(); LogSystem::Main().Info(message); }
 
-/// @copydoc Logger::Warn(std::string_view)
+/// @brief Logs a message verbatim at Warn severity through the main logger.
+/// @param message Message to emit.
 inline void Warn(std::string_view message) { VIGIL_LOG_GUARD(); LogSystem::Main().Warn(message); }
 
-/// @copydoc Logger::Error(std::string_view)
+/// @brief Logs a message verbatim at Error severity through the main logger.
+/// @param message Message to emit.
 inline void Error(std::string_view message) { VIGIL_LOG_GUARD(); LogSystem::Main().Error(message); }
 
-/// @copydoc Logger::Critical(std::string_view)
+/// @brief Logs a message verbatim at Critical severity through the main logger.
+/// @param message Message to emit.
 inline void Critical(std::string_view message) { VIGIL_LOG_GUARD(); LogSystem::Main().Critical(message); }
 
-/// @copydoc Logger::Log(LogLevel, std::string_view)
+/// @brief Logs a message verbatim at the selected severity through the main logger.
+/// @param level Severity level for the message.
+/// @param message Message to emit.
 inline void Log(LogLevel level, std::string_view message) { VIGIL_LOG_GUARD(); LogSystem::Main().Log(level, message); }
 
-/// @copydoc Logger::Trace(detail::FormatString<Args...>, Args&&...)
+/// @brief Formats and logs a message at Trace severity through the main logger.
+/// @param message Format string.
+/// @param args Values consumed by the format string.
 template <typename... Args>
 void Trace(detail::FormatString<Args...> message, Args&&... args)
 {
@@ -414,7 +423,9 @@ void Trace(detail::FormatString<Args...> message, Args&&... args)
     LogSystem::Main().Trace(message, std::forward<Args>(args)...);
 }
 
-/// @copydoc Logger::Debug(detail::FormatString<Args...>, Args&&...)
+/// @brief Formats and logs a message at Debug severity through the main logger.
+/// @param message Format string.
+/// @param args Values consumed by the format string.
 template <typename... Args>
 void Debug(detail::FormatString<Args...> message, Args&&... args)
 {
@@ -422,7 +433,9 @@ void Debug(detail::FormatString<Args...> message, Args&&... args)
     LogSystem::Main().Debug(message, std::forward<Args>(args)...);
 }
 
-/// @copydoc Logger::Info(detail::FormatString<Args...>, Args&&...)
+/// @brief Formats and logs a message at Info severity through the main logger.
+/// @param message Format string.
+/// @param args Values consumed by the format string.
 template <typename... Args>
 void Info(detail::FormatString<Args...> message, Args&&... args)
 {
@@ -430,7 +443,9 @@ void Info(detail::FormatString<Args...> message, Args&&... args)
     LogSystem::Main().Info(message, std::forward<Args>(args)...);
 }
 
-/// @copydoc Logger::Warn(detail::FormatString<Args...>, Args&&...)
+/// @brief Formats and logs a message at Warn severity through the main logger.
+/// @param message Format string.
+/// @param args Values consumed by the format string.
 template <typename... Args>
 void Warn(detail::FormatString<Args...> message, Args&&... args)
 {
@@ -438,7 +453,9 @@ void Warn(detail::FormatString<Args...> message, Args&&... args)
     LogSystem::Main().Warn(message, std::forward<Args>(args)...);
 }
 
-/// @copydoc Logger::Error(detail::FormatString<Args...>, Args&&...)
+/// @brief Formats and logs a message at Error severity through the main logger.
+/// @param message Format string.
+/// @param args Values consumed by the format string.
 template <typename... Args>
 void Error(detail::FormatString<Args...> message, Args&&... args)
 {
@@ -446,7 +463,9 @@ void Error(detail::FormatString<Args...> message, Args&&... args)
     LogSystem::Main().Error(message, std::forward<Args>(args)...);
 }
 
-/// @copydoc Logger::Critical(detail::FormatString<Args...>, Args&&...)
+/// @brief Formats and logs a message at Critical severity through the main logger.
+/// @param message Format string.
+/// @param args Values consumed by the format string.
 template <typename... Args>
 void Critical(detail::FormatString<Args...> message, Args&&... args)
 {
@@ -454,7 +473,10 @@ void Critical(detail::FormatString<Args...> message, Args&&... args)
     LogSystem::Main().Critical(message, std::forward<Args>(args)...);
 }
 
-/// @copydoc Logger::Log(LogLevel, detail::FormatString<Args...>, Args&&...)
+/// @brief Formats and logs a message at the selected severity through the main logger.
+/// @param level Severity level for the message.
+/// @param message Format string.
+/// @param args Values consumed by the format string.
 template <typename... Args>
 void Log(LogLevel level, detail::FormatString<Args...> message, Args&&... args)
 {
@@ -480,7 +502,7 @@ void Log(LogLevel level, detail::FormatString<Args...> message, Args&&... args)
  * statements disabled at compile time expand to `((void)0)` with zero
  * runtime cost and no argument evaluation.
  *
- * @note These macros forward to @ref LogSystem::Main via the `vigil::Log`
+ * @note These macros forward to `LogSystem::Main` via the `vigil::Log`
  *       free function. For named loggers, use @ref VIGIL_LOG_NAMED.
  * @{
  */
@@ -538,8 +560,8 @@ void Log(LogLevel level, detail::FormatString<Args...> message, Args&&... args)
  * @def VIGIL_LOG_NAMED(name, level, ...)
  * @brief Emits a log message through a specific named logger instance.
  *
- * Retrieves (or creates) a named logger via @ref LogSystem::Create and logs
- * the message if @p level satisfies @ref IsLevelActive at runtime.
+ * Retrieves (or creates) a named logger via `LogSystem::Create` and logs
+ * the message if @p level satisfies `IsLevelActive` at runtime.
  *
  * The level is a runtime value here — use `VIGIL_LOG_*` macros instead when
  * the level is known at compile time, as they eliminate the call entirely via

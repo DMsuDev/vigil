@@ -2,7 +2,12 @@
 //  Vigil is a cross-platform C++ library that provides a collection
 //  of utilities for application diagnostics and development.
 //
-//  MIT License
+//  Licensed under the MIT License.
+//   _    __ __ _____ ___ __
+//  | |  / /  _/ ____/  _/ /
+//  | | / // // / __ / // /     Logging and Diagnostics for C++
+//  | |/ // // /_/ // // /___   https://github.com/DMsuDev/vigil
+//  |___/___/\____/___/_____/
 //
 //  Copyright (c) 2026 @DMsuDev
 //

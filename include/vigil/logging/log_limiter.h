@@ -1,4 +1,10 @@
 // -----------------------------------------------------------------------------
+//   _    __ __ _____ ___ __
+//  | |  / /  _/ ____/  _/ /
+//  | | / // // / __ / // /     Logging and Diagnostics for C++
+//  | |/ // // /_/ // // /___   https://github.com/DMsuDev/vigil
+//  |___/___/\____/___/_____/
+//
 //  Copyright (c) 2026 @DMsuDev. Licensed under the MIT License.
 //  See LICENSE file in the project root for full license text.
 // -----------------------------------------------------------------------------
@@ -29,6 +35,9 @@ public:
     [[nodiscard]] static bool ShouldLog(const std::string& key);
 
     /// @brief Logs @p msg on the main logger, only the first time @p key is seen.
+    /// @param key Unique identifier for the log message.
+    /// @param level Severity level for the message.
+    /// @param msg Message to emit.
     static void LogOnce(const std::string& key, LogLevel level, const std::string& msg);
 };
 
@@ -41,9 +50,14 @@ public:
     /// @brief True if @p key has never been seen, or its TTL has expired.
     /// @param key        Unique identifier for the log message.
     /// @param ttlSeconds Minimum seconds between two logs of the same key.
+    /// @return @c true when the message may be logged.
     [[nodiscard]] static bool ShouldLog(const std::string& key, double ttlSeconds);
 
     /// @brief Logs @p msg on the main logger if the TTL for @p key has expired.
+    /// @param key Unique identifier for the log message.
+    /// @param ttlSeconds Minimum seconds between messages with the same key.
+    /// @param level Severity level for the message.
+    /// @param msg Message to emit.
     static void LogTTL(const std::string& key, double ttlSeconds, LogLevel level, const std::string& msg);
 };
 

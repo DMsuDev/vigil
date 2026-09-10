@@ -1,4 +1,10 @@
 // -----------------------------------------------------------------------------
+//   _    __ __ _____ ___ __
+//  | |  / /  _/ ____/  _/ /
+//  | | / // // / __ / // /     Logging and Diagnostics for C++
+//  | |/ // // /_/ // // /___   https://github.com/DMsuDev/vigil
+//  |___/___/\____/___/_____/
+//
 //  Copyright (c) 2026 @DMsuDev. Licensed under the MIT License.
 //  See LICENSE file in the project root for full license text.
 // -----------------------------------------------------------------------------
@@ -35,8 +41,8 @@ class LoggerImpl;
  * Logger provides the public interface for interacting with an
  * underlying logger instance, including emitting log messages, configuring
  * its severity threshold, and flushing its sinks. Instances are created and
- * owned by the Logger registry and are obtained through @ref Logger::Main,
- * @ref Logger::Create, or @ref Logger::Get.
+ * owned by the Logger registry and are obtained through @ref LogSystem::Main,
+ * @ref LogSystem::Create, or @ref LogSystem::Get.
  */
 class VIGIL_API Logger {
 public:
@@ -71,9 +77,13 @@ public:
     void Critical(std::string_view message);
 
     /// @brief Logs @p message verbatim (no formatting) at the given @p level.
+    /// @param level Severity level for the message.
+    /// @param message Message to emit.
     void Log(LogLevel level, std::string_view message);
 
     /// @brief Formats @p message with @p args using `fmt` syntax and logs it at Trace severity.
+    /// @param message Format string.
+    /// @param args Values consumed by the format string.
     template <typename... Args>
     void Trace(detail::FormatString<Args...> message, Args&&... args)
     {
@@ -81,6 +91,8 @@ public:
     }
 
     /// @brief Formats @p message with @p args using `fmt` syntax and logs it at Debug severity.
+    /// @param message Format string.
+    /// @param args Values consumed by the format string.
     template <typename... Args>
     void Debug(detail::FormatString<Args...> message, Args&&... args)
     {
@@ -88,6 +100,8 @@ public:
     }
 
     /// @brief Formats @p message with @p args using `fmt` syntax and logs it at Info severity.
+    /// @param message Format string.
+    /// @param args Values consumed by the format string.
     template <typename... Args>
     void Info(detail::FormatString<Args...> message, Args&&... args)
     {
@@ -95,6 +109,8 @@ public:
     }
 
     /// @brief Formats @p message with @p args using `fmt` syntax and logs it at Warn severity.
+    /// @param message Format string.
+    /// @param args Values consumed by the format string.
     template <typename... Args>
     void Warn(detail::FormatString<Args...> message, Args&&... args)
     {
@@ -102,6 +118,8 @@ public:
     }
 
     /// @brief Formats @p message with @p args using `fmt` syntax and logs it at Error severity.
+    /// @param message Format string.
+    /// @param args Values consumed by the format string.
     template <typename... Args>
     void Error(detail::FormatString<Args...> message, Args&&... args)
     {
@@ -109,6 +127,8 @@ public:
     }
 
     /// @brief Formats @p message with @p args using `fmt` syntax and logs it at Critical severity.
+    /// @param message Format string.
+    /// @param args Values consumed by the format string.
     template <typename... Args>
     void Critical(detail::FormatString<Args...> message, Args&&... args)
     {
@@ -116,6 +136,9 @@ public:
     }
 
     /// @brief Formats @p fmt with @p args using `fmt` syntax and logs the result at @p level.
+    /// @param level Severity level for the message.
+    /// @param fmt Format string.
+    /// @param args Values consumed by the format string.
     template <typename... Args>
     void Log(LogLevel level, detail::FormatString<Args...> fmt, Args&&... args)
     {
