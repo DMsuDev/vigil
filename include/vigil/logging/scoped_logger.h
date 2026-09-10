@@ -1,4 +1,10 @@
 // -----------------------------------------------------------------------------
+//   _    __ __ _____ ___ __
+//  | |  / /  _/ ____/  _/ /
+//  | | / // // / __ / // /     Logging and Diagnostics for C++
+//  | |/ // // /_/ // // /___   https://github.com/DMsuDev/vigil
+//  |___/___/\____/___/_____/
+//
 //  Copyright (c) 2026 @DMsuDev. Licensed under the MIT License.
 //  See LICENSE file in the project root for full license text.
 // -----------------------------------------------------------------------------
@@ -18,25 +24,23 @@
 
 /**
  * @file scoped_logger.h
- * @brief RAII utility for automatic scope entry/exit trace logging with elapsed time.
+ * @brief RAII instrumentation guard and macros for scope timing and trace logging.
  *
- * Defines the @ref vigil::ScopedLogger class and a family of convenience
- * macros for scope instrumentation (RAII and manual BEGIN/END blocks).
- *
- * All facilities in this header are conditionally compiled via `VIGIL_ENABLE_SCOPED_LOG`.
+ * Provides automatic entering (`>>`) and exiting (`<<`) diagnostics with execution
+ * duration measurements. Entire facility is conditionally compiled via `VIGIL_ENABLE_SCOPED_LOG`.
  */
 
 namespace vigil {
 
 /**
- * @brief RAII guard that emits entry and exit messages for a named scope.
+ * @brief RAII guard emitting entry and exit trace messages for a named block or function.
  *
- * On construction, logs `>> <scope>` at the configured severity level through
- * the main logger. On destruction, logs `<< <scope> (<elapsed> ms)`.
+ * On construction, logs `>> <scope>` at the specified severity level.
+ * On destruction, logs `<< <scope> (<elapsed>)` with adaptive time units.
  *
- * ### Shutdown Fallback
- * If @ref LogSystem::Shutdown() is called before this guard's destructor runs,
- * the exit message is routed to `stderr` to ensure timing data is not lost.
+ * @note If @ref LogSystem::Shutdown() is invoked while a guard is active,
+ *       the exit message automatically routes to `stderr` to guarantee
+ *       timing data delivery.
  *
  * @note Controlled at compile time via `VIGIL_ENABLE_SCOPED_LOG`.
  *
@@ -49,63 +53,97 @@ namespace vigil {
  */
 class ScopedLogger {
 public:
-    /// @brief Tag type used to opt into the owning-string constructor.
-    struct OwnedTag {};
 
     /**
-     * @brief Constructs a logger from a string literal or view.
+     * @brief Constructs a logger from a raw string literal.
      *
-     * Performs zero allocations for statically named scopes.
+     * Provides an exact match for `const char[N]` to prevent overload ambiguity
+     * while avoiding heap allocations.
      *
-     * @param scope String literal identifying the instrumented scope.
-     * @param level Severity level for entry and exit messages. Defaults to @ref LogLevel::Trace.
+     * @param scope Pointer to a null-terminated string literal. Must outlive the guard scope.
+     * @param level Severity level for entry and exit messages (defaults to @ref LogLevel::Trace).
      */
-    explicit ScopedLogger(std::string_view scope, LogLevel level = LogLevel::Trace)
-        : m_Scope(scope)
+    explicit ScopedLogger(const char* scope, LogLevel level = LogLevel::Trace)
+        : m_ScopeView(scope)
         , m_Level(level)
         , m_Start(std::chrono::steady_clock::now())
     {
-        LogSystem::Main().Log(m_Level, ">> {}", m_Scope);
+        LogSystem::Main().Log(m_Level, ">> {}", m_ScopeView);
+    }
+
+    /**
+     * @brief Constructs a logger from a string view.
+     *
+     * @param scope Non-owning view of the instrumented scope name.
+     * @param level Severity level for entry and exit messages (defaults to @ref LogLevel::Trace).
+     */
+    explicit ScopedLogger(std::string_view scope, LogLevel level = LogLevel::Trace)
+        : m_ScopeView(scope)
+        , m_Level(level)
+        , m_Start(std::chrono::steady_clock::now())
+    {
+        LogSystem::Main().Log(m_Level, ">> {}", m_ScopeView);
     }
 
     /**
      * @brief Constructs a logger taking ownership of a dynamic string.
      *
-     * Used internally by function-tracing macros to hold cleaned signature
-     * produced by @ref vigil::detail::CleanFunctionSignature.
+     * Designed for function-tracing macros where cleaned signatures are generated
+     * dynamically at runtime. Moves string storage into the guard instance.
      *
-     * @param scope  Cleaned function signature string to take ownership of.
-     * @param        OwnedTag marker to explicitly select this owning overload.
-     * @param level  Severity level for entry and exit messages. Defaults to @ref LogLevel::Trace.
+     * @param scope Rvalue reference to a dynamic string to take ownership of.
+     * @param level Severity level for entry and exit messages (defaults to @ref LogLevel::Trace).
      */
-    explicit ScopedLogger(std::string&& scope, OwnedTag, LogLevel level = LogLevel::Trace)
-        : m_Scope(std::move(scope))
+    explicit ScopedLogger(std::string&& scope, LogLevel level = LogLevel::Trace)
+        : m_ScopeStorage(std::move(scope))
+        , m_ScopeView(m_ScopeStorage)
         , m_Level(level)
         , m_Start(std::chrono::steady_clock::now())
     {
-        LogSystem::Main().Log(m_Level, ">> {}", m_Scope);
+        LogSystem::Main().Log(m_Level, ">> {}", m_ScopeView);
     }
 
-    /**
-     * @brief Destroys the guard and emits exit trace with execution duration.
-     *
-     * Falls back to `stderr` if @ref LogSystem is uninitialized or shut down.
-     */
+    /// @brief Destroys the guard and emits exit trace with execution duration.
+    /// Falls back to `stderr` if @ref LogSystem is uninitialized or shut down.
     ~ScopedLogger() noexcept
     {
-        const auto elapsed = std::chrono::steady_clock::now() - m_Start;
-        const auto ms      = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+        try
+        {
+            const auto elapsed = std::chrono::steady_clock::now() - m_Start;
+            const auto us = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
 
-        if (LogSystem::IsInitialized())
-        {
-            LogSystem::Main().Log(m_Level, "<< {} ({} ms)", m_Scope, ms);
+            // Adaptive formatting: avoid "0 ms" for sub-millisecond scopes.
+            char time_buf[32];
+            if (us < 1000)
+            {
+                std::snprintf(time_buf, sizeof(time_buf), "%lld \xc2\xb5s", static_cast<long long>(us));
+            }
+            else
+            {
+                // Express as milliseconds with two decimal places.
+                const long long ms_int  = us / 1000;
+                const long long ms_frac = (us % 1000) / 10; // hundredths
+                std::snprintf(time_buf, sizeof(time_buf), "%lld.%02lld ms",
+                    static_cast<long long>(ms_int),
+                    static_cast<long long>(ms_frac));
+            }
+
+            if (LogSystem::IsInitialized())
+            {
+                LogSystem::Main().Log(m_Level, "<< {} ({})", m_ScopeView, time_buf);
+            }
+            else
+            {
+                std::fprintf(stderr,
+                    "[Vigil/ScopedLogger] << %.*s (%s)  [LogSystem offline]\n",
+                    static_cast<int>(m_ScopeView.size()),
+                    m_ScopeView.data(),
+                    time_buf);
+            }
         }
-        else
+        catch (...)
         {
-            std::fprintf(stderr,
-                "[Vigil/ScopedLogger] << %s (%lld ms)  [LogSystem offline]\n",
-                m_Scope.c_str(),
-                static_cast<long long>(ms));
+            // Swallow all exceptions to ensure the destructor never throws.
         }
     }
 
@@ -115,7 +153,8 @@ public:
     ScopedLogger& operator=(ScopedLogger&&)      = delete;
 
 private:
-    std::string                           m_Scope;
+    std::string                           m_ScopeStorage;
+    std::string_view                      m_ScopeView;
     LogLevel                              m_Level;
     std::chrono::steady_clock::time_point m_Start;
 };
@@ -159,10 +198,9 @@ private:
  * @brief Instruments the current function signature at Trace level.
  * @hideinitializer
  */
-#define VIGIL_SCOPED_LOG_FUNCTION()                                       \
-    ::vigil::ScopedLogger VIGIL_CONCAT(_vigil_scope_fn_, __COUNTER__)(    \
-        ::vigil::detail::CleanFunctionSignature(VIGIL_CURRENT_FUNCTION),  \
-        ::vigil::ScopedLogger::OwnedTag{})
+#define VIGIL_SCOPED_LOG_FUNCTION()                                      \
+    ::vigil::ScopedLogger VIGIL_CONCAT(_vigil_scope_fn_, __COUNTER__)(   \
+        ::vigil::detail::CleanFunctionSignature(VIGIL_CURRENT_FUNCTION))
 
 /**
  * @def VIGIL_SCOPED_LOG_FUNCTION_LEVEL(level)
@@ -171,11 +209,9 @@ private:
  * @param level Log severity (@ref vigil::LogLevel).
  * @hideinitializer
  */
-#define VIGIL_SCOPED_LOG_FUNCTION_LEVEL(level)                            \
-    ::vigil::ScopedLogger VIGIL_CONCAT(_vigil_scope_fn_, __COUNTER__)(    \
-        ::vigil::detail::CleanFunctionSignature(VIGIL_CURRENT_FUNCTION),  \
-        ::vigil::ScopedLogger::OwnedTag{}, level)
-
+#define VIGIL_SCOPED_LOG_FUNCTION_LEVEL(level)                                  \
+    ::vigil::ScopedLogger VIGIL_CONCAT(_vigil_scope_fn_, __COUNTER__)(          \
+        ::vigil::detail::CleanFunctionSignature(VIGIL_CURRENT_FUNCTION), level)
 /** @} */
 
 // ============================================================================
