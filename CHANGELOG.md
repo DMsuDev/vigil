@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.1] - 2026-09-10
+
+### 🚀 Features
+
+- Add `ToString` function for LogLevel enumeration ([3fedf5f](https://github.com/DMsuDev/Vigil/commit/3fedf5f4cc9e8ac3e132d787a4481e341fa24652))
+
+### 🚜 Refactor
+
+- Reorganize examples directory structure and update CMake ([5eac335](https://github.com/DMsuDev/Vigil/commit/5eac33568a9593282e41e64bf1497d3c178cf941))
+
+  - Restructure example source files into `logging/` and `diagnostics/` categories.
+  - Update `vigil_add_example` CMake function to take custom source paths and categories.
+  - Set IDE target folder hierarchy to `Examples/<Category>`.
+
+- Optimize scope string handling and formatting ([14448f3](https://github.com/DMsuDev/Vigil/commit/14448f373b096a5b1f1f4b6ee955eb06f814f727))
+
+  - Replace string copy with std::string_view and internal storage
+  - Remove OwnedTag tag struct and simplify constructor overloads
+  - Add adaptive timing format (microseconds vs milliseconds)
+  - Wrap destructor logic in try/catch to guarantee noexcept
+
+### 📚 Documentation
+
+- Enhance Doxygen documentation in core and logging headers ([9d73bba](https://github.com/DMsuDev/Vigil/commit/9d73bba0f3802e79795d9c4d30dc160066c2ee63))
+
 ## [0.6.0] - 2026-09-08
 
 ### 💥 Breaking Changes
