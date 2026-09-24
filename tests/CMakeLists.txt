@@ -19,6 +19,11 @@ if(VIGIL_BUILD_TESTS)
   add_subdirectory(unit)
 endif()
 
+if(VIGIL_CRASH_TESTS)
+  message(STATUS "Vigil: Registering crash tests.")
+  add_subdirectory(crash)
+endif()
+
 # ------------------------------------------------------------------------------
 #  Install / Consumer Integration Tests (opt-in, slow)
 # ------------------------------------------------------------------------------
