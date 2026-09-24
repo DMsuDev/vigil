@@ -4,6 +4,52 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-09-24
+
+### 🚀 Features
+
+- Add crash guard subsystem ([569ee0a](https://github.com/DMsuDev/Vigil/commit/569ee0adfd022846f0e272058fdbf678ff04a003))
+
+  Implement cross-platform crash handling to intercept fatal signals and
+  unhandled exceptions.
+
+### 🐛 Bug Fixes
+
+- Add VIGIL_API export macro to CrashHandler ([d6ac584](https://github.com/DMsuDev/Vigil/commit/d6ac584eb5c1ca2f6ee321f290a4c7fa315192da))
+
+### 🛠️ Build System
+
+- Enable crash tests in CI presets ([05be089](https://github.com/DMsuDev/Vigil/commit/05be0898f70633523c87e1e57d34ace135035437))
+
+  - Enable `VIGIL_CRASH_TESTS` in CI configure presets.
+  - Specify `Debug` configuration for the `windows-dev` test preset.
+
+### 🔧 Maintenance
+
+- Discover unit test sources dynamically ([2bb5659](https://github.com/DMsuDev/Vigil/commit/2bb565902690744a3a32f4d1f1901fae28c6216e))
+
+- Refine integration test labels by mechanism ([a75ed09](https://github.com/DMsuDev/Vigil/commit/a75ed091395b312630eff5ee71a6d243f9156afb))
+
+- Add crash integration test harness ([9616612](https://github.com/DMsuDev/Vigil/commit/9616612ad297aae2b66a26e9c154d9ed4af4df6a))
+
+  Add a dedicated integration test suite under `tests/crash` to validate Vigil's
+  crash handling infrastructure against real runtime faults.
+
+  Key changes:
+  - Option Flag: Introduce `VIGIL_CRASH_TESTS` option in the main CMake build.
+  - Standalone Consumer: Build an isolated consumer executable using CTest's
+    `--build-and-test` mechanism.
+  - Trigger Coverage: Register individual tests for SIGSEGV, SIGABRT, SIGFPE, SIGILL,
+    std::terminate, bad_alloc, pure virtual calls, and OS-specific fault triggers.
+
+- Restructure integration workflow to include crash tests ([e58d243](https://github.com/DMsuDev/Vigil/commit/e58d243741c7e09b72e1173ffe08de381fa28417))
+
+  Rename `install-tests.yml` to `integration.yml` and update the README badge to reflect the broader test scope.
+
+  - Consolidate consumer tests into a single `consumer` job.
+  - Add a dedicated `crash` job to run the `VIGIL_CRASH_TESTS` suite.
+  - Standardize CMake variables and CTest labels across platforms.
+
 ## [0.6.1] - 2026-09-10
 
 ### 🚀 Features
