@@ -48,16 +48,15 @@ include(GoogleTest)
 # ------------------------------------------------------------------------------
 #  Source File Maps
 # ------------------------------------------------------------------------------
-set(VIGIL_GTEST_SOURCES
-  test_assert.cpp
-  test_async.cpp
-  test_hooks.cpp
-  test_log_limiter.cpp
-  test_log_system.cpp
-  test_logger.cpp
-  test_logging_macros.cpp
-  test_scoped_logger.cpp
+file(GLOB_RECURSE VIGIL_GTEST_SOURCES
+  CONFIGURE_DEPENDS
+  "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
 )
+
+if(NOT VIGIL_GTEST_SOURCES)
+  message(WARNING "[Vigil] No Vigil unit test sources were found.")
+  return()
+endif()
 
 # ------------------------------------------------------------------------------
 #  Test Binary Target Initialization
