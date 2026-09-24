@@ -31,7 +31,7 @@ add_test(NAME vigil_install
 )
 set_tests_properties(vigil_install PROPERTIES
   FIXTURES_SETUP "cmake_import_fixture"
-  LABELS         "vigil;install;environment_dependent"
+  LABELS         "vigil;install;cmake_import"
 )
 
 if(VIGIL_INSTALL_TESTS_CLEANUP)
@@ -42,7 +42,7 @@ if(VIGIL_INSTALL_TESTS_CLEANUP)
   )
   set_tests_properties(cmake_import_cleanup PROPERTIES
     FIXTURES_CLEANUP "cmake_import_fixture"
-    LABELS           "vigil;install;environment_dependent"
+    LABELS           "vigil;install;cmake_import"
   )
 endif()
 
@@ -62,5 +62,5 @@ add_test(NAME cmake_import
 )
 set_tests_properties(cmake_import PROPERTIES
   FIXTURES_REQUIRED "cmake_import_fixture"
-  LABELS            "vigil;install;environment_dependent"
+  LABELS            "vigil;install;cmake_import"
 )

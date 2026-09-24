@@ -22,7 +22,7 @@ if(VIGIL_INSTALL_TESTS_CLEANUP)
   )
   set_tests_properties(cmake_fetch_content_cleanup PROPERTIES
     FIXTURES_CLEANUP "cmake_fetch_content_fixture"
-    LABELS           "vigil;install;environment_dependent"
+    LABELS           "vigil;install;cmake_fetch_content"
   )
 endif()
 
@@ -42,5 +42,5 @@ add_test(NAME cmake_fetch_content
 )
 set_tests_properties(cmake_fetch_content PROPERTIES
   FIXTURES_REQUIRED "cmake_fetch_content_fixture"
-  LABELS            "vigil;install;environment_dependent"
+  LABELS            "vigil;install;cmake_fetch_content"
 )

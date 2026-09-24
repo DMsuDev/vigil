@@ -21,7 +21,7 @@ if(VIGIL_INSTALL_TESTS_CLEANUP)
   )
   set_tests_properties(cmake_add_subdirectory_cleanup PROPERTIES
     FIXTURES_CLEANUP "cmake_add_subdirectory_fixture"
-    LABELS           "vigil;install;environment_dependent"
+    LABELS           "vigil;install;cmake_add_subdirectory"
   )
 endif()
 
@@ -41,5 +41,5 @@ add_test(NAME cmake_add_subdirectory
 )
 set_tests_properties(cmake_add_subdirectory PROPERTIES
   FIXTURES_REQUIRED "cmake_add_subdirectory_fixture"
-  LABELS            "vigil;install;environment_dependent"
+  LABELS            "vigil;install;cmake_add_subdirectory"
 )
