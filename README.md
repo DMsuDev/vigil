@@ -41,7 +41,7 @@ Supports **C++17 and later** on **Linux**, **Windows**, and **macOS**.
 >
 > ```cmake
 > # Correct -- pin to a release tag
-> FetchContent_Declare(vigil GIT_TAG v0.6.1 ...)
+> FetchContent_Declare(vigil GIT_TAG v0.7.0 ...)
 >
 > # Avoid -- main is not guaranteed to be stable
 > FetchContent_Declare(vigil GIT_TAG main ...)
@@ -57,7 +57,7 @@ include(FetchContent)
 FetchContent_Declare(
   vigil
   GIT_REPOSITORY https://github.com/DMsuDev/vigil.git
-  GIT_TAG        v0.6.1   # tag or hash: pin to a release tag
+  GIT_TAG        v0.7.0   # tag or hash: pin to a release tag
   GIT_SHALLOW    TRUE
 )
 
