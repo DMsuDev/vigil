@@ -15,7 +15,7 @@
   [![Linux Build](https://github.com/DMsuDev/vigil/actions/workflows/linux-build.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/linux-build.yml)
   [![Windows Build](https://github.com/DMsuDev/vigil/actions/workflows/windows-build.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/windows-build.yml)
   [![macOS Build](https://github.com/DMsuDev/vigil/actions/workflows/macos-build.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/macos-build.yml)
-  [![Integration Build](https://github.com/DMsuDev/vigil/actions/workflows/install-tests.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/install-tests.yml)
+  [![Integration Build](https://github.com/DMsuDev/vigil/actions/workflows/integration.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/integration.yml)
 
 </div>
 

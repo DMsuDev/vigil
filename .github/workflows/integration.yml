@@ -1,0 +1,219 @@
+name: "Integration Tests"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "vendor/**"
+      - "cmake/**"
+      - "tests/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/integration.yml"
+
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "vendor/**"
+      - "cmake/**"
+      - "tests/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/integration.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_DIR: build
+  BUILD_TYPE: Release
+
+jobs:
+  # ===========================================================================
+  # Consumer Integration Tests
+  #
+  # Tests all supported CMake consumption methods from a single Vigil build:
+  #
+  #   - FetchContent
+  #   - add_subdirectory()
+  #   - install() + find_package()
+  #
+  # VIGIL_INSTALL is enabled because it only adds installation rules and does
+  # not change how the Vigil target itself is built.
+  # ===========================================================================
+
+  consumer:
+    name: Consumer tests (${{ matrix.platform }})
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+
+          - os: windows-latest
+            platform: windows-x64
+
+          - os: macos-latest
+            platform: macos-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # -----------------------------------------------------------------------
+      # External dependency
+      # -----------------------------------------------------------------------
+
+      - name: Install fmt (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfmt-dev
+
+      - name: Install fmt (macOS)
+        if: matrix.os == 'macos-latest'
+        run: brew install fmt
+
+      - name: Install fmt (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          vcpkg install fmt:x64-windows-static
+
+      - name: Configure (Linux / macOS)
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: |
+          cmake \
+            -S . \
+            -B "${BUILD_DIR}" \
+            -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
+            -DVIGIL_INSTALL=ON \
+            -DVIGIL_CONSUMER_TESTS=ON \
+            -DVIGIL_CRASH_TESTS=OFF \
+            -DVIGIL_INSTALL_TESTS_CLEANUP=ON \
+            -DVIGIL_BUILD_TESTS=OFF \
+            -DVIGIL_BUILD_EXAMPLES=OFF \
+            -DVIGIL_USE_SYSTEM_FMT=ON
+
+      - name: Configure (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          cmake `
+            -S . `
+            -B "${env:BUILD_DIR}" `
+            -DCMAKE_BUILD_TYPE="${env:BUILD_TYPE}" `
+            -DCMAKE_TOOLCHAIN_FILE="${env:VCPKG_INSTALLATION_ROOT}/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static `
+            -DVIGIL_USE_SYSTEM_FMT=ON `
+            -DVIGIL_INSTALL=ON `
+            -DVIGIL_CONSUMER_TESTS=ON `
+            -DVIGIL_CRASH_TESTS=OFF `
+            -DVIGIL_INSTALL_TESTS_CLEANUP=ON `
+            -DVIGIL_BUILD_TESTS=OFF `
+            -DVIGIL_BUILD_EXAMPLES=OFF `
+            -DBUILD_SHARED_LIBS=OFF
+
+      - name: Build
+        shell: bash
+        run: |
+          cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}" --parallel
+
+      - name: Run consumer tests
+        shell: bash
+        run: |
+          ctest \
+            --test-dir "${BUILD_DIR}" \
+            -C "${BUILD_TYPE}" \
+            -L 'cmake_add_subdirectory|cmake_fetch_content|cmake_import' \
+            --output-on-failure \
+            --timeout 600
+
+  # ===========================================================================
+  # Crash Integration Tests
+  #
+  # Crash tests intentionally terminate their process and therefore use an
+  # isolated build and test job.
+  # ===========================================================================
+
+  crash:
+    name: Crash tests (${{ matrix.platform }})
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+
+          - os: windows-latest
+            platform: windows-x64
+
+          - os: macos-latest
+            platform: macos-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Configure (Linux / macOS)
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: |
+          cmake \
+            -S . \
+            -B "${BUILD_DIR}" \
+            -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
+            -DVIGIL_INSTALL=OFF \
+            -DVIGIL_CONSUMER_TESTS=OFF \
+            -DVIGIL_CRASH_TESTS=ON \
+            -DVIGIL_BUILD_TESTS=OFF \
+            -DVIGIL_INSTALL_TESTS_CLEANUP=ON \
+            -DVIGIL_BUILD_EXAMPLES=OFF \
+            -DVIGIL_USE_SYSTEM_FMT=OFF
+
+      - name: Configure (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          cmake `
+            -S . `
+            -B "${env:BUILD_DIR}" `
+            -DCMAKE_BUILD_TYPE="${env:BUILD_TYPE}" `
+            -DVIGIL_INSTALL=OFF `
+            -DVIGIL_CONSUMER_TESTS=OFF `
+            -DVIGIL_CRASH_TESTS=ON `
+            -DVIGIL_INSTALL_TESTS_CLEANUP=ON `
+            -DVIGIL_BUILD_TESTS=OFF `
+            -DVIGIL_BUILD_EXAMPLES=OFF `
+            -DVIGIL_USE_SYSTEM_FMT=OFF
+
+      - name: Build
+        shell: bash
+        run: |
+          cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}" --parallel
+
+      - name: Run crash tests
+        shell: bash
+        run: |
+          ctest \
+            --test-dir "${BUILD_DIR}" \
+            -C "${BUILD_TYPE}" \
+            -L 'crash' \
+            --output-on-failure \
+            --timeout 600
