@@ -33,6 +33,8 @@ set(VIGIL_SOURCES
   trace/stack_trace.cpp
 
   assert.cpp
+
+  crash_guard.cpp
 )
 
 set(VIGIL_HEADERS
@@ -51,6 +53,8 @@ set(VIGIL_HEADERS
   "${VIGIL_INCLUDE_DIR}/vigil/logging/lifecycle_hooks.h"
 
   "${VIGIL_INCLUDE_DIR}/vigil/assert.h"
+
+  "${VIGIL_INCLUDE_DIR}/vigil/crash_guard.h"
 )
 
 set(VIGIL_INTERNAL_HEADERS

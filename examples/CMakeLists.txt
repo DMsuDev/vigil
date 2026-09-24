@@ -60,4 +60,5 @@ vigil_add_example(hooks_example    "logging/hooks_example.cpp"       "Logging")
 vigil_add_example(scoped_example   "logging/scoped_example.cpp"      "Logging")
 
 # Diagnostics Examples
-vigil_add_example(assert_example   "diagnostics/assert_example.cpp"  "Diagnostics")
+vigil_add_example(assert_example        "diagnostics/assert_example.cpp"       "Diagnostics")
+vigil_add_example(crash_guard_example   "diagnostics/crash_guard_example.cpp"  "Diagnostics")
