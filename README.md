@@ -32,6 +32,7 @@ Supports **C++17 and later** on **Linux**, **Windows**, and **macOS**.
 - **Rate Limiting:** One-shot (`LogOncePolicy::LogOnce`) and TTL-based (`LogTTLPolicy::LogTTL`) policies for high-frequency log paths.
 - **Diagnostics & Assertions:** Rich assertions with source locations, cross-platform stack traces, and thread-safe failure reporting.
 - **Scoped Instrumentation:** Optional RAII entry/exit logging with elapsed-time measurement and adaptive microsecond/millisecond formatting.
+- **Crash Handling:** Intercepts fatal signals (`SIGSEGV`, `SIGABRT`, `SIGFPE`, `SIGILL`) and unhandled exceptions (`std::terminate`, `std::bad_alloc`, pure virtual calls) to log stack traces before termination.
 
 ## Stability notice
 
@@ -90,6 +91,7 @@ cmake -S . -B build -DCMAKE_PREFIX_PATH="/path/to/vigil/install"
 | :---------------------------- | :----------: | :---------------------------------------------------------------------------------------- |
 | `VIGIL_BUILD_EXAMPLES`        |    `OFF`     | Build example targets.                                                                    |
 | `VIGIL_BUILD_TESTS`           |    `OFF`     | Build the test suite.                                                                     |
+| `VIGIL_CRASH_TESTS`           |    `OFF`     | Build integration test harness for fatal crash handling.                                  |
 | `VIGIL_CONSUMER_TESTS`        |    `OFF`     | Build slow CMake consumer integration tests (find_package/FetchContent/add_subdirectory). |
 | `VIGIL_INSTALL_TESTS_CLEANUP` |     `ON`     | Delete generated consumer project dirs after `VIGIL_CONSUMER_TESTS` run.                  |
 | `VIGIL_INSTALL`               |    `OFF`     | Generate install targets and package metadata.                                            |
@@ -422,16 +424,49 @@ int main()
 
 </details>
 
+<details>
+<summary>Crash handling</summary>
+
+<br>
+
+Vigil can intercept unhandled exceptions and fatal OS signals (`SIGSEGV`, `SIGABRT`, `SIGFPE`, `SIGILL`, `std::terminate`, `std::bad_alloc`, and pure virtual calls) to automatically format and log a full stack trace before the process exits.
+
+```cpp
+#include <vigil/vigil.h>
+
+int main()
+{
+    // Optional: use Vigil's logging system instead of stderr.
+    vigil::LogSystem::Init({ .Name = "App" });
+
+    vigil::CrashHandler::Install(
+        [](const vigil::CrashInfo& info)
+        {
+            // Handle the crash here if needed.
+            (void)info;
+        });
+
+    // Any fatal crash will generate a crash report with a stack trace.
+    int* ptr = nullptr;
+    *ptr = 42;
+
+    vigil::LogSystem::Shutdown();
+}
+```
+
+</details>
+
 ## Examples
 
 Fully worked examples covering every feature are available under [`examples/`](examples/):
 
-| Example        | Source                                                                               | Covers                                                                    |
-| :------------- | :----------------------------------------------------------------------------------- | :------------------------------------------------------------------------ |
-| Logging        | [`examples/logging/logger_example.cpp`](examples/logging/logger_example.cpp)         | Basic logging, named loggers, rate limiting, level control, hooks, flush. |
-| Assertions     | [`examples/diagnostics/assert_example.cpp`](examples/diagnostics/assert_example.cpp) | All assertion macros, safe and intentional-failure cases, CLI dispatch.   |
-| Scoped logging | [`examples/logging/scoped_example.cpp`](examples/logging/scoped_example.cpp)         | Function scope, nested scopes, explicit levels, manual BEGIN/END.         |
-| Hooks          | [`examples/logging/hooks_example.cpp`](examples/logging/hooks_example.cpp)           | SetHooks, individual setters, ClearHooks, named logger events.            |
+| Example        | Source                                                                                         | Covers                                                                     |
+| :------------- | :--------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------- |
+| Logging        | [`examples/logging/logger_example.cpp`](examples/logging/logger_example.cpp)                   | Basic logging, named loggers, rate limiting, level control, hooks, flush.  |
+| Assertions     | [`examples/diagnostics/assert_example.cpp`](examples/diagnostics/assert_example.cpp)           | All assertion macros, safe and intentional-failure cases, CLI dispatch.    |
+| Scoped logging | [`examples/logging/scoped_example.cpp`](examples/logging/scoped_example.cpp)                   | Function scope, nested scopes, explicit levels, manual BEGIN/END.          |
+| Hooks          | [`examples/logging/hooks_example.cpp`](examples/logging/hooks_example.cpp)                     | SetHooks, individual setters, ClearHooks, named logger events.             |
+| Crash handling | [`examples/diagnostics/crash_guard_example.cpp`](examples/diagnostics/crash_guard_example.cpp) | Intercept unhandled exceptions and fatal OS signals, generate stack trace. |
 
 > [!NOTE]
 > Examples are built with `VIGIL_BUILD_EXAMPLES=ON` and require **C++20** (for designated initializers), even though Vigil itself only requires C++17. They are compiled against whichever Vigil version/commit is checked out, so pin to a release tag to match the API shown above.
