@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "vigil/detail/symbol_export.h"
+
 #include <filesystem>
 #include <functional>
 
@@ -45,7 +47,7 @@ using CrashCallback = std::function<void(const CrashInfo&)>;
  *
  * @note Call InstallThreadAltStack() on every worker thread created by the application.
  */
-class CrashHandler
+class VIGIL_API CrashHandler
 {
 public:
     CrashHandler()                               = delete;
