@@ -229,12 +229,12 @@ if(VIGIL_INSTALL)
   include(CMakePackageConfigHelpers)
 
   set(export_dest_dir       "${CMAKE_INSTALL_LIBDIR}/cmake/Vigil")
-  set(project_config_in     "${PROJECT_SOURCE_DIR}/cmake/VigilConfig.cmake.in")
+  set(project_config_in     "${PROJECT_SOURCE_DIR}/cmake/templates/VigilConfig.cmake.in")
   set(project_config_out    "${PROJECT_BINARY_DIR}/VigilConfig.cmake")
   set(version_config_file   "${PROJECT_BINARY_DIR}/VigilConfigVersion.cmake")
   set(export_name           "vigil-targets")
   set(pkgconfig_install_dir "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
-  set(pkg_config_file       "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.pc")
+  set(pkg_config_file       "${PROJECT_BINARY_DIR}/${PROJECT_NAME}.pc")
 
   # ----------------------------------------------------------------------------
   # Target & Header Installation:
@@ -295,8 +295,9 @@ if(VIGIL_INSTALL)
     set(pkgconfig_libdir "\${exec_prefix}/${CMAKE_INSTALL_LIBDIR}")
   endif()
 
+  # Configure and install the pkg-config file.
   configure_file(
-    "${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}.pc.in"
+    "${PROJECT_SOURCE_DIR}/cmake/templates/${PROJECT_NAME}.pc.in"
     "${pkg_config_file}"
     @ONLY
   )
