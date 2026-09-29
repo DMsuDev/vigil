@@ -19,7 +19,10 @@ cmake_minimum_required(VERSION 3.28)
 #  Modules & Helpers
 # ------------------------------------------------------------------------------
 set(VIGIL_BASE_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}")
-list(APPEND CMAKE_MODULE_PATH "${VIGIL_BASE_FOLDER}/cmake")
+list(APPEND CMAKE_MODULE_PATH
+  "${VIGIL_BASE_FOLDER}/cmake"
+  "${VIGIL_BASE_FOLDER}/cmake/vendor"
+)
 
 # ------------------------------------------------------------------------------
 #  Version

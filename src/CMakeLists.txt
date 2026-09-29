@@ -179,7 +179,7 @@ if(VIGIL_ENABLE_STACK_TRACE)
     target_sources(vigil PRIVATE trace/detail/stack_trace_win.cpp)
     target_link_libraries(vigil PRIVATE dbghelp)
   else()
-    include(libbacktrace_vendor)
+    include(libbacktrace)
 
     target_sources(vigil PRIVATE trace/detail/stack_trace_posix.cpp)
     target_link_libraries(vigil PRIVATE vigil::libbacktrace)
