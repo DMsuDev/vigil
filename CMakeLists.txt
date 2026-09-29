@@ -37,8 +37,6 @@ message(STATUS "${PROJECT_NAME} version: ${VIGIL_VERSION}")
 # ------------------------------------------------------------------------------
 #  Configuration Options
 # ------------------------------------------------------------------------------
-# Defaults are tied to PROJECT_IS_TOP_LEVEL so that consumer builds are never
-# affected by Vigil's own development settings.
 
 option(VIGIL_BUILD_SHARED          "Build Vigil as a shared library."                                  ${BUILD_SHARED_LIBS})
 option(VIGIL_INSTALL               "Generate the install target."                                      OFF)
@@ -50,8 +48,14 @@ option(VIGIL_BUILD_EXAMPLES        "Build Vigil's example programs."            
 option(VIGIL_BUILD_WARNINGS        "Enable strict compiler warning suites."                            ${PROJECT_IS_TOP_LEVEL})
 option(VIGIL_WARNINGS_AS_ERRORS    "Treat compiler warnings as hard errors."                           OFF)
 option(VIGIL_ENABLE_STACK_TRACE    "Enable cross-platform call stack capture and symbolication"        ON )
-option(VIGIL_ENABLE_SCOPED_LOG     "Instrument scopes with entry/exit trace logging ."                 OFF)
-option(VIGIL_USE_SYSTEM_FMT        "Use system-installed fmt library"                                   ${VIGIL_INSTALL})
+option(VIGIL_USE_SYSTEM_FMT        "Use system-installed fmt library"                                  ${VIGIL_INSTALL})
+
+include(debug_default_options)
+vigil_option_debug_default(VIGIL_ENABLE_SCOPED_LOG
+  "Instrument scopes with entry/exit trace logging."
+  OFF
+  ON
+)
 
 # ------------------------------------------------------------------------------
 #  Option Validation & Derived Settings
@@ -68,14 +72,6 @@ if(VIGIL_INSTALL AND NOT VIGIL_USE_SYSTEM_FMT)
     "[Vigil] VIGIL_USE_SYSTEM_FMT=OFF is incompatible with VIGIL_INSTALL=ON "
     "(fmt appears in Vigil's public headers). Forcing VIGIL_USE_SYSTEM_FMT=ON.")
   set(VIGIL_USE_SYSTEM_FMT ON CACHE BOOL "Use system-installed fmt instead of the vendored copy." FORCE)
-endif()
-
-# Enable scoped logging automatically in Debug builds unless explicitly set.
-if(NOT DEFINED VIGIL_ENABLE_SCOPED_LOG OR NOT VIGIL_ENABLE_SCOPED_LOG)
-  if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR "Debug" IN_LIST CMAKE_CONFIGURATION_TYPES)
-    set(VIGIL_ENABLE_SCOPED_LOG ON CACHE BOOL "Instrument scopes with entry/exit trace logging." FORCE)
-    message(STATUS "Vigil: Scoped logging enabled automatically for Debug build.")
-  endif()
 endif()
 
 # ------------------------------------------------------------------------------
