@@ -12,8 +12,7 @@
 #pragma once
 
 #include "vigil/detail/preprocessor_utils.h"
-
-#include <cstdlib>
+#include "vigil/detail/compiler_attributes.h"
 
 namespace vigil::crash_triggers {
 
@@ -21,13 +20,13 @@ namespace detail {
 
 struct Base
 {
+    Base() { InvokeCall(); }
+
     virtual void Call() = 0;
     virtual ~Base()     = default;
-};
 
-struct Derived : Base
-{
-    void Call() override { std::abort(); } // never reached
+private:
+    VIGIL_NOINLINE void InvokeCall() { Call(); }
 };
 
 } // namespace detail
@@ -36,15 +35,10 @@ struct Derived : Base
 {
     struct Caller : detail::Base
     {
-        Caller() { static_cast<detail::Base*>(this)->Call(); }
         void Call() override {}
     };
 
-    // Placement new on a stack buffer so we control the object lifetime.
-    alignas(Caller) unsigned char buf[sizeof(Caller)];
-    ::new (buf) Caller();
-
-    VIGIL_UNREACHABLE();
+    Caller caller;
 }
 
 } // namespace vigil::crash_triggers

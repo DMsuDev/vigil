@@ -14,12 +14,25 @@
 #include "vigil/detail/preprocessor_utils.h"
 #include "vigil/detail/compiler_attributes.h"
 
+#include <csignal>
+#include <cstdlib>
+
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+    #include <intrin.h>
+#endif
+
 namespace vigil::crash_triggers {
 
 [[noreturn]] inline void TriggerSigIll()
 {
-    VIGIL_DEBUGBREAK_IF_ATTACHED();
-    VIGIL_UNREACHABLE();
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+    __ud2();
+#elif VIGIL_HAS_BUILTIN(__builtin_trap)
+    __builtin_trap();
+#else
+    std::raise(SIGILL);
+#endif
+    std::abort();
 }
 
 } // namespace vigil::crash_triggers
