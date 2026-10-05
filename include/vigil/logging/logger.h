@@ -139,9 +139,13 @@ public:
     /// @param level Severity level for the message.
     /// @param fmt Format string.
     /// @param args Values consumed by the format string.
+    /// @note Skips formatting entirely if @p level is below this logger's current level.
     template <typename... Args>
     void Log(LogLevel level, detail::FormatString<Args...> fmt, Args&&... args)
     {
+        if (level < GetLevel())
+            return;
+
         LogImpl(level, fmt::format(fmt, std::forward<Args>(args)...));
     }
 
