@@ -35,9 +35,10 @@ function(vigil_option_debug_default name docstring default debug_default)
   option(${name} "${docstring}" ${default})
 
   if(NOT _user_set)
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR "Debug" IN_LIST CMAKE_CONFIGURATION_TYPES)
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR
+       "Debug" IN_LIST CMAKE_CONFIGURATION_TYPES OR "RelWithDebInfo" IN_LIST CMAKE_CONFIGURATION_TYPES)
       set(${name} ${debug_default} CACHE BOOL "${docstring}" FORCE)
-      message(STATUS "Vigil: '${name}' defaulted to ${debug_default} for Debug build.")
+      message(STATUS "Vigil: '${name}' defaulted to ${debug_default} for ${CMAKE_BUILD_TYPE} build.")
     endif()
   endif()
 endfunction()
