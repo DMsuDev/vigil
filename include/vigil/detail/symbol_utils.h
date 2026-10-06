@@ -21,10 +21,9 @@ enum class FormatPathMode {
 /// @brief Formats a file path down to a configurable number of trailing
 ///        directory components, always keeping the file name.
 /// @param path   Source path (may use '/' or '\\' separators).
-/// @param levels How many trailing directory components to keep in addition
-///               to the file name. 0 = return the full, unmodified path.
-///               If @p levels exceeds the number of components available,
-///               the full path is returned (clamped, not an error).
+/// @param levels Number of trailing path components to keep.
+///               0 = full path; 1 = filename; 2 = dir/file.cpp; values
+///               exceeding available separators are clamped to the full path.
 /// @return A view into @p path's storage - callers must ensure @p path
 ///         outlives the returned view.
 [[nodiscard]] VIGIL_API
