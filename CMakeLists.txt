@@ -36,16 +36,20 @@ project(Vigil
   DESCRIPTION "Cross-platform diagnostics library for C++."
 )
 message(STATUS "${PROJECT_NAME} version: ${VIGIL_VERSION}")
+include("${VIGIL_BASE_FOLDER}/cmake/build_helpers.cmake")
+
+vigil_configure_cmake()
 
 # ------------------------------------------------------------------------------
 #  Configuration Options
 # ------------------------------------------------------------------------------
 
 option(VIGIL_BUILD_SHARED          "Build Vigil as a shared library."                                  ${BUILD_SHARED_LIBS})
+option(VIGIL_ENABLE_COVERAGE       "Enable code coverage instrumentation."                             OFF)
 option(VIGIL_INSTALL               "Generate the install target."                                      OFF)
 option(VIGIL_CRASH_TESTS           "Enable Vigil crash integration tests."                             OFF)
 option(VIGIL_CONSUMER_TESTS        "Enable CMake consumer integration tests."                          OFF)
-option(VIGIL_INSTALL_TESTS_CLEANUP "Delete generated consumer project dirs after install tests run."   ON )
+option(VIGIL_INSTALL_TESTS_CLEANUP "Delete generated consumer project dirs after install tests run."   ${PROJECT_IS_TOP_LEVEL})
 option(VIGIL_BUILD_TESTS           "Build Vigil's unit-test suite."                                    ${PROJECT_IS_TOP_LEVEL})
 option(VIGIL_BUILD_EXAMPLES        "Build Vigil's example programs."                                   ${PROJECT_IS_TOP_LEVEL})
 option(VIGIL_BUILD_WARNINGS        "Enable strict compiler warning suites."                            ${PROJECT_IS_TOP_LEVEL})
@@ -54,6 +58,11 @@ option(VIGIL_ENABLE_STACK_TRACE    "Enable cross-platform call stack capture and
 option(VIGIL_USE_SYSTEM_FMT        "Use system-installed fmt library"                                  ${VIGIL_INSTALL})
 
 include(debug_default_options)
+vigil_option_debug_default(VIGIL_ENABLE_ASSERTS
+  "Enable runtime assertions."
+  OFF
+  ON
+)
 vigil_option_debug_default(VIGIL_ENABLE_SCOPED_LOG
   "Instrument scopes with entry/exit trace logging."
   OFF
@@ -77,42 +86,33 @@ if(VIGIL_INSTALL AND NOT VIGIL_USE_SYSTEM_FMT)
   set(VIGIL_USE_SYSTEM_FMT ON CACHE BOOL "Use system-installed fmt instead of the vendored copy." FORCE)
 endif()
 
+if(VIGIL_WARNINGS_AS_ERRORS AND NOT VIGIL_BUILD_WARNINGS)
+  message(WARNING
+    "[Vigil] VIGIL_WARNINGS_AS_ERRORS=ON requires VIGIL_BUILD_WARNINGS=ON. "
+    "Either set both to ON or disable WARNINGS_AS_ERRORS.")
+endif()
+
+if(VIGIL_INSTALL_TESTS_CLEANUP AND NOT VIGIL_BUILD_TESTS)
+  message(WARNING "[Vigil] VIGIL_INSTALL_TESTS_CLEANUP=ON requires VIGIL_BUILD_TESTS=ON.")
+endif()
+
+if(VIGIL_ENABLE_COVERAGE AND NOT VIGIL_BUILD_TESTS)
+  message(FATAL_ERROR "[Vigil] VIGIL_ENABLE_COVERAGE requires VIGIL_BUILD_TESTS=ON.")
+endif()
+
 # ------------------------------------------------------------------------------
 #  Global Settings
 # ------------------------------------------------------------------------------
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-include(compiler_options)
-include(compiler_warnings)
-include(copy_runtime_deps)
-
 # ------------------------------------------------------------------------------
-#  Output Layout & Platform Defaults  (top-level only)
+#  Output Layout  (top-level only)
 # ------------------------------------------------------------------------------
 if(PROJECT_IS_TOP_LEVEL)
-
-  # Standard install directories (bin, lib, include, etc.) with platform-specific defaults.
-  include(GNUInstallDirs)
-
   # Isolate artifact generation inside the local binary footprint
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
-
-  # Single-config generators: default to Release when no build type is set.
-  if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build configuration." FORCE)
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
-  endif()
-
-  if(VIGIL_BUILD_SHARED)
-    if(APPLE)
-      set(CMAKE_INSTALL_RPATH "@loader_path")
-    elseif(UNIX)
-      set(CMAKE_INSTALL_RPATH "$ORIGIN")
-    endif()
-    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
-  endif()
 endif()
 
 # ------------------------------------------------------------------------------

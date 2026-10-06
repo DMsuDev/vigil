@@ -62,3 +62,6 @@ set_target_properties(vigil::libbacktrace PROPERTIES
 
 # Ensure the static library exists before anything tries to link against it.
 add_dependencies(vigil::libbacktrace libbacktrace)
+
+# Disable warnings for the third-party libbacktrace library
+vigil_disable_third_party_warnings(vigil::libbacktrace)

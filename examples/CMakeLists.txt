@@ -40,8 +40,10 @@ function(vigil_add_example target_name source_file category)
   #     target_sources(${target_name} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/common/resources.rc")
   # endif()
 
-  vigil_enable_warnings(${target_name})
-  vigil_set_compiler_options(${target_name})
+  vigil_configure_compiler(${target_name})
+  vigil_configure_warnings(${target_name})
+  vigil_enable_coverage(${target_name})
+  vigil_strip_dead_code(${target_name})
 
   vigil_copy_runtime_dependencies(${target_name})
 

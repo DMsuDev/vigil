@@ -80,8 +80,10 @@ target_include_directories(vigil_tests
 # ------------------------------------------------------------------------------
 #  Target Policies & System Adjustments
 # ------------------------------------------------------------------------------
-vigil_enable_warnings(vigil_tests)
-vigil_set_compiler_options(vigil_tests)
+vigil_configure_compiler(vigil_tests)
+vigil_configure_warnings(vigil_tests)
+vigil_enable_coverage(vigil_tests)
+vigil_strip_dead_code(vigil_tests)
 
 # Ensures that if Vigil or its vendor components are shared DLL assets on Windows,
 # they are copied next to the test binary to allow running via CTest seamlessly.

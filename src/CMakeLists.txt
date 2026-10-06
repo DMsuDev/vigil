@@ -145,11 +145,22 @@ target_include_directories(vigil
 target_compile_features(vigil PUBLIC cxx_std_17)
 
 set_target_properties(vigil PROPERTIES
-  CXX_EXTENSIONS            OFF
-  CXX_VISIBILITY_PRESET     hidden
-  VISIBILITY_INLINES_HIDDEN ON
   FOLDER                    "Vigil"
+  CXX_EXTENSIONS            OFF
+
+  # Output binary naming
+  OUTPUT_NAME               "vigil"
+  DEBUG_POSTFIX             "d"
 )
+
+# Visibility settings (GCC/Clang only)
+if(NOT MSVC)
+  set_target_properties(vigil PROPERTIES
+    CXX_VISIBILITY_PRESET     hidden
+    VISIBILITY_INLINES_HIDDEN ON
+    )
+endif()
+
 # ------------------------------------------------------------------------------
 #  Preprocessor Compile Definitions
 # ------------------------------------------------------------------------------
@@ -164,9 +175,6 @@ target_compile_definitions(vigil
   PUBLIC
     # Tells consumers whether they are building against or consuming shared binary code
     $<$<BOOL:${VIGIL_BUILD_SHARED}>:VIGIL_SHARED_LIBRARY>
-
-    # Enable assertion checks in Debug and RelWithDebInfo builds
-    $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:VIGIL_ENABLE_ASSERTS>
 )
 
 # ------------------------------------------------------------------------------
@@ -190,6 +198,10 @@ if(VIGIL_ENABLE_SCOPED_LOG)
   target_compile_definitions(vigil PUBLIC VIGIL_ENABLE_SCOPED_LOG)
 endif()
 
+if(VIGIL_ENABLE_ASSERTS)
+  target_compile_definitions(vigil PUBLIC VIGIL_ENABLE_ASSERTS)
+endif()
+
 # ------------------------------------------------------------------------------
 #  Dependency Linking Setup
 # ------------------------------------------------------------------------------
@@ -206,8 +218,10 @@ target_link_libraries(vigil
 # ------------------------------------------------------------------------------
 #  Compiler Flags, Diagnostics, and Warnings
 # ------------------------------------------------------------------------------
-vigil_enable_warnings(vigil)
-vigil_set_compiler_options(vigil)
+vigil_configure_compiler(vigil)
+vigil_configure_warnings(vigil)
+vigil_enable_coverage(vigil)
+vigil_strip_dead_code(vigil)
 
 # Consumers on MSVC must use the conformant preprocessor to expand
 # Vigil's variadic macros correctly (__VA_OPT__ support).
