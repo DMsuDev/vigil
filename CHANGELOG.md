@@ -4,6 +4,62 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] - 2026-10-08
+
+### 🚀 Features
+
+- Added early return in Log ([6c3e7a8](https://github.com/DMsuDev/Vigil/commit/6c3e7a803bbe0f0b873b36d3a82838582a477ea6))
+
+### 🐛 Bug Fixes
+
+- Update debug defaults for RelWithDebInfo ([14fbdaa](https://github.com/DMsuDev/Vigil/commit/14fbdaa187f6c7c55a1bf00027b202b865ebadb3))
+
+- Improve logger lifecycle and level events ([f28bffa](https://github.com/DMsuDev/Vigil/commit/f28bffa981fb92a579617b813a9f152a1bb4ef2b))
+
+  - Reset logging state when initialization fails
+  - Create dedicated file sinks for custom file levels
+  - Unregister the previous main logger before replacement
+  - Copy logger name before invoking level-change callbacks
+
+- Correct POSIX inline frame detection ([ac195f0](https://github.com/DMsuDev/Vigil/commit/ac195f06b3f560852e950141d531a8b2efba1d91))
+
+  Mark all resolved frames except the final one as inlined.
+
+- Validate and propagate release tag consistently ([98c7d11](https://github.com/DMsuDev/Vigil/commit/98c7d11ebc192d0a0a86db44c820eeddea814b73))
+
+### 🚜 Refactor
+
+- Centralize Debug option defaults ([d734d18](https://github.com/DMsuDev/Vigil/commit/d734d1841095855f9c047403aee7447e7070105a))
+
+  - Add reusable `vigil_option_debug_default()` helper
+  - Preserve explicit cache values in Debug builds
+  - Remove duplicated scoped logging default logic
+
+- Simplify crash triggers for pure virtual and sigill ([2acffc2](https://github.com/DMsuDev/Vigil/commit/2acffc298424d0bd1fd7e17500cdb9dc7596c144))
+
+  - Trigger pure virtual call via base constructor using `VIGIL_NOINLINE`
+  - Emit explicit trap instructions (`__ud2`, `__builtin_trap`) for reliable `SIGILL`
+
+- Consolidate build options into helper functions ([0e2c60a](https://github.com/DMsuDev/Vigil/commit/0e2c60a291671a388ae97c4f4d764fe5a12f5146))
+
+  - Replace multiple individual CMake scripts with a centralized `build_helpers.cmake` module
+  - Add support for code coverage (`VIGIL_ENABLE_COVERAGE`), assertion configurations, and dead-code elimination
+  - Standardize compiler configuration, warning setup, and runtime dependency handling across targets
+
+- Remove redundant WIN32_LEAN_AND_MEAN definition ([fa0276b](https://github.com/DMsuDev/Vigil/commit/fa0276bc6b3de252f8bd2a9e1c308665f44e55a2))
+
+- Modularize presets and expand build configurations ([38e4dbe](https://github.com/DMsuDev/Vigil/commit/38e4dbe23e28d0a46e4ad244cb367aab09a38a6c))
+
+### 🛠️ Build System
+
+- Move `templates` to subfolder and fix pkg-config path ([16873e0](https://github.com/DMsuDev/Vigil/commit/16873e0d7488bf968686f7622043c64061d54535))
+
+- Move `libbacktrace` module to `cmake/vendor` ([47d519a](https://github.com/DMsuDev/Vigil/commit/47d519a26732f3d7509ac85bb25b66943325647e))
+
+  - Add `cmake/vendor` to `CMAKE_MODULE_PATH`
+  - Rename `libbacktrace_vendor.cmake` to `cmake/vendor/libbacktrace.cmake`
+  - Update `include()` call in `src/CMakeLists.txt`
+
 ## [0.7.0] - 2026-09-24
 
 ### 🚀 Features
