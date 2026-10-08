@@ -3,65 +3,115 @@
   "cmakeMinimumRequired": { "major": 3, "minor": 28, "patch": 0 },
 
   "configurePresets": [
+
     {
       "name": "base",
       "hidden": true,
+      "description": "Every VIGIL_* option with a safe default. Must be LAST in every 'inherits' list.",
       "binaryDir": "${sourceDir}/build/${presetName}",
+      "installDir": "${sourceDir}/install/${presetName}",
       "cacheVariables": {
-        "CMAKE_EXPORT_COMPILE_COMMANDS": true
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+
+        "VIGIL_BUILD_SHARED":          false,
+        "VIGIL_INSTALL":               false,
+        "VIGIL_USE_SYSTEM_FMT":        false,
+
+        "VIGIL_BUILD_TESTS":           false,
+        "VIGIL_BUILD_EXAMPLES":        false,
+        "VIGIL_CRASH_TESTS":           false,
+        "VIGIL_CONSUMER_TESTS":        false,
+        "VIGIL_INSTALL_TESTS_CLEANUP": false,
+
+        "VIGIL_BUILD_WARNINGS":        true,
+        "VIGIL_WARNINGS_AS_ERRORS":    false,
+
+        "VIGIL_ENABLE_STACK_TRACE":    true,
+        "VIGIL_ENABLE_ASSERTS":        false,
+        "VIGIL_ENABLE_SCOPED_LOG":     false
+      }
+    },
+
+    {
+      "name": "cfg-dev",
+      "hidden": true,
+      "description": "Day-to-day development: unit tests, examples, asserts and scoped logging.",
+      "cacheVariables": {
+        "VIGIL_BUILD_TESTS":       true,
+        "VIGIL_BUILD_EXAMPLES":    true,
+        "VIGIL_ENABLE_ASSERTS":    true,
+        "VIGIL_ENABLE_SCOPED_LOG": true
       }
     },
     {
-      "name": "base-dev",
+      "name": "cfg-werror",
       "hidden": true,
+      "description": "Mixin: treat compiler warnings as errors (CI).",
       "cacheVariables": {
-        "VIGIL_BUILD_TESTS":    true,
-        "VIGIL_BUILD_EXAMPLES": true,
-        "VIGIL_ENABLE_SCOPED_LOG": true,
-        "VIGIL_INSTALL":        false
+        "VIGIL_WARNINGS_AS_ERRORS": true
       }
     },
     {
-      "name": "base-package",
+      "name": "cfg-package",
       "hidden": true,
+      "description": "Distributable library: install target, system fmt, no tests or examples.",
       "cacheVariables": {
-        "VIGIL_BUILD_TESTS":    false,
-        "VIGIL_BUILD_EXAMPLES": false,
         "VIGIL_INSTALL":        true,
         "VIGIL_USE_SYSTEM_FMT": true
       }
     },
     {
-      "name": "base-install-tests-full",
+      "name": "cfg-consumer-full",
       "hidden": true,
+      "description": "Integration tests against an installed package (find_package, FetchContent, add_subdirectory) plus crash tests.",
       "cacheVariables": {
-        "VIGIL_BUILD_TESTS":           false,
-        "VIGIL_BUILD_EXAMPLES":        false,
         "VIGIL_INSTALL":               true,
+        "VIGIL_USE_SYSTEM_FMT":        true,
         "VIGIL_CRASH_TESTS":           true,
         "VIGIL_CONSUMER_TESTS":        true,
-        "VIGIL_INSTALL_TESTS_CLEANUP": false,
-        "VIGIL_USE_SYSTEM_FMT":        true
+        "VIGIL_INSTALL_TESTS_CLEANUP": false
       }
     },
     {
-      "name": "base-install-tests-no-import",
+      "name": "cfg-consumer-source",
       "hidden": true,
+      "description": "Integration tests without an installed package (no find_package): vendored fmt, crash tests included.",
       "cacheVariables": {
-        "VIGIL_BUILD_TESTS":           false,
-        "VIGIL_BUILD_EXAMPLES":        false,
-        "VIGIL_INSTALL":               false,
         "VIGIL_CRASH_TESTS":           true,
         "VIGIL_CONSUMER_TESTS":        true,
-        "VIGIL_INSTALL_TESTS_CLEANUP": false,
-        "VIGIL_USE_SYSTEM_FMT":        false
+        "VIGIL_INSTALL_TESTS_CLEANUP": false
       }
     },
 
     {
-      "name": "windows-vs",
+      "name": "link-static",
+      "hidden": true,
+      "cacheVariables": { "VIGIL_BUILD_SHARED": false }
+    },
+    {
+      "name": "link-shared",
+      "hidden": true,
+      "cacheVariables": { "VIGIL_BUILD_SHARED": true }
+    },
+
+    {
+      "name": "mode-debug",
+      "hidden": true,
+      "description": "Single-config generators only. Multi-config generators pick the config at build time.",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "mode-release",
+      "hidden": true,
+      "description": "Single-config generators only. Multi-config generators pick the config at build time.",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+
+    {
+      "name": "plat-windows-vs",
       "hidden": true,
       "generator": "Visual Studio 18 2026",
+      "architecture": { "value": "x64", "strategy": "set" },
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -69,9 +119,11 @@
       }
     },
     {
-      "name": "windows-ninja",
+      "name": "plat-windows-ninja",
       "hidden": true,
       "generator": "Ninja",
+      "architecture": { "value": "x64", "strategy": "external" },
+      "toolset":      { "value": "host=x64", "strategy": "external" },
       "condition": {
         "type": "equals",
         "lhs": "${hostSystemName}",
@@ -83,7 +135,7 @@
       }
     },
     {
-      "name": "linux",
+      "name": "plat-linux",
       "hidden": true,
       "generator": "Ninja",
       "condition": {
@@ -93,7 +145,7 @@
       }
     },
     {
-      "name": "macos",
+      "name": "plat-macos",
       "hidden": true,
       "generator": "Ninja",
       "condition": {
@@ -105,118 +157,188 @@
 
     {
       "name": "windows-dev",
-      "displayName": "Windows — Dev (VS, Debug, Static)",
-      "description": "Development build: tests and examples enabled, no install.",
-      "inherits": [ "base", "windows-vs", "base-dev" ],
-      "cacheVariables": {
-        "VIGIL_BUILD_SHARED": false
-      }
+      "displayName": "Windows — Dev (VS, Static)",
+      "description": "Tests, examples, asserts and scoped logging. Build with configuration Debug.",
+      "inherits": [ "cfg-dev", "link-static", "plat-windows-vs", "base" ]
+    },
+    {
+      "name": "windows-ninja-dev",
+      "displayName": "Windows — Dev (Ninja, Static, Debug)",
+      "description": "Tests, examples, asserts and scoped logging. Build with configuration Debug.",
+      "inherits": [ "cfg-dev", "link-static", "mode-debug", "plat-windows-ninja", "base" ]
+    },
+    {
+      "name": "windows-ci",
+      "displayName": "Windows — CI (VS, Static, Warnings as errors)",
+      "inherits": [ "cfg-werror", "windows-dev" ]
     },
     {
       "name": "windows-package-static",
       "displayName": "Windows — Package Static (Ninja, Release)",
-      "inherits": [ "base", "windows-ninja", "base-package" ],
-      "cacheVariables": {
-        "VIGIL_BUILD_SHARED": false
-      }
+      "inherits": [ "cfg-package", "link-static", "mode-release", "plat-windows-ninja", "base" ]
     },
     {
       "name": "windows-package-shared",
       "displayName": "Windows — Package Shared (Ninja, Release)",
-      "inherits": [ "base", "windows-ninja", "base-package" ],
-      "cacheVariables": {
-        "VIGIL_BUILD_SHARED": true
-      }
+      "inherits": [ "cfg-package", "link-shared", "mode-release", "plat-windows-ninja", "base" ]
     },
+    {
+      "name": "windows-consumer-full",
+      "displayName": "Windows — Consumer + Crash tests, installed package (VS, Release)",
+      "inherits": [ "cfg-consumer-full", "link-static", "plat-windows-vs", "base" ]
+    },
+    {
+      "name": "windows-consumer-source",
+      "displayName": "Windows — Consumer + Crash tests, from source (VS, Release)",
+      "inherits": [ "cfg-consumer-source", "link-static", "plat-windows-vs", "base" ]
+    },
+        {
+      "name": "windows-consumer-full-dbg",
+      "displayName": "Windows — Consumer + Crash tests, installed package (VS, Debug)",
+      "inherits": [ "cfg-consumer-full", "link-static", "plat-windows-vs", "base" ]
+    },
+    {
+      "name": "windows-consumer-source-dbg",
+      "displayName": "Windows — Consumer + Crash tests, from source (VS, Debug)",
+      "inherits": [ "cfg-consumer-source", "link-static", "plat-windows-vs", "base" ]
+    },
+
     {
       "name": "linux-dev",
       "displayName": "Linux — Dev (Ninja, Debug, Static)",
-      "description": "Development build: tests and examples enabled, no install.",
-      "inherits": [ "base", "linux", "base-dev" ],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE":   "Debug",
-        "VIGIL_BUILD_SHARED": false
-      }
+      "description": "Tests, examples, asserts and scoped logging.",
+      "inherits": [ "cfg-dev", "link-static", "mode-debug", "plat-linux", "base" ]
+    },
+    {
+      "name": "linux-ci",
+      "displayName": "Linux — CI (Ninja, Debug, Warnings as errors)",
+      "inherits": [ "cfg-werror", "linux-dev" ]
     },
     {
       "name": "linux-package-static",
       "displayName": "Linux — Package Static (Ninja, Release)",
-      "inherits": [ "base", "linux", "base-package" ],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE":   "Release",
-        "VIGIL_BUILD_SHARED": false
-      }
+      "inherits": [ "cfg-package", "link-static", "mode-release", "plat-linux", "base" ]
     },
     {
       "name": "linux-package-shared",
       "displayName": "Linux — Package Shared (Ninja, Release)",
-      "inherits": [ "base", "linux", "base-package" ],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE":   "Release",
-        "VIGIL_BUILD_SHARED": true
-      }
+      "inherits": [ "cfg-package", "link-shared", "mode-release", "plat-linux", "base" ]
     },
+    {
+      "name": "linux-consumer-full",
+      "displayName": "Linux — Consumer + Crash tests, installed package (Ninja, Release)",
+      "inherits": [ "cfg-consumer-full", "link-static", "mode-release", "plat-linux", "base" ]
+    },
+    {
+      "name": "linux-consumer-source",
+      "displayName": "Linux — Consumer + Crash tests, from source (Ninja, Release)",
+      "inherits": [ "cfg-consumer-source", "link-static", "mode-release", "plat-linux", "base" ]
+    },
+
     {
       "name": "macos-dev",
       "displayName": "macOS — Dev (Ninja, Debug, Static)",
-      "description": "Development build: tests and examples enabled, no install.",
-      "inherits": [ "base", "macos", "base-dev" ],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE":   "Debug",
-        "VIGIL_BUILD_SHARED": false
-      }
+      "description": "Tests, examples, asserts and scoped logging.",
+      "inherits": [ "cfg-dev", "link-static", "mode-debug", "plat-macos", "base" ]
+    },
+    {
+      "name": "macos-ci",
+      "displayName": "macOS — CI (Ninja, Debug, Warnings as errors)",
+      "inherits": [ "cfg-werror", "macos-dev" ]
     },
     {
       "name": "macos-package-static",
       "displayName": "macOS — Package Static (Ninja, Release)",
-      "inherits": [ "base", "macos", "base-package" ],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE":   "Release",
-        "VIGIL_BUILD_SHARED": false
-      }
+      "inherits": [ "cfg-package", "link-static", "mode-release", "plat-macos", "base" ]
     },
     {
       "name": "macos-package-shared",
       "displayName": "macOS — Package Shared (Ninja, Release)",
-      "inherits": [ "base", "macos", "base-package" ],
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE":   "Release",
-        "VIGIL_BUILD_SHARED": true
-      }
+      "inherits": [ "cfg-package", "link-shared", "mode-release", "plat-macos", "base" ]
+    },
+    {
+      "name": "macos-consumer-full",
+      "displayName": "macOS — Consumer + Crash tests, installed package (Ninja, Release)",
+      "inherits": [ "cfg-consumer-full", "link-static", "mode-release", "plat-macos", "base" ]
+    },
+    {
+      "name": "macos-consumer-source",
+      "displayName": "macOS — Consumer + Crash tests, from source (Ninja, Release)",
+      "inherits": [ "cfg-consumer-source", "link-static", "mode-release", "plat-macos", "base" ]
     }
   ],
 
   "buildPresets": [
-    { "name": "windows-dev",            "configurePreset": "windows-dev",            "configuration": "Debug"   },
-    { "name": "windows-package-static", "configurePreset": "windows-package-static", "configuration": "Release" },
-    { "name": "windows-package-shared", "configurePreset": "windows-package-shared", "configuration": "Release" },
-    { "name": "linux-dev",              "configurePreset": "linux-dev" },
-    { "name": "linux-package-static",   "configurePreset": "linux-package-static" },
-    { "name": "linux-package-shared",   "configurePreset": "linux-package-shared" },
-    { "name": "macos-dev",              "configurePreset": "macos-dev" },
-    { "name": "macos-package-static",   "configurePreset": "macos-package-static" },
-    { "name": "macos-package-shared",   "configurePreset": "macos-package-shared" }
+    { "name": "windows-dev",                 "configurePreset": "windows-dev",                 "configuration": "Debug"   },
+    { "name": "windows-ninja-dev",           "configurePreset": "windows-ninja-dev"            },
+    { "name": "windows-ci",                  "configurePreset": "windows-ci",                  "configuration": "Debug"   },
+    { "name": "windows-package-static",      "configurePreset": "windows-package-static"       },
+    { "name": "windows-package-shared",      "configurePreset": "windows-package-shared"       },
+    { "name": "windows-consumer-full",       "configurePreset": "windows-consumer-full",       "configuration": "Release" },
+    { "name": "windows-consumer-source",     "configurePreset": "windows-consumer-source",     "configuration": "Release" },
+    { "name": "windows-consumer-full-dbg",   "configurePreset": "windows-consumer-full-dbg",   "configuration": "Debug" },
+    { "name": "windows-consumer-source-dbg", "configurePreset": "windows-consumer-source-dbg", "configuration": "Debug" },
+
+    { "name": "linux-dev",               "configurePreset": "linux-dev"               },
+    { "name": "linux-ci",                "configurePreset": "linux-ci"                },
+    { "name": "linux-package-static",    "configurePreset": "linux-package-static"    },
+    { "name": "linux-package-shared",    "configurePreset": "linux-package-shared"    },
+    { "name": "linux-consumer-full",     "configurePreset": "linux-consumer-full"     },
+    { "name": "linux-consumer-source",   "configurePreset": "linux-consumer-source"   },
+
+    { "name": "macos-dev",               "configurePreset": "macos-dev"               },
+    { "name": "macos-ci",                "configurePreset": "macos-ci"                },
+    { "name": "macos-package-static",    "configurePreset": "macos-package-static"    },
+    { "name": "macos-package-shared",    "configurePreset": "macos-package-shared"    },
+    { "name": "macos-consumer-full",     "configurePreset": "macos-consumer-full"     },
+    { "name": "macos-consumer-source",   "configurePreset": "macos-consumer-source"   }
   ],
 
   "testPresets": [
     {
-      "name": "windows-dev",
-      "configurePreset": "windows-dev",
-      "configuration": "Debug",
-      "output": { "outputOnFailure": true },
+      "name": "test-base",
+      "hidden": true,
+      "output":    { "outputOnFailure": true },
       "execution": { "noTestsAction": "error", "stopOnFailure": false }
     },
     {
-      "name": "linux-dev",
-      "configurePreset": "linux-dev",
-      "output": { "outputOnFailure": true },
-      "execution": { "noTestsAction": "error", "stopOnFailure": false }
+      "name": "test-consumer-full",
+      "hidden": true,
+      "description": "Installed package: cmake_import CAN resolve the package, so it stays in the run.",
+      "inherits": "test-base",
+      "filter": {
+        "include": { "label": "install|crash" }
+      },
+      "execution": { "noTestsAction": "error", "stopOnFailure": false, "timeout": 600 }
     },
     {
-      "name": "macos-dev",
-      "configurePreset": "macos-dev",
-      "output": { "outputOnFailure": true },
-      "execution": { "noTestsAction": "error", "stopOnFailure": false }
-    }
+      "name": "test-consumer-source",
+      "hidden": true,
+      "description": "No install step: cmake_import has nothing to find_package() against, so it's excluded.",
+      "inherits": "test-base",
+      "filter": {
+        "include": { "label": "install|crash" },
+        "exclude": { "name": "cmake_import" }
+      },
+      "execution": { "noTestsAction": "error", "stopOnFailure": false, "timeout": 600 }
+    },
+
+    { "name": "windows-dev",                 "inherits": "test-base",            "configurePreset": "windows-dev",             "configuration": "Debug"   },
+    { "name": "windows-ninja-dev",           "inherits": "test-consumer-source", "configurePreset": "windows-ninja-dev"  },
+    { "name": "windows-ci",                  "inherits": "test-base",            "configurePreset": "windows-ci",              "configuration": "Debug"   },
+    { "name": "windows-consumer-full",       "inherits": "test-consumer-full",   "configurePreset": "windows-consumer-full",   "configuration": "Release" },
+    { "name": "windows-consumer-source",     "inherits": "test-consumer-source", "configurePreset": "windows-consumer-source", "configuration": "Release" },
+    { "name": "windows-consumer-full-dbg",   "inherits": "test-consumer-full",   "configurePreset": "windows-consumer-full-dbg",   "configuration": "Debug" },
+    { "name": "windows-consumer-source-dbg", "inherits": "test-consumer-source", "configurePreset": "windows-consumer-source-dbg", "configuration": "Debug" },
+
+    { "name": "linux-dev",               "inherits": "test-base",            "configurePreset": "linux-dev"             },
+    { "name": "linux-ci",                "inherits": "test-base",            "configurePreset": "linux-ci"              },
+    { "name": "linux-consumer-full",     "inherits": "test-consumer-full",   "configurePreset": "linux-consumer-full"   },
+    { "name": "linux-consumer-source",   "inherits": "test-consumer-source", "configurePreset": "linux-consumer-source" },
+
+    { "name": "macos-dev",               "inherits": "test-base",            "configurePreset": "macos-dev"             },
+    { "name": "macos-ci",                "inherits": "test-base",            "configurePreset": "macos-ci"              },
+    { "name": "macos-consumer-full",     "inherits": "test-consumer-full",   "configurePreset": "macos-consumer-full"   },
+    { "name": "macos-consumer-source",   "inherits": "test-consumer-source", "configurePreset": "macos-consumer-source" }
   ]
 }
