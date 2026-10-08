@@ -86,15 +86,10 @@ namespace {
 
 namespace {
 
-// backtrace_pcinfo() fires FullCallback once per logical frame at a given PC,
-// including inlined frames. ErrorCallback fires when DWARF resolution fails —
-// we still emit a minimal frame carrying the raw address.
-
 struct ResolutionContext
 {
-    std::vector<StackFrame>* output;     // non-owning — points into caller's vector
-    std::uintptr_t           address;    // physical PC being resolved
-    bool                     firstFrame; // true for the physical frame, false for inlined
+    std::vector<StackFrame>* output;
+    std::uintptr_t           address;
 };
 
 int FullCallback(
@@ -111,14 +106,12 @@ int FullCallback(
     frame.symbolName = Demangle(function);
     frame.fileName   = filename ? filename : "";
     frame.line       = lineno > 0 ? static_cast<std::uint32_t>(lineno) : 0u;
-    frame.column     = 0u; // libbacktrace does not provide column numbers
-
-    // First callback for this PC = physical frame; all subsequent = inlined.
-    frame.isInlined = !ctx->firstFrame;
-    ctx->firstFrame = false;
+    frame.column     = 0u;
+    frame.isInlined = false; // Provisional — corrected in ResolveOne(): the last frame
+                             // for this PC is the physical one, the rest are inlined.
 
     ctx->output->push_back(std::move(frame));
-    return 0; // 0 = continue iteration
+    return 0;
 }
 
 void ErrorCallback(void* data, const char* /*msg*/, int /*errnum*/)
@@ -146,8 +139,16 @@ void ResolveOne(
     uintptr_t                pc,
     std::vector<StackFrame>& output)
 {
-    ResolutionContext ctx{&output, static_cast<std::uintptr_t>(pc), /*firstFrame=*/true};
+    const std::size_t before = output.size();
+
+    ResolutionContext ctx{&output, static_cast<std::uintptr_t>(pc)};
     backtrace_pcinfo(state, pc, FullCallback, ErrorCallback, &ctx);
+
+    // libbacktrace reports inlined call sites first and the physical
+    // (outermost) frame last for a given PC. Mark every frame inlined
+    // except the final one.
+    for (std::size_t i = before; i + 1 < output.size(); ++i)
+        output[i].isInlined = true;
 }
 
 // Fallback when libbacktrace failed to initialize. Uses backtrace_symbols()
