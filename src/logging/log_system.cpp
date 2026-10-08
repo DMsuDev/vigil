@@ -16,6 +16,7 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/async.h>
 
+#include <cstdio>
 #include <filesystem>
 #include <unordered_map>
 #include <mutex>
@@ -294,6 +295,12 @@ void LogSystem::Init(const LogSystemConfig& config)
     catch (const spdlog::spdlog_ex& ex)
     {
         std::fprintf(stderr, "[Vigil] Log init failed: %s\n", ex.what());
+
+        g_ConsoleSink.reset();
+        g_SharedFileSink.reset();
+        g_GlobalLogDir.clear();
+        g_Async          = false;
+        g_AsyncPoolReady = false;
     }
 }
 
@@ -413,8 +420,10 @@ Logger& LogSystem::Create(const LogConfig& config)
     const std::string& effectiveDir =
         config.LogDir.empty() ? g_GlobalLogDir : config.LogDir;
 
+    // Give this logger its own file sink when it needs a distinct path or file-level
+    // threshold; otherwise share the main sink (whose level was fixed at Init()).
     spdlog::sink_ptr fileSink = g_SharedFileSink;
-    if (!config.LogFile.empty() || !effectiveDir.empty())
+    if (!config.LogFile.empty() || !effectiveDir.empty() || config.FileLevel.has_value())
     {
         const auto logPath = ResolveLogPath(effectiveDir, config.LogFile, config.Name);
         const LogLevel fileLevel = config.FileLevel.value_or(LogLevel::Trace);
@@ -453,6 +462,10 @@ void LogSystem::SetMain(std::string_view name)
 
     auto it = g_NamedLoggers.find(std::string{name});
     if (it == g_NamedLoggers.end()) return;
+
+    // Unregister the old main so its name can be reused.
+    if (g_MainLogger)
+        spdlog::drop(std::string{g_MainLogger->GetName()});
 
     g_MainLogger = std::move(it->second);
     g_NamedLoggers.erase(it);
@@ -550,6 +563,10 @@ void LogSystem::SetLevel(std::string_view name, LogLevel level)
 {
     LevelChangeCallback cb;
     LogLevel old;
+
+    // Copy before releasing the lock, as `name` is only valid for this call,
+    // while the event may be consumed after the lock is released.
+    std::string loggerName;
     {
         std::scoped_lock lock(g_Mutex);
         if (!IsInitializedUnsafe()) return;
@@ -559,10 +576,11 @@ void LogSystem::SetLevel(std::string_view name, LogLevel level)
 
         old = it->second->GetLevel();
         it->second->SetLevel(level);
+        loggerName = it->first;
         cb = g_Hooks.Hooks.OnLevelChange;
     }
 
-    if (cb) cb(LevelChangeEvent{ name, old, level });
+    if (cb) cb(LevelChangeEvent{ loggerName, old, level });
 }
 
 //==============================================================================
