@@ -181,6 +181,12 @@ function(vigil_disable_third_party_warnings target)
     message(FATAL_ERROR "vigil_disable_third_party_warnings: target '${target}' does not exist.")
   endif()
 
+  # Imported targets are prebuilt; there is nothing to compile.
+  get_target_property(_imported "${target}" IMPORTED)
+  if(_imported)
+    return()
+  endif()
+
   set_target_properties("${target}" PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
 
   target_compile_options("${target}" PRIVATE
