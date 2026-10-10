@@ -14,7 +14,7 @@
 #                                    write_basic_package_version_file() which
 #                                    require a pure SemVer value.
 #
-#  Recognized suffixes: -WIP, .WIP, -dev, .dev
+#  Accepted formats: X.Y.Z or X.Y.Z-WIP (anything else is a fatal error)
 #
 #  Copyright (c) 2026 @DMsuDev. Licensed under the MIT License.
 #  See LICENSE file in the project root for full license text.
@@ -37,8 +37,16 @@ function(vigil_load_version version plain_version)
   file(READ "${_file}" _raw)
   string(STRIP "${_raw}" _raw)
 
-  string(REGEX REPLACE "[-.]?(dev|WIP)$" "" _plain "${_raw}")
-  string(REGEX MATCH   "[-.]?(dev|WIP)$" _suffix "${_raw}")
+  # Validate the version format before stripping the prerelease suffix.
+  if(NOT _raw MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)(-WIP)?$")
+    message(FATAL_ERROR
+      "[Vigil] Invalid version '${_raw}' in ${_file}. "
+      "Expected format 'X.Y.Z' or 'X.Y.Z-WIP'."
+    )
+  endif()
+
+  string(REGEX REPLACE "-WIP$" "" _plain "${_raw}")
+  string(REGEX MATCH   "-WIP$" _suffix "${_raw}")
 
   set(${version}       "${_raw}"   PARENT_SCOPE)
   set(${plain_version} "${_plain}" PARENT_SCOPE)
