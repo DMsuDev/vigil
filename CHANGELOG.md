@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.1] - 2026-10-10
+
+### 🚀 Features
+
+- Warn on uninitialized logging ([98244df](https://github.com/DMsuDev/Vigil/commit/98244df89763215a102b597e5b681b9c37035ae8))
+
+  - Introduce `WarnUninitializedOnce()` to print a single stderr message when logging before initialization.
+  - Refactor `VIGIL_LOG_GUARD` and `VIGIL_LOG_NAMED` macros into `do-while` blocks to handle assertion and fallback warning cleanly.
+
+- Improve file sink error reporting and init failure cleanup ([4479ba2](https://github.com/DMsuDev/Vigil/commit/4479ba2513da728267065a5a5d660f240ce31699))
+
+### 🐛 Bug Fixes
+
+- Improve version format validation and error messaging ([e9ae4d9](https://github.com/DMsuDev/Vigil/commit/e9ae4d9af4649b87a9678434f37df3f4cc9baa2c))
+
 ## [0.8.0] - 2026-10-08
 
 ### 🚀 Features
@@ -26,6 +41,8 @@ The format is based on [Conventional Commits](https://www.conventionalcommits.or
   Mark all resolved frames except the final one as inlined.
 
 - Validate and propagate release tag consistently ([98c7d11](https://github.com/DMsuDev/Vigil/commit/98c7d11ebc192d0a0a86db44c820eeddea814b73))
+
+- Prevent disabling warnings for imported third-party targets ([84181e6](https://github.com/DMsuDev/Vigil/commit/84181e6312f5cec9506d895152fb63c37f8fd4b4))
 
 ### 🚜 Refactor
 
