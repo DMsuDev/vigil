@@ -18,6 +18,7 @@
 
 #include <atomic>
 #include <cstdio>
+#include <exception>
 #include <filesystem>
 #include <unordered_map>
 #include <mutex>
@@ -148,25 +149,37 @@ spdlog::sink_ptr MakeFileSink(
 {
     auto factory = [filePath, fileMode]() -> spdlog::sink_ptr
     {
-        if (filePath.has_parent_path())
-            std::filesystem::create_directories(filePath.parent_path());
-
-        spdlog::sink_ptr sink;
-
-        if (fileMode == FileOpenMode::Truncate)
+        try
         {
-            sink = CreateShared<spdlog::sinks::basic_file_sink_st>(
-                filePath.string(), /*truncate=*/true);
-        }
-        else
-        {
-            // 10 MiB per file, keep up to 5 rotating files.
-            sink = CreateShared<spdlog::sinks::rotating_file_sink_st>(
-                filePath.string(), 1024 * 1024 * 10, 5);
-        }
+            if (filePath.has_parent_path())
+                std::filesystem::create_directories(filePath.parent_path());
 
-        sink->set_pattern("[%T] [%l] %n: %v");
-        return sink;
+            spdlog::sink_ptr sink;
+
+            if (fileMode == FileOpenMode::Truncate)
+            {
+                sink = CreateShared<spdlog::sinks::basic_file_sink_st>(
+                    filePath.string(), /*truncate=*/true);
+            }
+            else
+            {
+                // 10 MiB per file, keep up to 5 rotating files.
+                sink = CreateShared<spdlog::sinks::rotating_file_sink_st>(
+                    filePath.string(), 1024 * 1024 * 10, 5);
+            }
+
+            sink->set_pattern("[%T] [%l] %n: %v");
+            return sink;
+        }
+        catch (const std::exception& ex)
+        {
+            // The lazy sink swallows factory failures; report once here so the
+            // missing log file is never silent.
+            std::fprintf(stderr,
+                "[Vigil] Cannot open log file '%s': %s. File logging is disabled.\n",
+                filePath.string().c_str(), ex.what());
+            throw;
+        }
     };
 
     auto lazySink = CreateShared<detail::LazyFileSink_mt>(std::move(factory));
@@ -293,10 +306,11 @@ void LogSystem::Init(const LogSystemConfig& config)
 
         g_Initialized = true;
     }
-    catch (const spdlog::spdlog_ex& ex)
+    catch (const std::exception& ex)
     {
         std::fprintf(stderr, "[Vigil] Log init failed: %s\n", ex.what());
 
+        g_MainLogger.reset();
         g_ConsoleSink.reset();
         g_SharedFileSink.reset();
         g_GlobalLogDir.clear();
@@ -488,8 +502,8 @@ void LogSystem::WarnUninitializedOnce() noexcept
     static std::atomic<bool> warned{false};
     if (!warned.exchange(true))
     {
-        std::fputs("[vigil] warning: logging used before LogSystem::Init(); "
-                   "messages are dropped.\n", stderr);
+        std::fputs("[vigil] warning: logging used while LogSystem is not initialized "
+                   "(Init() not called or failed); messages are dropped.\n", stderr);
     }
 }
 

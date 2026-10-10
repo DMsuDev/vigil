@@ -17,8 +17,9 @@ namespace vigil::detail {
  * @brief File sink that defers file creation until the first message is logged.
  *
  * Prevents empty `.log` files when the application exits without writing
- * anything. If the factory throws on first use, subsequent messages are
- * silently dropped, and the application keeps running normally
+ * anything. If the factory throws on first use, subsequent messages to this
+ * sink are dropped (the factory is responsible for reporting the failure) and
+ * the application keeps running normally.
  *
  * @tparam Mutex Use @c std::mutex (via @c LazyFileSink_mt) for multi-threaded
  *               loggers, or @c spdlog::details::null_mutex (via
