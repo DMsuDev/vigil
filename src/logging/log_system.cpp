@@ -16,6 +16,7 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/async.h>
 
+#include <atomic>
 #include <cstdio>
 #include <filesystem>
 #include <unordered_map>
@@ -480,6 +481,16 @@ bool LogSystem::IsInitialized() noexcept
 {
     std::scoped_lock lock(g_Mutex);
     return g_Initialized;
+}
+
+void LogSystem::WarnUninitializedOnce() noexcept
+{
+    static std::atomic<bool> warned{false};
+    if (!warned.exchange(true))
+    {
+        std::fputs("[vigil] warning: logging used before LogSystem::Init(); "
+                   "messages are dropped.\n", stderr);
+    }
 }
 
 Logger& LogSystem::Main()

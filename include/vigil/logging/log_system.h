@@ -24,13 +24,25 @@
 
 // Internal guard to ensure the logging system is initialized before proceeding.
 #if defined(VIGIL_ENABLE_ASSERTS)
-    #define VIGIL_LOG_GUARD()                           \
-        VIGIL_ASSERT_MSG(LogSystem::IsInitialized(),    \
-            "Vigil logging API called before Init()."); \
-        if (!LogSystem::IsInitialized()) return
+    #define VIGIL_LOG_GUARD()                                   \
+        do {                                                    \
+            VIGIL_ASSERT_MSG(LogSystem::IsInitialized(),        \
+                "Vigil logging API called before Init().");     \
+            if (!LogSystem::IsInitialized())                    \
+            {                                                   \
+                LogSystem::WarnUninitializedOnce();             \
+                return;                                         \
+            }                                                   \
+        } while (0)
 #else
-    #define VIGIL_LOG_GUARD() \
-        if (!LogSystem::IsInitialized()) return
+    #define VIGIL_LOG_GUARD()                                   \
+        do {                                                    \
+            if (!LogSystem::IsInitialized())                    \
+            {                                                   \
+                LogSystem::WarnUninitializedOnce();             \
+                return;                                         \
+            }                                                   \
+        } while (0)
 #endif
 
 /**
@@ -151,6 +163,10 @@ public:
 
     /// @brief True after Init() has completed successfully.
     [[nodiscard]] static bool IsInitialized() noexcept;
+
+    /// @brief Prints a one-time warning to stderr about logging used before Init().
+    /// @note Internal helper for the logging guards; subsequent calls are no-ops.
+    static void WarnUninitializedOnce() noexcept;
 
     // =========================================================== //
     //                     HOOKS REGISTRATION                      //
@@ -571,15 +587,18 @@ void Log(LogLevel level, detail::FormatString<Args...> message, Args&&... args)
  * @param level Runtime @ref vigil::LogLevel for this entry.
  * @param ...   Format string (`fmt` syntax) followed by arguments.
  */
-#define VIGIL_LOG_NAMED(name, level, ...)                             \
-    do {                                                              \
-        VIGIL_ASSERT_MSG(::vigil::LogSystem::IsInitialized(),         \
-            "Vigil logging API called before Init().");               \
-        if (::vigil::LogSystem::IsInitialized() &&                    \
-            ::vigil::IsLevelActive(level))                            \
-        {                                                             \
-            ::vigil::LogSystem::Create(name).Log(level, __VA_ARGS__); \
-        }                                                             \
+#define VIGIL_LOG_NAMED(name, level, ...)                                         \
+    do {                                                                          \
+        if (::vigil::LogSystem::IsInitialized())                                  \
+        {                                                                         \
+            if (::vigil::IsLevelActive(level))                                    \
+                ::vigil::LogSystem::Create(name).Log(level, __VA_ARGS__);         \
+        }                                                                         \
+        else                                                                      \
+        {                                                                         \
+            VIGIL_ASSERT_MSG(false, "Vigil logging API called before Init().");   \
+            ::vigil::LogSystem::WarnUninitializedOnce();                          \
+        }                                                                         \
     } while (0)
 
 /** @} */
