@@ -9,15 +9,19 @@
 # ==============================================================================
 # USAGE
 # ==============================================================================
-# Run from the build directory (on Windows, use a VS Developer PowerShell):
+# Option A: run-clang-tidy (this script, runs all TUs)
 #   cd <build-dir>
-#   run-clang-tidy -source-filter '[\\/](src|tests)[\\/]'
+#   ./run-clang-tidy -source-filter '[\\/](src|tests)[\\/]'
+#   ./run-clang-tidy -source-filter '[\\/](src|tests)[\\/]' -fix
 #
-# Or enable it in CMake to run during C++ compilation:
-#   -DVIGIL_ENABLE_CLANG_TIDY=ON
-#   Ninja CI presets enable it automatically.
+# Option B: clang-tidy directly (faster, single TU or glob)
+#   clang-tidy -p build src/*.cpp
+#   clang-tidy -p build --fix-errors src/crash_handler.cpp
+#   clang-tidy -p build --fix --checks='-*,modernize-*' src/*.cpp
 #
-# OPTIONAL: Add `-fix` to apply suggestions automatically (review the diff afterwards).
+# Option C: via CMake (runs during compilation)
+#   cmake -S . -B build -GNinja -DVIGIL_ENABLE_CLANG_TIDY=ON
+#   cmake --build build -j
 #
 # ==============================================================================
 # CONFIGURATION NOTES
@@ -36,20 +40,22 @@ Checks:
 - -bugprone-easily-swappable-parameters
 - -bugprone-exception-escape               # False positives on STL container move constructors (std::map, std::vector).
 - -bugprone-throwing-static-initialization # Only fails on OOM at startup; noisy with STL globals.
+- -bugprone-empty-catch                    # Allow empty catch blocks, e.g., in destructors. (Many functions must not throw)
 - clang-analyzer-*
 - -clang-analyzer-optin.performance.Padding
 - concurrency-*
 - misc-*
-- -misc-include-cleaner
+- -misc-include-cleaner    # False positives with transitive includes in nested header graphs.
 - -misc-non-private-member-variables-in-classes
 - -misc-no-recursion
-- -misc-const-correctness
+- -misc-const-correctness  # Noisy: flags trivial cases (scoped_lock, string_view) with no real safety benefit.
 - -misc-use-anonymous-namespace
 - modernize-*
 - -modernize-use-trailing-return-type
 - -modernize-avoid-c-arrays               # To allow using C-style arrays where necessary.
 - -modernize-use-std-print                # We want to avoid using std::print, use fmt::print instead.
 - -modernize-use-integer-sign-comparison  # Noisy for small fixed-size arrays; casts are always guarded.
+- -modernize-macro-to-enum                # We want to keep integer macros for compile-time gating. (Are a lot of them)
 - performance-*
 - -performance-enum-size # Avoid forcing std::uint8_t for small enums; negligible memory benefit.
 - portability-*
@@ -73,9 +79,6 @@ Checks:
 - -readability-use-concise-preprocessor-directives # We do not use #ifdef (is ugly as shit)
 - -readability-use-anyofallof
 - -readability-else-after-return
-- -readability-redundant-access-specifiers
-- -readability-redundant-preprocessor
-- -readability-static-accessed-through-instance
 
 - cppcoreguidelines-narrowing-conversions
 - cppcoreguidelines-prefer-member-initializer
