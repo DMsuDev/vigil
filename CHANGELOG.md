@@ -43,6 +43,24 @@ The format is based on [Conventional Commits](https://www.conventionalcommits.or
 
 - Update usage instructions and refine checks ([810fb8f](https://github.com/DMsuDev/Vigil/commit/810fb8f985866be5cd1ada987505d7dd24e07b69))
 
+### 🛠️ Build System
+
+- Install documentation and verify installed files ([c3c9936](https://github.com/DMsuDev/Vigil/commit/c3c9936524691948090c88f33df8b13975503276))
+
+  Include the `docs/` directory in Vigil installations and extend the CMake import tests to verify that all documentation files are installed correctly.
+
+  - Preserve the documentation directory structure.
+  - Add individual file comparison tests for the installed documentation.
+
+### 🔧 Maintenance
+
+- Pin runner to ubuntu-24.04 to retain clang-18 ([9fea846](https://github.com/DMsuDev/Vigil/commit/9fea846bf1c432c2915e0e81737392f796b6f6f5))
+
+  ubuntu-latest moved to Ubuntu 26.04 which dropped Clang 18.
+  Pin the runner until the build is validated against a newer toolchain.
+
+- Add C++17 to build matrix ([620ceaf](https://github.com/DMsuDev/Vigil/commit/620ceaf06a76f875593ced472751b03dfbadc9b1))
+
 ## [0.8.1] - 2026-10-10
 
 ### 🚀 Features
