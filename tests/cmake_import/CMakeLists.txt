@@ -34,6 +34,31 @@ set_tests_properties(vigil_install PROPERTIES
   LABELS         "vigil;install;cmake_import"
 )
 
+file(GLOB_RECURSE vigil_doc_files
+  CONFIGURE_DEPENDS
+  LIST_DIRECTORIES FALSE
+  RELATIVE "${PROJECT_SOURCE_DIR}/docs"
+  "${PROJECT_SOURCE_DIR}/docs/*"
+)
+
+if(IS_ABSOLUTE "${CMAKE_INSTALL_DATAROOTDIR}")
+  set(vigil_install_docs_dir "${CMAKE_INSTALL_DATAROOTDIR}/doc/${PROJECT_NAME}/docs")
+else()
+  set(vigil_install_docs_dir "${VIGIL_INSTALL_TEST_PREFIX}/${CMAKE_INSTALL_DATAROOTDIR}/doc/${PROJECT_NAME}/docs")
+endif()
+
+foreach(doc_file IN LISTS vigil_doc_files)
+  add_test(NAME "vigil_install_doc::${doc_file}"
+    COMMAND "${CMAKE_COMMAND}" -E compare_files
+      "${PROJECT_SOURCE_DIR}/docs/${doc_file}"
+      "${vigil_install_docs_dir}/${doc_file}"
+  )
+  set_tests_properties("vigil_install_doc::${doc_file}" PROPERTIES
+    FIXTURES_REQUIRED "cmake_import_fixture"
+    LABELS            "vigil;install;cmake_import"
+  )
+endforeach()
+
 if(VIGIL_INSTALL_TESTS_CLEANUP)
   add_test(NAME cmake_import_cleanup
     COMMAND "${CMAKE_COMMAND}" -E rm -rf

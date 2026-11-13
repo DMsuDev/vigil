@@ -293,6 +293,9 @@ if(VIGIL_INSTALL)
     "${PROJECT_SOURCE_DIR}/LICENSE"
     DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/${PROJECT_NAME}"
   )
+  install(DIRECTORY "${PROJECT_SOURCE_DIR}/docs"
+    DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/doc/${PROJECT_NAME}"
+  )
 
   # ----------------------------------------------------------------------------
   # Pkg-Config File Generation & Installation
