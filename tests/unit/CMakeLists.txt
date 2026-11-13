@@ -16,30 +16,26 @@
 # ------------------------------------------------------------------------------
 #  Dependency: GoogleTest
 # ------------------------------------------------------------------------------
-if(VIGIL_USE_SYSTEM_LIBS)
-  find_package(GTest CONFIG REQUIRED)
-else()
-  if(NOT TARGET GTest::gtest)
-    include(FetchContent)
+if(NOT TARGET GTest::gtest)
+  include(FetchContent)
 
-    # Match MSVC runtime settings to avoid mismatches on Windows
-    set(gtest_force_shared_crt ON  CACHE BOOL "Use shared CRT for gtest" FORCE)
+  # Match MSVC runtime settings to avoid mismatches on Windows
+  set(gtest_force_shared_crt ON  CACHE BOOL "Use shared CRT for gtest" FORCE)
 
-    # Disable building the gmock framework to reduce build footprint.
-    set(BUILD_GMOCK OFF CACHE BOOL "Disable gmock framework" FORCE)
+  # Disable building the gmock framework to reduce build footprint.
+  set(BUILD_GMOCK OFF CACHE BOOL "Disable gmock framework" FORCE)
 
-    # Disable installation rules for GoogleTest to avoid polluting system paths.
-    set(INSTALL_GTEST OFF CACHE BOOL "Disable gtest installation rules" FORCE)
+  # Disable installation rules for GoogleTest to avoid polluting system paths.
+  set(INSTALL_GTEST OFF CACHE BOOL "Disable gtest installation rules" FORCE)
 
-    FetchContent_Declare(
-      googletest
-      GIT_REPOSITORY https://github.com/google/googletest.git
-      GIT_TAG        v1.17.0
-      GIT_SHALLOW    TRUE
-      SYSTEM
-    )
-    FetchContent_MakeAvailable(googletest)
-  endif()
+  FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG        v1.17.0
+    GIT_SHALLOW    TRUE
+    SYSTEM
+  )
+  FetchContent_MakeAvailable(googletest)
 endif()
 
 # Load the native GoogleTest discovery modules
