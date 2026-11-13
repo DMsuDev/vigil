@@ -10,12 +10,12 @@
     Structured Logging • Assertions • Runtime Instrumentation
   </p>
 
-  [![License MIT](https://img.shields.io/github/license/DMsuDev/vigil?style=flat&logo=open-source-initiative&logoColor=white)](https://github.com/DMsuDev/vigil/blob/main/LICENSE)
-  ![Version](https://img.shields.io/github/v/release/DMsuDev/vigil?style=flat&label=Version&color=purple)
-  [![Linux Build](https://github.com/DMsuDev/vigil/actions/workflows/linux-build.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/linux-build.yml)
-  [![Windows Build](https://github.com/DMsuDev/vigil/actions/workflows/windows-build.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/windows-build.yml)
-  [![macOS Build](https://github.com/DMsuDev/vigil/actions/workflows/macos-build.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/macos-build.yml)
-  [![Integration Build](https://github.com/DMsuDev/vigil/actions/workflows/integration.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/integration.yml)
+[![License MIT](https://img.shields.io/github/license/DMsuDev/vigil?style=flat&logo=open-source-initiative&logoColor=white)](https://github.com/DMsuDev/vigil/blob/main/LICENSE)
+![Version](https://img.shields.io/github/v/release/DMsuDev/vigil?style=flat&label=Version&color=purple)
+[![Linux Build](https://github.com/DMsuDev/vigil/actions/workflows/linux-build.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/linux-build.yml)
+[![Windows Build](https://github.com/DMsuDev/vigil/actions/workflows/windows-build.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/windows-build.yml)
+[![macOS Build](https://github.com/DMsuDev/vigil/actions/workflows/macos-build.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/macos-build.yml)
+[![Integration Build](https://github.com/DMsuDev/vigil/actions/workflows/integration.yml/badge.svg)](https://github.com/DMsuDev/vigil/actions/workflows/integration.yml)
 
 </div>
 
@@ -27,12 +27,12 @@ Supports **C++17 and later** on **Linux**, **Windows**, and **macOS**.
 
 ## Features
 
-- **Structured Logging:** `fmt`-style messages, compile-time filtering, main and named loggers, console/rotating file sinks, and thread-safe output.
-- **Lifecycle Hooks:** Event callbacks for mirroring messages to in-app consoles, telemetry, or test assertions.
-- **Rate Limiting:** One-shot (`LogOncePolicy::LogOnce`) and TTL-based (`LogTTLPolicy::LogTTL`) policies for high-frequency log paths.
-- **Diagnostics & Assertions:** Rich assertions with source locations, cross-platform stack traces, and thread-safe failure reporting.
-- **Scoped Instrumentation:** Optional RAII entry/exit logging with elapsed-time measurement and adaptive microsecond/millisecond formatting.
-- **Crash Handling:** Intercepts fatal signals (`SIGSEGV`, `SIGABRT`, `SIGFPE`, `SIGILL`) and unhandled exceptions (`std::terminate`, `std::bad_alloc`, pure virtual calls) to log stack traces before termination.
+- **Structured logging:** `fmt`-style messages, compile-time filtering, a main logger plus named loggers, console and rotating file sinks, optional asynchronous output. [Learn more](docs/user-guide.md#logging)
+- **Lifecycle hooks:** event callbacks for mirroring messages to in-app consoles, telemetry, or test assertions. [Learn more](docs/user-guide.md#lifecycle-hooks)
+- **Rate limiting:** one-shot (`LogOncePolicy`) and TTL-based (`LogTTLPolicy`) policies for high-frequency code paths. [Learn more](docs/user-guide.md#rate-limited-logging)
+- **Assertions:** rich assertions with source location, formatted messages, and a full stack trace on failure. [Learn more](docs/user-guide.md#assertions)
+- **Scoped instrumentation:** optional RAII entry/exit logging with elapsed-time measurement. [Learn more](docs/user-guide.md#scoped-logging)
+- **Crash handling:** intercepts fatal signals and unhandled exceptions, then logs a stack trace and writes a crash report before the process exits. [Learn more](docs/user-guide.md#crash-handling)
 
 ## Stability notice
 
@@ -40,16 +40,16 @@ Supports **C++17 and later** on **Linux**, **Windows**, and **macOS**.
 > Always pin to a **release tag** when integrating Vigil. The `main` branch is the active development branch and may contain breaking changes, incomplete features, or unstable APIs at any point.
 >
 > ```cmake
-> # Correct -- pin to a release tag
-> FetchContent_Declare(vigil GIT_TAG #tag_or_hash ...)
+> # Correct: pin to a release tag
+> FetchContent_Declare(vigil GIT_REPOSITORY https://github.com/DMsuDev/vigil.git GIT_TAG v0.8.2)
 >
-> # Avoid -- main is not guaranteed to be stable
-> FetchContent_Declare(vigil GIT_TAG main ...)
+> # Avoid: main is not guaranteed to be stable
+> FetchContent_Declare(vigil GIT_REPOSITORY https://github.com/DMsuDev/vigil.git GIT_TAG main)
 > ```
 
-## CMake integration
+## Quick start
 
-### Option 1: FetchContent (recommended)
+### 1. Add Vigil to your project
 
 ```cmake
 include(FetchContent)
@@ -57,7 +57,7 @@ include(FetchContent)
 FetchContent_Declare(
   vigil
   GIT_REPOSITORY https://github.com/DMsuDev/vigil.git
-  GIT_TAG        # tag or hash: pin to a release tag
+  GIT_TAG        v0.8.2  # pin to a release tag
   GIT_SHALLOW    TRUE
 )
 
@@ -65,402 +65,48 @@ FetchContent_MakeAvailable(vigil)
 target_link_libraries(my_app PRIVATE vigil::vigil)
 ```
 
-### Option 2: Subdirectory
+`add_subdirectory()` and installed-package (`find_package`) setups are covered in [Getting started](docs/getting-started.md#adding-vigil-to-your-project).
 
-```cmake
-add_subdirectory(vendor/vigil)
-target_link_libraries(my_app PRIVATE vigil::vigil)
-```
-
-### Option 3: Installed package
-
-```cmake
-find_package(Vigil CONFIG REQUIRED)
-target_link_libraries(my_app PRIVATE vigil::vigil)
-```
-
-If CMake cannot locate `VigilConfig.cmake`, pass the install prefix explicitly:
-
-```bash
-cmake -S . -B build -DCMAKE_PREFIX_PATH="/path/to/vigil/install"
-```
-
-### CMake options
-
-| Option                        |   Default    | Description                                                                               |
-| :---------------------------- | :----------: | :---------------------------------------------------------------------------------------- |
-| `VIGIL_BUILD_EXAMPLES`        |    `OFF`     | Build example targets.                                                                    |
-| `VIGIL_BUILD_TESTS`           |    `OFF`     | Build the test suite.                                                                     |
-| `VIGIL_CRASH_TESTS`           |    `OFF`     | Build integration test harness for fatal crash handling.                                  |
-| `VIGIL_CONSUMER_TESTS`        |    `OFF`     | Build slow CMake consumer integration tests (find_package/FetchContent/add_subdirectory). |
-| `VIGIL_INSTALL_TESTS_CLEANUP` |     `ON`     | Delete generated consumer project dirs after `VIGIL_CONSUMER_TESTS` run.                  |
-| `VIGIL_INSTALL`               |    `OFF`     | Generate install targets and package metadata.                                            |
-| `VIGIL_USE_SYSTEM_FMT`        |    `OFF`     | Prefer a system-installed `fmt` when available.                                           |
-| `VIGIL_BUILD_SHARED`          |    `OFF`     | Build Vigil as a shared library.                                                          |
-| `VIGIL_BUILD_WARNINGS`        |     `ON`     | Enable strict compiler warning suites.                                                    |
-| `VIGIL_WARNINGS_AS_ERRORS`    |    `OFF`     | Treat compiler warnings as hard errors.                                                   |
-| `VIGIL_ENABLE_STACK_TRACE`    |     `ON`     | Enable stack trace capture and symbolication.                                             |
-| `VIGIL_ENABLE_ASSERTS`        | `ON` (Debug) | Enable assertion macros with logging and stack traces.                                    |
-| `VIGIL_ENABLE_SCOPED_LOG`     |    `OFF`     | Enable RAII scope instrumentation macros.                                                 |
-
-Example configure command:
-
-```bash
-cmake -S . -B build \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DVIGIL_BUILD_TESTS=OFF \
-  -DVIGIL_BUILD_EXAMPLES=OFF
-```
-
-## Usage
-
-<details>
-<summary>Logging</summary>
-
-<br>
-
-Initialize the logging system once at startup and emit messages using the API or convenience macros with `fmt`-style formatting.
+### 2. Log, assert, shut down
 
 ```cpp
 #include <vigil/vigil.h>
 
 int main()
 {
-    vigil::LogSystem::Init({
-        .Name         = "MyApp",
-        .LogDir       = "logs",
-        .ConsoleLevel = vigil::LogLevel::Info,
-    });
+    vigil::LogSystemConfig config;
+    config.Name   = "MyApp";
+    config.LogDir = "logs";
+    vigil::LogSystem::Init(config);
 
     vigil::Info("Application started: version {}.{}", 1, 0);
     vigil::Warn("Config file not found, using defaults.");
-    vigil::Error("Failed to connect to {}:{}", "127.0.0.1", 5432);
 
-    VIGIL_LOG_DEBUG("Debug detail: x = {}", 42);
-    VIGIL_LOG_INFO("Build number: {:06}", 1337);
-
-    vigil::LogSystem::Shutdown();
-}
-```
-
-> [!IMPORTANT]
-> Calling any logging function before `LogSystem::Init()` triggers a `VIGIL_ASSERT` in debug builds and is a silent no-op in release builds, arguments are never evaluated.
-
-### Log levels
-
-| Level      | Macro                     | Typical use               |
-| :--------- | :------------------------ | :------------------------ |
-| `Trace`    | `VIGIL_LOG_TRACE(...)`    | Verbose internal flow     |
-| `Debug`    | `VIGIL_LOG_DEBUG(...)`    | Developer diagnostics     |
-| `Info`     | `VIGIL_LOG_INFO(...)`     | Normal operational events |
-| `Warn`     | `VIGIL_LOG_WARN(...)`     | Recoverable anomalies     |
-| `Error`    | `VIGIL_LOG_ERROR(...)`    | Operation failures        |
-| `Critical` | `VIGIL_LOG_CRITICAL(...)` | System-level failures     |
-
-</details>
-
-<details>
-<summary>Named loggers</summary>
-
-<br>
-
-Create per-subsystem loggers that share the main file sink or write to a dedicated file.
-
-```cpp
-#include <vigil/vigil.h>
-
-int main()
-{
-    vigil::LogSystem::Init({
-        .Name   = "Engine",
-        .LogDir = "logs",
-    });
-
-    // Simple named logger — shares the main file sink.
-    auto& net = vigil::LogSystem::Create("Network");
-    net.Info("Connected to server.");
-    net.Warn("Packet loss detected: {}%", 12);
-
-    // Named logger with a dedicated file and custom level.
-    vigil::LogSystem::Create({
-        .Name      = "Physics",
-        .LogDir    = "logs/physics",
-        .LogFile   = "physics.log",
-        .FileMode  = vigil::FileOpenMode::Truncate,
-        .FileLevel = vigil::LogLevel::Debug,
-    });
-
-    vigil::LogSystem::Get("Physics").Debug("Simulation step complete.");
-
-    // Log through a named logger via macro.
-    VIGIL_LOG_NAMED("Network", vigil::LogLevel::Error, "Disconnected from server.");
-
-    // Find() returns nullptr instead of throwing when a logger does not exist.
-    if (auto* audio = vigil::LogSystem::Find("Audio"))
-        audio->Info("Audio subsystem ready.");
+    int value = 42;
+    VIGIL_ASSERT_MSG(value > 0, "Expected a positive value, got {}", value);
 
     vigil::LogSystem::Shutdown();
 }
 ```
 
-### Logger API
+> [!TIP]
+> Call `LogSystem::Init()` once at startup and `LogSystem::Shutdown()` before exit. Logging before `Init()` is dropped (and asserts in builds with assertions enabled). See [Before Init and after Shutdown](docs/user-guide.md#before-init-and-after-shutdown).
 
-| Function                       | Description                                                         |
-| :----------------------------- | :------------------------------------------------------------------ |
-| `LogSystem::Create(name)`      | Creates or retrieves a named logger sharing the main file sink.     |
-| `LogSystem::Create(LogConfig)` | Creates or retrieves a named logger with a dedicated configuration. |
-| `LogSystem::Get(name)`         | Returns a named logger; throws if not found.                        |
-| `LogSystem::Find(name)`        | Returns a pointer to a named logger, or `nullptr` if not found.     |
-| `LogSystem::Remove(name)`      | Removes a named logger and releases its sinks.                      |
-| `LogSystem::SetMain(name)`     | Promotes a named logger to replace the main logger.                 |
+## Documentation
 
-</details>
-
-<details>
-<summary>Rate-limited logging</summary>
-
-<br>
-
-Prevent log spam in high-frequency code paths without manual state management.
-
-```cpp
-#include <vigil/vigil.h>
-#include <chrono>
-#include <thread>
-
-int main()
-{
-    vigil::LogSystem::Init({ .Name = "App" });
-
-    for (int i = 0; i < 20; ++i)
-    {
-        // Emitted exactly once for this key, for the lifetime of the process.
-        vigil::LogOncePolicy::LogOnce(
-            "startup-notice",
-            vigil::LogLevel::Warn,
-            "Running without a config file.");
-
-        // Emitted at most once every 500 ms.
-        vigil::LogTTLPolicy::LogTTL(
-            "heartbeat",
-            0.5,
-            vigil::LogLevel::Info,
-            "Service heartbeat OK.");
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-
-    vigil::LogSystem::Shutdown();
-}
-```
-
-| Policy                   | Parameters                 | Behavior                                        |
-| :----------------------- | :------------------------- | :---------------------------------------------- |
-| `LogOncePolicy::LogOnce` | string key                 | Logs exactly once per key per process lifetime. |
-| `LogTTLPolicy::LogTTL`   | string key + TTL (seconds) | Logs at most once per TTL window.               |
-
-</details>
-
-<details>
-<summary>Assertions</summary>
-
-<br>
-
-Assertion macros evaluate conditions and, on failure, log the expression, source location, formatted message, and full stack trace before terminating the process.
-
-```cpp
-#include <vigil/vigil.h>
-
-int main()
-{
-    vigil::LogSystem::Init({ .Name = "App" });
-
-    int  value = 42;
-    int* ptr   = &value;
-
-    VIGIL_ASSERT(value > 0);
-    VIGIL_ASSERT_MSG(value == 42, "Expected 42, got {}", value);
-    VIGIL_ASSERT_NOT_NULL(ptr);
-    VIGIL_ASSERT_IN_RANGE(value, 0, 100);
-
-    vigil::LogSystem::Shutdown();
-}
-```
-
-A failing assertion produces output like:
-
-```text
-[App] Assertion failed
-  Expression : value == 0
-  Location   : src/main.cpp:12
-  Function   : main()
-  Message    : Expected 0, got 42.
-
-Stack trace (3 frames):
-
-#0 0x00005807BEF5FF26 in main() at src/main.cpp:12
-#1 0x000076962942A601 in __libc_start_call_main() at libc_start_call_main.h:58
-#2 0x000076962942A718 in __libc_start_main_impl() at libc-start.c:347
-```
-
-### Assertion macro reference
-
-| Macro                                  | Custom message |  Release behavior   | Use case                                        |
-| :------------------------------------- | :------------: | :-----------------: | :---------------------------------------------- |
-| `VIGIL_ASSERT(check)`                  |       —        |    Stripped out     | Preconditions with no side-effects.             |
-| `VIGIL_ASSERT_MSG(check, ...)`         |       ✓        |    Stripped out     | Preconditions requiring runtime context.        |
-| `VIGIL_ASSERT_NOT_NULL(ptr)`           |       —        |    Stripped out     | Null pointer guards.                            |
-| `VIGIL_ASSERT_IN_RANGE(val, min, max)` |       —        |    Stripped out     | Bounds validation.                              |
-| `VIGIL_VERIFY(check)`                  |       —        | Condition evaluated | Side-effect expressions (e.g. `file.close()`).  |
-| `VIGIL_VERIFY_MSG(check, ...)`         |       ✓        | Condition evaluated | Side-effect checks needing failure context.     |
-| `VIGIL_UNREACHABLE_ASSERT()`           |       —        |       UB hint       | Unreachable switch defaults or dead code paths. |
-
-> [!NOTE]
-> `VIGIL_ASSERT*` macros are active only when `VIGIL_ENABLE_ASSERTS` is defined and are completely stripped in release builds. `VIGIL_VERIFY*` macros **always evaluate their condition** regardless of build type.
-
-</details>
-
-<details>
-<summary>Scoped logging</summary>
-
-<br>
-
-Enable with `-DVIGIL_ENABLE_SCOPED_LOG=ON`. Instruments functions and code blocks with automatic entry/exit messages and elapsed time at zero overhead when disabled.
-
-```cpp
-#include <vigil/vigil.h>
-
-static void LoadAssets()
-{
-    VIGIL_SCOPED_LOG_FUNCTION();
-
-    {
-        VIGIL_SCOPED_LOG("Parsing manifest");
-        // ...
-    }
-
-    {
-        VIGIL_SCOPED_LOG("Uploading textures");
-        // ...
-    }
-}
-```
-
-Output:
-
-```text
-[trace] >> void LoadAssets()
-[trace] >> Parsing manifest
-[trace] << Parsing manifest (15 ms)
-[trace] >> Uploading textures
-[trace] << Uploading textures (20 ms)
-[trace] << void LoadAssets() (37 ms)
-```
-
-### Macro reference
-
-| Macro                                    | Description                                                            |
-| :--------------------------------------- | :--------------------------------------------------------------------- |
-| `VIGIL_SCOPED_LOG(name)`                 | RAII scope at `Trace` level.                                           |
-| `VIGIL_SCOPED_LOG_LEVEL(name, level)`    | RAII scope at an explicit level.                                       |
-| `VIGIL_SCOPED_LOG_FUNCTION()`            | RAII scope using the compiler function signature at `Trace`.           |
-| `VIGIL_SCOPED_LOG_FUNCTION_LEVEL(level)` | RAII scope using the compiler function signature at an explicit level. |
-| `VIGIL_SCOPE_BEGIN(name)`                | Opens a manual block scope at `Trace` level.                           |
-| `VIGIL_SCOPE_BEGIN_LEVEL(name, level)`   | Opens a manual block scope at an explicit level.                       |
-| `VIGIL_SCOPE_END()`                      | Closes a manual block scope.                                           |
-
-> [!NOTE]
-> When `VIGIL_ENABLE_SCOPED_LOG` is not defined, all macros expand to `((void)0)`. `VIGIL_SCOPE_BEGIN` and `VIGIL_SCOPE_END` expand to bare `{` and `}` to preserve block structure.
-
-</details>
-
-<details>
-<summary>Lifecycle hooks</summary>
-
-<br>
-
-Observe logging events without modifying the pipeline — useful for in-app consoles, telemetry, or test assertions.
-
-```cpp
-#include <vigil/vigil.h>
-
-int main()
-{
-    vigil::LogSystem::Init({ .Name = "App" });
-
-    vigil::LogSystem::SetHooks({
-        .OnMessage = [](const vigil::LogMessageEvent& e) {
-            // Mirror every message to an in-app console, telemetry sink, etc.
-        },
-        .OnLevelChange = [](const vigil::LevelChangeEvent& e) {
-            // React when any logger's severity level changes.
-        },
-        .OnFlush = [](const vigil::FlushEvent& e) {
-            // Notified after any flush operation.
-        },
-        .OnShutdown = [] {
-            // Called at the start of LogSystem::Shutdown().
-        },
-    });
-
-    vigil::Info("This message is observed by the hook.");
-    vigil::LogSystem::ClearHooks();
-    vigil::Info("This message is not.");
-
-    vigil::LogSystem::Shutdown();
-}
-```
-
-### Hook API
-
-| Function                          | Description                                                |
-| :-------------------------------- | :--------------------------------------------------------- |
-| `LogSystem::SetHooks(LogHooks)`   | Registers all hooks at once, replacing any previously set. |
-| `LogSystem::SetOnMessage(cb)`     | Registers a callback for every emitted message.            |
-| `LogSystem::SetOnLevelChange(cb)` | Registers a callback for logger level changes.             |
-| `LogSystem::SetOnFlush(cb)`       | Registers a callback after any flush.                      |
-| `LogSystem::SetOnShutdown(cb)`    | Registers a callback at the start of shutdown.             |
-| `LogSystem::ClearHooks()`         | Removes all registered hooks.                              |
-
-</details>
-
-<details>
-<summary>Crash handling</summary>
-
-<br>
-
-Vigil can intercept unhandled exceptions and fatal OS signals (`SIGSEGV`, `SIGABRT`, `SIGFPE`, `SIGILL`, `std::terminate`, `std::bad_alloc`, and pure virtual calls) to automatically format and log a full stack trace before the process exits.
-
-```cpp
-#include <vigil/vigil.h>
-
-int main()
-{
-    // Optional: use Vigil's logging system instead of stderr.
-    vigil::LogSystem::Init({ .Name = "App" });
-
-    vigil::CrashHandler::Install(
-        [](const vigil::CrashInfo& info)
-        {
-            // Handle the crash here if needed.
-            (void)info;
-        });
-
-    // Any fatal crash will generate a crash report with a stack trace.
-    int* ptr = nullptr;
-    *ptr = 42;
-
-    vigil::LogSystem::Shutdown();
-}
-```
-
-</details>
+| Document                                   | What you will find                                                                          |
+| :----------------------------------------- | :------------------------------------------------------------------------------------------ |
+| [Getting started](docs/getting-started.md) | Requirements, installation, CMake options and presets, troubleshooting                      |
+| [User guide](docs/user-guide.md)           | Logging, hooks, rate limiting, assertions, scoped logging, stack traces, crash handling     |
+| [Architecture](docs/architecture.md)       | How Vigil is built: layers, threading model, crash pipeline, build system, design decisions |
+| [Development](docs/development.md)         | Building, testing, CI, code style, commits, and releases                                    |
+| [Changelog](CHANGELOG.md)                  | Release history                                                                             |
 
 ## Examples
 
-Fully worked examples covering every feature are available under [`examples/`](examples/):
+Fully worked examples covering every feature are available under [`examples/`](https://github.com/DMsuDev/vigil/tree/main/examples):
 
-| Example        | Source/File                                                               | Covers                                      |
+| Example        | Source                                                                    | Covers                                      |
 | :------------- | :------------------------------------------------------------------------ | :------------------------------------------ |
 | Logging        | [`logger_example.cpp`](examples/logging/logger_example.cpp)               | Basic configuration, rate limits and levels |
 | Assertions     | [`assert_example.cpp`](examples/diagnostics/assert_example.cpp)           | Assertion macros, failures and CLI dispatch |
@@ -469,7 +115,13 @@ Fully worked examples covering every feature are available under [`examples/`](e
 | Crash handling | [`crash_guard_example.cpp`](examples/diagnostics/crash_guard_example.cpp) | Exception capture, OS signals setup         |
 
 > [!NOTE]
-> Examples are built with `VIGIL_BUILD_EXAMPLES=ON` and require **C++20** (for designated initializers), even though Vigil itself only requires C++17. They are compiled against whichever Vigil version/commit is checked out, so pin to a release tag to match the API shown above.
+> Examples are built with `VIGIL_BUILD_EXAMPLES=ON` and require **C++20** (for designated initializers), even though Vigil itself only requires C++17. They are compiled against whichever Vigil version or commit is checked out, so pin to a release tag to match the API shown in the documentation.
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](https://github.com/DMsuDev/vigil/blob/main/CONTRIBUTING.md) before submitting changes.
+
+For AI-assisted contributions, see [AGENTS.md](https://github.com/DMsuDev/vigil/blob/main/AGENTS.md).
 
 ## License
 
