@@ -84,6 +84,8 @@ struct ScopedRegistry {
 
     ScopedRegistry(const ScopedRegistry&)            = delete;
     ScopedRegistry& operator=(const ScopedRegistry&) = delete;
+    ScopedRegistry(ScopedRegistry&&)                 = delete;
+    ScopedRegistry& operator=(ScopedRegistry&&)      = delete;
 };
 
 /// @brief Attaches a fresh TestSinkMt to @p logger and returns it for inspection.

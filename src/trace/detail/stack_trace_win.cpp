@@ -186,7 +186,7 @@ std::vector<StackFrame> CaptureFrames(unsigned framesToSkip, unsigned maxFrames)
                         ? framesToSkip + kOwnFrames
                         : framesToSkip;
 
-    const DWORD toCapture = static_cast<DWORD>(std::min(maxFrames, kAbsoluteMax));
+    const DWORD toCapture = static_cast<DWORD>(std::min(maxFrames, kAbsoluteMax)); // NOLINT(modernize-use-auto)
 
     // Store as const void* to avoid reinterpret_cast at the ResolveAddresses call site.
     std::vector<const void*> raw(toCapture);
@@ -226,7 +226,7 @@ std::vector<StackFrame> ResolveAddresses(
     std::vector<StackFrame> frames;
     frames.reserve(count);
 
-    std::lock_guard<std::mutex> lock(s_mutex);
+    std::scoped_lock<std::mutex> lock(s_mutex);
 
     for (std::size_t i = 0; i < count; ++i)
     {

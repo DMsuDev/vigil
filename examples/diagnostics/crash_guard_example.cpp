@@ -15,10 +15,10 @@
 #include <iostream>
 #include <thread>
 
-[[noreturn]] inline void TriggerSigSegV()
+[[noreturn]] static inline void TriggerSigSegV()
 {
     volatile int* p = nullptr;
-    *p = 42;
+    *p = 42; // NOLINT(clang-analyzer-core.NullDereference)
 }
 
 int main()

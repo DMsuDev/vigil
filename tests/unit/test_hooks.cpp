@@ -99,6 +99,14 @@ TEST(HooksTest, OnMessageFiresForNamedLoggersCreatedBeforeAndAfterHookRegistrati
 // OnLevelChange
 // =============================================================================
 
+TEST(HooksTest, DefaultLevelChangeEventHasInitializedLevels)
+{
+    LevelChangeEvent event;
+
+    EXPECT_EQ(event.OldLevel, LogLevel::Trace);
+    EXPECT_EQ(event.NewLevel, LogLevel::Trace);
+}
+
 TEST(HooksTest, OnLevelChangeReceivesOldAndNewLevelWithLoggerName)
 {
     LogSystemConfig config;

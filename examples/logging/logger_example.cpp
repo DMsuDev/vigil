@@ -22,10 +22,10 @@
 // Example Initialization Macro
 // ============================================================================
 
-#define VIGIL_EXAMPLE_INIT                    \
-    vigil::LogSystem::Init({                  \
-        .Name         = "Example",            \
-        .LogDir       = "logs/named",         \
+#define VIGIL_EXAMPLE_INIT                     \
+    vigil::LogSystem::Init({                   \
+        .Name         = "Example",             \
+        .LogDir       = "logs/named",          \
         .ConsoleLevel = vigil::LogLevel::Trace \
     });
 

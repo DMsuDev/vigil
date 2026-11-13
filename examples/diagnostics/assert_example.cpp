@@ -108,15 +108,15 @@ int main(int argc, char* argv[])
     };
 
     const Entry entries[] = {
-        { "--basic",            Demo_BasicAssert,  false },
-        { "--verify",           Demo_Verify,       false },
-        { "--null",             Demo_NullCheck,    false },
-        { "--range",            Demo_RangeCheck,   false },
-        { "--unreachable",      Demo_Unreachable,  false },
-        { "--fail-basic",       Fail_BasicAssert,  true  },
-        { "--fail-null",        Fail_NullCheck,    true  },
-        { "--fail-range",       Fail_RangeCheck,   true  },
-        { "--fail-unreachable", Fail_Unreachable,  true  },
+        { .flag="--basic",            .fn=Demo_BasicAssert,  .terminal=false },
+        { .flag="--verify",           .fn=Demo_Verify,       .terminal=false },
+        { .flag="--null",             .fn=Demo_NullCheck,    .terminal=false },
+        { .flag="--range",            .fn=Demo_RangeCheck,   .terminal=false },
+        { .flag="--unreachable",      .fn=Demo_Unreachable,  .terminal=false },
+        { .flag="--fail-basic",       .fn=Fail_BasicAssert,  .terminal=true  },
+        { .flag="--fail-null",        .fn=Fail_NullCheck,    .terminal=true  },
+        { .flag="--fail-range",       .fn=Fail_RangeCheck,   .terminal=true  },
+        { .flag="--fail-unreachable", .fn=Fail_Unreachable,  .terminal=true  },
     };
 
     // -------------------------------------------------------------------------

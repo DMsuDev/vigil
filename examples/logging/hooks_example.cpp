@@ -21,13 +21,15 @@
 
 #define VIGIL_EXAMPLE_INIT(name)               \
     vigil::LogSystem::Init({                   \
-        .Name         = name,                  \
+        .Name         = (name),                \
         .LogDir       = "logs/hooks",          \
         .ConsoleLevel = vigil::LogLevel::Trace \
     });
 
 
 // Simulates an in-app console that receives log messages (e.g. a game editor).
+namespace {
+
 struct AppConsole
 {
     struct Entry {
@@ -40,7 +42,7 @@ struct AppConsole
 
     void Push(const vigil::LogMessageEvent& e)
     {
-        Entries.push_back({ e.Level, std::string(e.Message), std::string(e.LoggerName) });
+        Entries.push_back({ .Level=e.Level, .Message=std::string(e.Message), .LoggerName=std::string(e.LoggerName) });
         std::cout << "[AppConsole] [" << vigil::ToString(e.Level) << "] "
                   << "[" << e.LoggerName << "] " << e.Message << "\n";
     }
@@ -55,6 +57,8 @@ struct AppConsole
         }
     }
 };
+
+} // namespace
 
 // ============================================================================
 // Demos

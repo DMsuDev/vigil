@@ -183,7 +183,7 @@ std::string StackTrace::Format(const std::vector<StackFrame>& frames)
 
     // Index field width grows naturally with frame count — no forced minimum.
     const int digits = static_cast<int>(
-        std::to_string(visible.size() > 0u ? visible.size() - 1u : 0u).length());
+        std::to_string(visible.empty() ? 0u : visible.size() - 1u).length());
 
     for (std::size_t i = 0; i < visible.size(); ++i)
     {

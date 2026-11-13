@@ -131,7 +131,7 @@ namespace vigil::detail {
  * @param ...   Format string and arguments (fmt syntax) providing additional context.
  */
 #define VIGIL_ASSERT_MSG(check, ...) \
-    VIGIL_INTERNAL_ASSERT_IMPL(check, VIGIL_STRINGIFY(check), VIGIL_CURRENT_LOC(), __VA_ARGS__)
+    VIGIL_INTERNAL_ASSERT_IMPL((check), VIGIL_STRINGIFY(check), VIGIL_CURRENT_LOC(), __VA_ARGS__)
 
 /**
  * @def VIGIL_ASSERT(check)
@@ -220,7 +220,7 @@ namespace vigil::detail {
  * @param ptr Pointer expression to validate.
  */
 #define VIGIL_ASSERT_NOT_NULL(ptr) \
-    VIGIL_ASSERT_MSG(ptr != nullptr, "Pointer must not be null: " VIGIL_STRINGIFY(ptr))
+    VIGIL_ASSERT_MSG((ptr) != nullptr, "Pointer must not be null: " VIGIL_STRINGIFY(ptr))
 
 /**
  * @def VIGIL_ASSERT_IN_RANGE(val, min_val, max_val)

@@ -32,33 +32,33 @@ public:
 
     size_t msg_counter()
     {
-        std::lock_guard<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
+        std::scoped_lock<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
         return msg_counter_;
     }
 
     size_t flush_counter()
     {
-        std::lock_guard<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
+        std::scoped_lock<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
         return flush_counter_;
     }
 
     // Returns the level of the last received message, or nullopt if none.
     std::optional<spdlog::level::level_enum> last_level()
     {
-        std::lock_guard<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
+        std::scoped_lock<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
         return last_level_;
     }
 
     void set_delay(std::chrono::milliseconds delay)
     {
-        std::lock_guard<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
+        std::scoped_lock<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
         delay_ = delay;
     }
 
     // Returns every saved line, without the trailing eol.
     std::vector<std::string> lines()
     {
-        std::lock_guard<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
+        std::scoped_lock<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
         return lines_;
     }
 
@@ -68,7 +68,7 @@ protected:
         spdlog::memory_buf_t formatted;
         spdlog::sinks::base_sink<Mutex>::formatter_->format(msg, formatted);
         auto eol_len = strlen(spdlog::details::os::default_eol);
-        using diff_t = typename std::iterator_traits<decltype(formatted.end())>::difference_type;
+        using diff_t = std::iterator_traits<decltype(formatted.end())>::difference_type;
         if (lines_.size() < kMaxLines)
             lines_.emplace_back(formatted.begin(), formatted.end() - static_cast<diff_t>(eol_len));
         last_level_ = msg.level;

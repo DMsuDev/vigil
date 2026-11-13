@@ -25,7 +25,7 @@ namespace vigil::detail {
     // Clean the function signature for better readability
     std::string functionName = CleanFunctionSignature(loc.function_name());
 
-    std::string normalizedFile = NormalizePathSeparators(loc.file_name());
+    const std::string normalizedFile = NormalizePathSeparators(loc.file_name());
     std::string_view fileLocation = FormatFilePath(normalizedFile, 4U);
 
     // Check if the logging system is initialized and safe to use
@@ -71,7 +71,7 @@ namespace vigil::detail {
         if (!message.empty())
             std::cerr << "  Message    : " << message << "\n";
 
-        std::cerr << "\n" << stackDump << std::endl;
+        std::cerr << "\n" << stackDump << "\n";
     }
 
     // Suppress the MSVC "abort() has been called" dialog in non-debugger runs.

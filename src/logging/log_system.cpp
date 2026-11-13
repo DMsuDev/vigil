@@ -112,7 +112,7 @@ std::filesystem::path ResolveLogPath(
     const std::string& logFile,
     const std::string& name)
 {
-    const std::filesystem::path file =
+    std::filesystem::path file =
         logFile.empty() ? MakeLogFileName(name) : logFile;
 
     if (logDir.empty())

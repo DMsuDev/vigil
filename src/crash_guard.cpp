@@ -353,7 +353,7 @@ void StartWatchdog()
 {
     std::string reason = "std::terminate() called";
 
-    if (std::exception_ptr ep = std::current_exception())
+    if (const std::exception_ptr ep = std::current_exception())
     {
         try { std::rethrow_exception(ep); }
         catch (const std::exception& e) {

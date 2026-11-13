@@ -27,16 +27,16 @@ namespace vigil {
 
 /// @brief Context passed to the message callback on every emitted log entry.
 struct LogMessageEvent {
-    LogLevel    Level;      ///< Severity level of the emitted message.
-    std::string Message;    ///< Fully formatted message string (pattern already applied).
-    std::string LoggerName; ///< Name of the logger that emitted the message.
+    LogLevel    Level{ LogLevel::Trace }; ///< Severity level of the emitted message.
+    std::string Message;                  ///< Fully formatted message string (pattern already applied).
+    std::string LoggerName;               ///< Name of the logger that emitted the message.
 };
 
 /// @brief Context passed when any logger's severity level changes.
 struct LevelChangeEvent {
-    std::string_view LoggerName; ///< Name of the affected logger. Empty when the change is global.
-    LogLevel         OldLevel;   ///< Severity level before the change.
-    LogLevel         NewLevel;   ///< Severity level after the change.
+    std::string_view LoggerName;                  ///< Name of the affected logger. Empty when the change is global.
+    LogLevel         OldLevel{ LogLevel::Trace }; ///< Severity level before the change.
+    LogLevel         NewLevel{ LogLevel::Trace }; ///< Severity level after the change.
 };
 
 /// @brief Context passed after a flush operation completes.

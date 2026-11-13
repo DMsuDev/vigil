@@ -26,6 +26,8 @@ public:
                spdlog::sink_ptr       consoleSink,
                spdlog::sink_ptr       fileSink);
 
+    ~LoggerImpl() = default;
+
     LoggerImpl(const LoggerImpl&)            = delete;
     LoggerImpl& operator=(const LoggerImpl&) = delete;
     LoggerImpl(LoggerImpl&&)                 = delete;

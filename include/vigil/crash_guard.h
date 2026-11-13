@@ -50,9 +50,13 @@ using CrashCallback = std::function<void(const CrashInfo&)>;
 class VIGIL_API CrashHandler
 {
 public:
+    // Static utility class for crash handling; prevents instantiation.
     CrashHandler()                               = delete;
     CrashHandler(const CrashHandler&)            = delete;
     CrashHandler& operator=(const CrashHandler&) = delete;
+    ~CrashHandler()                              = delete;
+    CrashHandler(CrashHandler&&)                 = delete;
+    CrashHandler& operator=(CrashHandler&&)      = delete;
 
     /**
      * @brief Arms all platform crash hooks.

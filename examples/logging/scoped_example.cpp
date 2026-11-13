@@ -25,8 +25,8 @@
 // Example Initialization Macro
 // ============================================================================
 
-#define VIGIL_EXAMPLE_INIT                    \
-    vigil::LogSystem::Init({                  \
+#define VIGIL_EXAMPLE_INIT                     \
+    vigil::LogSystem::Init({                   \
         .Name         = "ScopedExample",       \
         .LogDir       = "logs/scoped",         \
         .ConsoleLevel = vigil::LogLevel::Trace \
