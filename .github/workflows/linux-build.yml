@@ -36,7 +36,7 @@ jobs:
   build:
     name: >-
       Linux ${{ matrix.compiler }} C++${{ matrix.standard }} ${{ matrix.build_type }} ${{ matrix.shared && 'Shared' || 'Static' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     strategy:
       fail-fast: false
