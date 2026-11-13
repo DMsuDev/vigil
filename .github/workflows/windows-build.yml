@@ -43,7 +43,7 @@ jobs:
 
       matrix:
         platform: [Win32, x64]
-        standard: [20, 23]
+        standard: [17, 20, 23]
         shared: ["", "-DBUILD_SHARED_LIBS=ON"]
         build_type: [Debug, Release]
 
