@@ -4,6 +4,45 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Conventional Commits](https://www.conventionalcommits.org/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.2] - 2026-11-13
+
+### 🚀 Features
+
+- Integrate clang-tidy static analysis ([d093351](https://github.com/DMsuDev/Vigil/commit/d0933512ec1fbee2b57919aefe2811ede5d12661))
+
+  Add optional clang-tidy integration for C++ compilation and enable it in Ninja CI presets. Introduce a project-wide configuration to enforce consistent static analysis checks across the codebase.
+
+  - Add `.clang-tidy` with selected checks, warning policies, and naming conventions.
+  - Add `VIGIL_ENABLE_CLANG_TIDY` CMake option with MSVC support.
+  - Enable `compile_commands.json` generation for top-level builds.
+  - Restructure CMake presets around Ninja Multi-Config and Visual Studio generators.
+  - Expand build and test presets to cover Debug and Release configurations.
+
+### 🐛 Bug Fixes
+
+- Address clang-tidy findings across the codebase ([883d502](https://github.com/DMsuDev/Vigil/commit/883d502c9f07ab372498847936e94935a678253b))
+
+  Apply Clang-Tidy recommendations and resolve related warnings across the library, examples, and tests.
+
+  - Improve initialization, const-correctness, and type usage.
+  - Clarify macro arguments and aggregate initialization.
+  - Refine class declarations and synchronization primitives.
+  - Add targeted NOLINT annotations for intentional patterns.
+  - Add tests for default event initialization.
+
+### 🚜 Refactor
+
+- Consolidate build configuration helpers ([c843fe0](https://github.com/DMsuDev/Vigil/commit/c843fe01f615db48e15759dab455f5d51984284f))
+
+  Centralize CMake configuration utilities into a dedicated helpers module, simplifying project setup and removing redundant modules.
+
+  - Move version loading and debug-default option handling into `build_helpers.cmake`.
+  - Remove the standalone `vigil_version.cmake` and `debug_default_options.cmake` modules.
+  - Organize CMake helpers under `cmake/helpers/`.
+  - Update the main CMake configuration to use the consolidated module.
+
+- Update usage instructions and refine checks ([810fb8f](https://github.com/DMsuDev/Vigil/commit/810fb8f985866be5cd1ada987505d7dd24e07b69))
+
 ## [0.8.1] - 2026-10-10
 
 ### 🚀 Features
