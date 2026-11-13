@@ -9,4 +9,4 @@ URL: https://github.com/DMsuDev/@PROJECT_NAME@
 Version: @PROJECT_VERSION@
 Cflags: -I${includedir}
 Libs: -L${libdir} -lvigil
-Requires: @PKG_CONFIG_REQUIRES@
+Requires: fmt
