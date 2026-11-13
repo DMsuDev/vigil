@@ -24,6 +24,11 @@ list(APPEND CMAKE_MODULE_PATH
   "${VIGIL_BASE_FOLDER}/cmake/vendor"
 )
 
+# Enable compile commands for top-level project
+if(PROJECT_IS_TOP_LEVEL)
+  set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+endif()
+
 # ------------------------------------------------------------------------------
 #  Version
 # ------------------------------------------------------------------------------
@@ -46,6 +51,7 @@ vigil_configure_cmake()
 
 option(VIGIL_BUILD_SHARED          "Build Vigil as a shared library."                                  ${BUILD_SHARED_LIBS})
 option(VIGIL_ENABLE_COVERAGE       "Enable code coverage instrumentation."                             OFF)
+option(VIGIL_ENABLE_CLANG_TIDY     "Run clang-tidy during C++ compilation."                            OFF)
 option(VIGIL_INSTALL               "Generate the install target."                                      OFF)
 option(VIGIL_CRASH_TESTS           "Enable Vigil crash integration tests."                             OFF)
 option(VIGIL_CONSUMER_TESTS        "Enable CMake consumer integration tests."                          OFF)
@@ -128,6 +134,24 @@ configure_file(
 #  Third-Party / Vendor Dependencies
 # ------------------------------------------------------------------------------
 add_subdirectory(vendor)
+
+# ------------------------------------------------------------------------------
+#  Static Analysis
+# ------------------------------------------------------------------------------
+if(VIGIL_ENABLE_CLANG_TIDY)
+  if(NOT CMAKE_GENERATOR MATCHES "Ninja|Makefiles")
+    message(FATAL_ERROR
+      "[Vigil] VIGIL_ENABLE_CLANG_TIDY requires a Ninja or Makefile generator.")
+  endif()
+
+  find_program(VIGIL_CLANG_TIDY_EXECUTABLE NAMES clang-tidy REQUIRED)
+  set(CMAKE_CXX_CLANG_TIDY "${VIGIL_CLANG_TIDY_EXECUTABLE}")
+  if(MSVC)
+    # clang-tidy does not reliably infer MSVC's exception mode from /EHsc.
+    list(APPEND CMAKE_CXX_CLANG_TIDY "--extra-arg=/EHsc")
+  endif()
+  message(STATUS "Vigil: clang-tidy enabled: ${VIGIL_CLANG_TIDY_EXECUTABLE}")
+endif()
 
 # ------------------------------------------------------------------------------
 #  Library Sources Processing

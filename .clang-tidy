@@ -1,0 +1,121 @@
+# ==============================================================================
+# SETUP
+# ==============================================================================
+# Generate compile_commands.json (requires a Ninja or Makefile generator):
+#   cmake --preset <preset-name> && cmake --build --preset <build-preset>
+#
+# NOTE: Visual Studio generators do not export compile_commands.json.
+#
+# ==============================================================================
+# USAGE
+# ==============================================================================
+# Run from the build directory (on Windows, use a VS Developer PowerShell):
+#   cd <build-dir>
+#   run-clang-tidy -source-filter '[\\/](src|tests)[\\/]'
+#
+# Or enable it in CMake to run during C++ compilation:
+#   -DVIGIL_ENABLE_CLANG_TIDY=ON
+#   Ninja CI presets enable it automatically.
+#
+# OPTIONAL: Add `-fix` to apply suggestions automatically (review the diff afterwards).
+#
+# ==============================================================================
+# CONFIGURATION NOTES
+# ==============================================================================
+#  - `- -X` disables check X. Entries apply in order (later ones override earlier ones).
+#  - `-*` at the top disables everything; `family-*` enables an entire family.
+#  - WarningsAsErrors: Only listed checks fail the run; the rest remain warnings.
+#  - HeaderFilterRegex: Controls which headers report diagnostics.
+#    (Analyzed .cpp files are determined by `-source-filter` in the CLI command).
+#  - Validate this file with: clang-tidy --verify-config
+
+---
+Checks:
+- -*
+- bugprone-*
+- -bugprone-easily-swappable-parameters
+- -bugprone-exception-escape               # False positives on STL container move constructors (std::map, std::vector).
+- -bugprone-throwing-static-initialization # Only fails on OOM at startup; noisy with STL globals.
+- clang-analyzer-*
+- -clang-analyzer-optin.performance.Padding
+- concurrency-*
+- misc-*
+- -misc-include-cleaner
+- -misc-non-private-member-variables-in-classes
+- -misc-no-recursion
+- -misc-const-correctness
+- -misc-use-anonymous-namespace
+- modernize-*
+- -modernize-use-trailing-return-type
+- -modernize-avoid-c-arrays               # To allow using C-style arrays where necessary.
+- -modernize-use-std-print                # We want to avoid using std::print, use fmt::print instead.
+- -modernize-use-integer-sign-comparison  # Noisy for small fixed-size arrays; casts are always guarded.
+- performance-*
+- -performance-enum-size # Avoid forcing std::uint8_t for small enums; negligible memory benefit.
+- portability-*
+- -portability-avoid-pragma-once
+- -portability-restrict-system-includes
+- readability-*
+- -readability-identifier-length
+- -readability-identifier-naming
+- -readability-magic-numbers
+- -readability-braces-around-statements
+- -readability-function-size
+- -readability-function-cognitive-complexity
+- -readability-implicit-bool-conversion
+- -readability-named-parameter
+- -readability-isolate-declaration
+- -readability-qualified-auto
+- -readability-use-std-min-max
+- -readability-math-missing-parentheses
+- -readability-uppercase-literal-suffix
+- -readability-convert-member-functions-to-static
+- -readability-use-concise-preprocessor-directives # We do not use #ifdef (is ugly as shit)
+- -readability-use-anyofallof
+- -readability-else-after-return
+- -readability-redundant-access-specifiers
+- -readability-redundant-preprocessor
+- -readability-static-accessed-through-instance
+
+- cppcoreguidelines-narrowing-conversions
+- cppcoreguidelines-prefer-member-initializer
+- cppcoreguidelines-pro-type-member-init # We want to use default member initializers
+- cppcoreguidelines-slicing
+- cppcoreguidelines-special-member-functions
+- cppcoreguidelines-virtual-class-destructor
+- cppcoreguidelines-avoid-capturing-lambda-coroutines
+- cppcoreguidelines-rvalue-reference-param-not-moved
+
+# TODO: review later
+- -readability-make-member-function-const # False positives
+
+# Only fail the analysis on particularly serious diagnostics.
+WarningsAsErrors: >
+  bugprone-use-after-move,
+  bugprone-dangling-handle,
+  bugprone-infinite-loop,
+  bugprone-undefined-memory-manipulation,
+  clang-analyzer-core.*
+
+# Include public and private headers, test helpers, and example headers.
+HeaderFilterRegex: '(^|.*[\\/])(include[\\/]vigil|src|tests|examples)[\\/].*\.(h|hpp|inl)$'
+
+# Exclude third-party dependencies and generated build files.
+ExcludeHeaderFilterRegex: '(^|.*[\\/])(vendor|build|_deps)[\\/]'
+HeaderFileExtensions:
+  - h
+  - hpp
+  - inl
+
+SystemHeaders: false
+FormatStyle: none
+
+CheckOptions:
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: CamelCase
+  - key: readability-identifier-naming.ConstexprVariablePrefix
+    value: k
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.ScopedEnumConstantCase
+    value: CamelCase
