@@ -1,8 +1,8 @@
 # ==============================================================================
 #  VIGIL - CMAKE BUILD HELPERS
 # ==============================================================================
-#  Description: CMake functions for build environment configuration, compiler
-#               options, warnings, and per-target optimizations.
+#  Description: CMake functions for version loading, configuration options,
+#               compiler settings, warnings, and per-target optimizations.
 #
 #  Copyright (c) 2026 @DMsuDev. Licensed under the MIT License.
 #  See LICENSE file in the project root for full license text.
@@ -21,6 +21,73 @@ function(_vigil_target_scope target out_scope)
     set(${out_scope} INTERFACE PARENT_SCOPE)
   else()
     set(${out_scope} PRIVATE PARENT_SCOPE)
+  endif()
+endfunction()
+
+# ------------------------------------------------------------------------------
+# vigil_load_version(<out_version> <out_plain_version>)
+#
+# Reads VERSION from the current source directory. Returns the full X.Y.Z or
+# X.Y.Z-WIP version and the suffix-free version for project(). Sets
+# VIGIL_IS_PRERELEASE in the caller's scope when the version has a WIP suffix.
+# ------------------------------------------------------------------------------
+
+function(vigil_load_version version plain_version)
+  set(_file "${CMAKE_CURRENT_SOURCE_DIR}/VERSION")
+
+  if(NOT EXISTS "${_file}")
+    message(FATAL_ERROR "VERSION file not found: ${_file}")
+  endif()
+
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_file}")
+
+  file(READ "${_file}" _raw)
+  string(STRIP "${_raw}" _raw)
+
+  # Validate the version format before stripping the prerelease suffix.
+  if(NOT _raw MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)(-WIP)?$")
+    message(FATAL_ERROR
+      "[Vigil] Invalid version '${_raw}' in ${_file}. "
+      "Expected format 'X.Y.Z' or 'X.Y.Z-WIP'."
+    )
+  endif()
+
+  string(REGEX REPLACE "-WIP$" "" _plain "${_raw}")
+  string(REGEX MATCH   "-WIP$" _suffix "${_raw}")
+
+  set(${version}       "${_raw}"   PARENT_SCOPE)
+  set(${plain_version} "${_plain}" PARENT_SCOPE)
+
+  if(_suffix)
+    set(VIGIL_IS_PRERELEASE TRUE PARENT_SCOPE)
+  endif()
+endfunction()
+
+# ------------------------------------------------------------------------------
+# vigil_option_debug_default(<name> <docstring> <default> <debug_default>)
+#
+# Declares a BOOL option with a different default for Debug and RelWithDebInfo,
+# including multi-config generators. Existing cache values are preserved.
+# ------------------------------------------------------------------------------
+
+function(vigil_option_debug_default name docstring default debug_default)
+  # Must be captured BEFORE option() — after that call the cache entry always
+  # exists, so this is the only point where "never set by the user" is
+  # distinguishable from "left at the default".
+  if(DEFINED CACHE{${name}})
+    set(_user_set TRUE)
+  else()
+    set(_user_set FALSE)
+  endif()
+
+  option(${name} "${docstring}" ${default})
+
+  if(NOT _user_set)
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR
+       "Debug" IN_LIST CMAKE_CONFIGURATION_TYPES OR "RelWithDebInfo" IN_LIST CMAKE_CONFIGURATION_TYPES)
+      set(${name} ${debug_default} CACHE BOOL "${docstring}" FORCE)
+      message(STATUS "Vigil: '${name}' defaulted to ${debug_default} for ${CMAKE_BUILD_TYPE} build.")
+    endif()
   endif()
 endfunction()
 

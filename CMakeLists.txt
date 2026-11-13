@@ -24,15 +24,19 @@ list(APPEND CMAKE_MODULE_PATH
   "${VIGIL_BASE_FOLDER}/cmake/vendor"
 )
 
+# ------------------------------------------------------------------------------
+#  Project Configuration
+# ------------------------------------------------------------------------------
 # Enable compile commands for top-level project
 if(PROJECT_IS_TOP_LEVEL)
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 endif()
 
+include("${VIGIL_BASE_FOLDER}/cmake/helpers/build_helpers.cmake")
+
 # ------------------------------------------------------------------------------
 #  Version
 # ------------------------------------------------------------------------------
-include(vigil_version)
 vigil_load_version(VIGIL_VERSION VIGIL_PLAIN_VERSION)
 
 project(Vigil
@@ -41,7 +45,6 @@ project(Vigil
   DESCRIPTION "Cross-platform diagnostics library for C++."
 )
 message(STATUS "${PROJECT_NAME} version: ${VIGIL_VERSION}")
-include("${VIGIL_BASE_FOLDER}/cmake/build_helpers.cmake")
 
 vigil_configure_cmake()
 
@@ -63,7 +66,6 @@ option(VIGIL_WARNINGS_AS_ERRORS    "Treat compiler warnings as hard errors."    
 option(VIGIL_ENABLE_STACK_TRACE    "Enable cross-platform call stack capture and symbolication"        ON )
 option(VIGIL_USE_SYSTEM_FMT        "Use system-installed fmt library"                                  ${VIGIL_INSTALL})
 
-include(debug_default_options)
 vigil_option_debug_default(VIGIL_ENABLE_ASSERTS
   "Enable runtime assertions."
   OFF
