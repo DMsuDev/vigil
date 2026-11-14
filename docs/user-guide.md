@@ -50,11 +50,11 @@ Initialize once at startup and shut down before exit:
 
 int main()
 {
-    vigil::LogSystem::Init({
-        .Name         = "MyApp",
-        .LogDir       = "logs",
-        .ConsoleLevel = vigil::LogLevel::Info,
-    });
+    vigil::LogSystemConfig config;
+    config.Name         = "MyApp";
+    config.LogDir       = "logs";
+    config.ConsoleLevel = vigil::LogLevel::Info;
+    vigil::LogSystem::Init(config);
 
     vigil::Info("Application started");
 
@@ -136,13 +136,15 @@ Only the macros are stripped at compile time. Free functions and `Logger` method
 
 ### Controlling levels at runtime
 
-| Call                                   | Effect                                                                                |
-| :------------------------------------- | :------------------------------------------------------------------------------------ |
-| `logger.SetLevel(level)`               | Sets the level of one logger. Does not fire the `OnLevelChange` hook.                 |
-| `LogSystem::SetLevel(name, level)`     | Sets the level of one **named** logger and fires `OnLevelChange`.                     |
-| `LogSystem::SetGlobalLevel(level)`     | Sets the level of the main logger and every named logger. Fires `OnLevelChange` once. |
-| `LogSystem::SetConsoleLevel(level)`    | Sets the level of the shared console sink.                                            |
-| `LogSystem::SetGlobalFileLevel(level)` | Sets the level of the shared file sink and of every dedicated file sink.              |
+| Call                                   | Effect                                                                   |
+| :------------------------------------- | :----------------------------------------------------------------------- |
+| `logger.SetLevel(level)`               | Sets one logger's level and fires `OnLevelChange`.                       |
+| `LogSystem::SetLevel(name, level)`     | Sets one **named** logger's level and fires `OnLevelChange`.             |
+| `LogSystem::SetGlobalLevel(level)`     | Sets all logger levels and fires `OnLevelChange` once.                   |
+| `LogSystem::SetConsoleLevel(level)`    | Sets the level of the shared console sink.                               |
+| `LogSystem::SetGlobalFileLevel(level)` | Sets the level of the shared file sink and of every dedicated file sink. |
+
+`OnLevelChange` fires on every call, even if the level does not change. When a call is made from inside an `OnMessage` or `OnLevelChange` callback, the level is still applied but the hook is not fired.
 
 ```cpp
 auto& logger = vigil::LogSystem::Main();
@@ -311,12 +313,12 @@ vigil::Info("This one is not.");
 vigil::LogSystem::Shutdown();
 ```
 
-| Hook            | Fires when                                                 | Event data                                               |
-| :-------------- | :--------------------------------------------------------- | :------------------------------------------------------- |
-| `OnMessage`     | A message passes a logger's level filter.                  | `Level`, `Message`, `LoggerName`                         |
-| `OnLevelChange` | `LogSystem::SetLevel` or `SetGlobalLevel` changes a level. | `LoggerName` (empty when global), `OldLevel`, `NewLevel` |
-| `OnFlush`       | `LogSystem::Flush(name)` or `FlushAll()` flushes a logger. | `LoggerName` (one event per flushed logger)              |
-| `OnShutdown`    | At the start of `LogSystem::Shutdown()`.                   | none                                                     |
+| Hook            | Fires when                                                     | Event data                                               |
+| :-------------- | :------------------------------------------------------------- | :------------------------------------------------------- |
+| `OnMessage`     | A message passes a logger's level filter.                      | `Level`, `Message`, `LoggerName`                         |
+| `OnLevelChange` | A logger level changes outside `OnMessage` or `OnLevelChange`. | `LoggerName` (empty when global), `OldLevel`, `NewLevel` |
+| `OnFlush`       | `LogSystem::Flush(name)` or `FlushAll()` flushes a logger.     | `LoggerName` (one event per flushed logger)              |
+| `OnShutdown`    | At the start of `LogSystem::Shutdown()`.                       | none                                                     |
 
 Registration functions:
 
@@ -333,16 +335,17 @@ Pass `nullptr` to a setter to clear that single hook.
 
 Rules for callbacks:
 
-- **`OnMessage` runs on the logging thread, inside the sink's lock.** Keep it fast and non-blocking, and never call `LogSystem` functions from it. For asynchronous loggers it runs on the background thread.
-- **The other hooks run after Vigil's internal lock is released**, so they may call back into `LogSystem`. Avoid operations that trigger the same hook again: for example, `Shutdown()` from `OnShutdown` causes unbounded recursion.
+- **`OnMessage` runs on the logging thread, inside the sink's lock.** Keep it fast and non-blocking, and never call `LogSystem` functions from it. `Logger::SetLevel()` is allowed but applies silently and does not fire `OnLevelChange`. For asynchronous loggers it runs on the background thread.
+- **The other hooks run after Vigil's internal lock is released**, so they may call back into `LogSystem`. Nested level changes do not recursively invoke `OnLevelChange`. Avoid recursively triggering other hooks: for example, `Shutdown()` from `OnShutdown` causes unbounded recursion.
+- `OnLevelChange` callbacks may execute concurrently and are not guaranteed to run in change order. Protect any shared state they access. `OldLevel` represents the level immediately before the corresponding update, even when concurrent silent updates occur inside `OnMessage`. For global level changes, `OldLevel` represents the main logger's previous level.
+- Exceptions thrown by `OnLevelChange`, `OnFlush`, or `OnShutdown` propagate to the caller. The new level is already applied when `OnLevelChange` throws. An exception from `OnShutdown` aborts `Shutdown()` before teardown begins.
 - `LogMessageEvent::Message` is the raw message text (the log pattern is not applied). Its strings are owned copies and safe to keep.
 - `LevelChangeEvent::LoggerName` and `FlushEvent::LoggerName` are `std::string_view`s that are only valid during the callback. Copy them if you need them later.
-- `Logger::SetLevel()` called directly on a logger handle does **not** fire `OnLevelChange`. Use `LogSystem::SetLevel` or `SetGlobalLevel` when you want the event.
 - `OnMessage` receives messages from the main logger and from named loggers, including ones created before or after the hook was registered.
 
 ## Assertions
 
-Assertion macros check a condition and, on failure, log the expression, source location, function, an optional message, and a stack trace, then terminate the process.
+Assertion macros check a condition and terminate the process on failure.
 
 ```cpp
 int  value = 42;
@@ -492,7 +495,7 @@ Controlling the feature:
 
 ## Crash handling
 
-`CrashHandler` intercepts fatal signals and unhandled exceptions. Before the process exits it logs a stack trace, writes a crash report file, and calls your callback.
+`CrashHandler` intercepts fatal signals and unhandled exceptions.
 
 ```cpp
 #include <vigil/vigil.h>
@@ -558,7 +561,6 @@ On Windows, a stack overflow is reported without a stack trace because there is 
 Consequences:
 
 - Only the **first** crash is reported. Other threads that crash meanwhile are parked.
-- Your callback runs on the watchdog thread, after logging and the report file. Keep it short; the whole sequence must finish within the deadline.
 - The process exits through `_exit` (or `TerminateProcess`), so **no core dump** is produced.
 
 ### The crash report file
