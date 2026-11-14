@@ -10,6 +10,8 @@
 #include "logging/detail/spd_convert.h"
 #include "logging/detail/hooks_registry.h"
 #include "logging/detail/lazy_file_sink.h"
+#include "logging/detail/callback_sink.h"
+#include "logging/detail/level_change.h"
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
@@ -40,6 +42,13 @@ namespace {
 // operation is still holding this lock. Using std::mutex would deadlock in that
 // scenario.
 std::recursive_mutex g_Mutex;
+
+// Makes "read old level + set new level" atomic. It is separate from g_Mutex
+// because OnMessage runs inside the sink lock and may change levels, so that
+// path cannot take the registry lock. Lock order: g_Mutex, then g_LevelMutex.
+// Never acquire the registry or sink locks while holding it.
+std::mutex g_LevelMutex;
+thread_local bool g_InLevelChangeCallback = false;
 bool g_Initialized   = false;
 bool g_Async         = false;
 
@@ -79,7 +88,60 @@ void EnsureInitialized(const char* function)
             std::string("[Vigil] LogSystem::") + function + "() called before Init().");
 }
 
+LogLevel UpdateLevel(detail::LoggerImpl& impl, LogLevel level)
+{
+    std::scoped_lock lock(g_LevelMutex);
+    const LogLevel oldLevel = impl.GetLevel();
+    impl.SetLevel(level);
+    return oldLevel;
+}
+
+void FireLevelChange(const LevelChangeCallback& callback, const LevelChangeEvent& event)
+{
+    if (!callback || g_InLevelChangeCallback)
+        return;
+
+    struct CallbackScope
+    {
+        CallbackScope() noexcept { g_InLevelChangeCallback = true; }
+        ~CallbackScope() { g_InLevelChangeCallback = false; }
+    } scope;
+
+    callback(event);
+}
+
 } // namespace
+
+namespace detail {
+
+void ChangeLevel(LoggerImpl& impl, LogLevel level)
+{
+    // Inside the sink lock the registry lock must not be taken, so the change
+    // is applied silently.
+    if (g_InMessageCallback)
+    {
+        UpdateLevel(impl, level);
+        return;
+    }
+
+    // Copy before locking: the view points into spdlog's storage.
+    const std::string loggerName{impl.Name()};
+
+    LevelChangeCallback callback;
+    LogLevel oldLevel;
+    {
+        // Held during the update so Shutdown() or a logger removal cannot
+        // destroy `impl` concurrently.
+        std::scoped_lock lock(g_Mutex);
+        oldLevel = UpdateLevel(impl, level);
+        if (IsInitializedUnsafe())
+            callback = g_Hooks.Hooks.OnLevelChange;
+    }
+
+    FireLevelChange(callback, LevelChangeEvent{ loggerName, oldLevel, level });
+}
+
+} // namespace detail
 
 //==============================================================================
 // Path helpers
@@ -547,15 +609,14 @@ void LogSystem::SetGlobalLevel(LogLevel level)
         std::scoped_lock lock(g_Mutex);
         if (!IsInitializedUnsafe()) return;
 
-        old = g_MainLogger->GetLevel();
-        g_MainLogger->SetLevel(level);
+        old = UpdateLevel(g_MainLogger->Impl(), level);
         for (auto& [_, handle] : g_NamedLoggers)
-            handle->SetLevel(level);
+            UpdateLevel(handle->Impl(), level);
 
         cb = g_Hooks.Hooks.OnLevelChange;
     }
 
-    if (cb) cb(LevelChangeEvent{ {}, old, level });
+    FireLevelChange(cb, LevelChangeEvent{ {}, old, level });
 }
 
 void LogSystem::SetGlobalFileLevel(LogLevel level)
@@ -599,13 +660,12 @@ void LogSystem::SetLevel(std::string_view name, LogLevel level)
         auto it = g_NamedLoggers.find(std::string{name});
         if (it == g_NamedLoggers.end()) return;
 
-        old = it->second->GetLevel();
-        it->second->SetLevel(level);
+        old = UpdateLevel(it->second->Impl(), level);
         loggerName = it->first;
         cb = g_Hooks.Hooks.OnLevelChange;
     }
 
-    if (cb) cb(LevelChangeEvent{ loggerName, old, level });
+    FireLevelChange(cb, LevelChangeEvent{ loggerName, old, level });
 }
 
 //==============================================================================

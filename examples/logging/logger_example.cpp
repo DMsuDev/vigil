@@ -251,10 +251,12 @@ static void Demo_LifecycleHooks()
 
     vigil::Info("This message will be intercepted by the OnMessage hook.");
 
-    vigil::LogSystem::Main().SetLevel(vigil::LogLevel::Warn);
-    vigil::LogSystem::Main().SetLevel(vigil::LogLevel::Trace);
-
-    vigil::LogSystem::Create("AnotherLogger");
+    // For demonstration, create another logger and manipulate its level.
+    auto& anotherLogger = vigil::LogSystem::Create("AnotherLogger");
+    anotherLogger.SetLevel(vigil::LogLevel::Info);
+    vigil::LogSystem::SetLevel("AnotherLogger", vigil::LogLevel::Warn);
+    vigil::LogSystem::SetGlobalLevel(vigil::LogLevel::Warn);
+    vigil::LogSystem::SetGlobalLevel(vigil::LogLevel::Trace);
 
     vigil::LogSystem::FlushAll();
 

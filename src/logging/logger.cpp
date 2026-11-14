@@ -5,6 +5,7 @@
 
 #include "vigil/logging/logger.h"
 
+#include "logging/detail/level_change.h"
 #include "logging/detail/logger_impl.h"
 #include "logging/detail/spd_convert.h"
 
@@ -21,7 +22,7 @@ std::string_view Logger::GetName() const noexcept
 
 void Logger::SetLevel(LogLevel level)
 {
-    m_Impl->SetLevel(level);
+    detail::ChangeLevel(*m_Impl, level);
 }
 
 LogLevel Logger::GetLevel() const noexcept

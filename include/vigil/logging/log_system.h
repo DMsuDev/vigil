@@ -181,7 +181,7 @@ public:
      *
      * Hooks:
      * - OnMessage: Invoked on every emitted log message.
-     * - OnLevelChange: Invoked whenever a logger's severity level changes.
+     * - OnLevelChange: Invoked when a logger's level changes outside OnMessage and OnLevelChange callbacks.
      * - OnFlush: Invoked after any flush operation.
      * - OnShutdown: Invoked at the start of @ref Shutdown.
      *
@@ -205,7 +205,12 @@ public:
     static void SetOnMessage(LogMessageCallback callback);
 
     /**
-     * @brief Registers a callback invoked when any logger's severity level changes.
+     * @brief Registers a callback invoked when a logger's level changes.
+     *
+     * Changes made through @ref Logger::SetLevel inside an @c OnMessage callback
+     * are applied silently and do not trigger this callback. Level changes made
+     * inside this callback do not trigger recursive invocations.
+     *
      * @param callback Function to invoke. Pass @c nullptr to clear.
      */
     static void SetOnLevelChange(LevelChangeCallback callback);
@@ -381,6 +386,10 @@ public:
 
     /**
      * @brief Flushes a specific named logger.
+     *
+     * @note The main logger cannot be addressed by name. Use
+     *       @ref Logger::Flush on @ref Main, or @ref FlushAll.
+     *
      * @param name Name of the logger to flush.
      */
     static void Flush(std::string_view name);

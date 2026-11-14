@@ -19,6 +19,8 @@
 
 namespace vigil::detail {
 
+inline thread_local bool g_InMessageCallback = false;
+
 /**
  * @brief spdlog sink implementation that dispatches to a @ref LogMessageCallback.
  *
@@ -79,6 +81,19 @@ protected:
         event.Level      = detail::FromSpdLevel(msg.level);
         event.Message    = std::string(msg.payload.data(),     msg.payload.size());
         event.LoggerName = std::string(msg.logger_name.data(), msg.logger_name.size());
+
+        struct MessageCallbackScope
+        {
+            MessageCallbackScope() noexcept
+                : m_Previous(g_InMessageCallback)
+            {
+                g_InMessageCallback = true;
+            }
+
+            ~MessageCallbackScope() { g_InMessageCallback = m_Previous; }
+
+            bool m_Previous;
+        } scope;
 
         m_Callback(event);
     }

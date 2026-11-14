@@ -15,7 +15,10 @@
 
 #include <gtest/gtest.h>
 
+#include <atomic>
+#include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 using namespace vigil;
@@ -134,15 +137,165 @@ TEST(HooksTest, OnLevelChangeReceivesOldAndNewLevelWithLoggerName)
     EXPECT_EQ(capturedNew,   LogLevel::Error);
 }
 
+TEST(HooksTest, LoggerSetLevelFiresOnLevelChange)
+{
+    vigil::test::ScopedRegistry registry({});
+
+    size_t      changeCount = 0;
+    LogLevel    capturedOld = LogLevel::Off;
+    LogLevel    capturedNew = LogLevel::Off;
+    std::string capturedName;
+
+    LogSystem::SetOnLevelChange([&](const LevelChangeEvent& e) {
+        ++changeCount;
+        capturedOld  = e.OldLevel;
+        capturedNew  = e.NewLevel;
+        capturedName = e.LoggerName;
+    });
+
+    auto& logger = LogSystem::Create("Network");
+    logger.SetLevel(LogLevel::Warn);
+
+    EXPECT_EQ(changeCount,  1u);
+    EXPECT_EQ(capturedName, "Network");
+    EXPECT_EQ(capturedOld,  LogLevel::Trace);
+    EXPECT_EQ(capturedNew,  LogLevel::Warn);
+
+    LogSystem::SetLevel("Network", LogLevel::Error);
+    EXPECT_EQ(changeCount,  2u);
+    EXPECT_EQ(capturedOld,  LogLevel::Warn);
+    EXPECT_EQ(capturedNew,  LogLevel::Error);
+
+    logger.SetLevel(LogLevel::Critical);
+    EXPECT_EQ(changeCount,  3u);
+    EXPECT_EQ(capturedOld,  LogLevel::Error);
+    EXPECT_EQ(capturedNew,  LogLevel::Critical);
+}
+
+TEST(HooksTest, SetLevelInsideOnMessageAppliesLevelWithoutFiringOnLevelChange)
+{
+    vigil::test::ScopedRegistry registry({});
+    auto& logger = LogSystem::Main();
+
+    size_t changeCount = 0;
+    LogLevel capturedOld = LogLevel::Off;
+    LogSystem::SetOnLevelChange([&](const LevelChangeEvent& event) {
+        ++changeCount;
+        capturedOld = event.OldLevel;
+    });
+    LogSystem::SetOnMessage([&logger](const LogMessageEvent&) {
+        logger.SetLevel(LogLevel::Error);
+    });
+
+    logger.Info("trigger");
+
+    EXPECT_EQ(logger.GetLevel(), LogLevel::Error);
+    EXPECT_EQ(changeCount, 0u);
+
+    logger.SetLevel(LogLevel::Warn);
+    EXPECT_EQ(changeCount, 1u);
+    EXPECT_EQ(capturedOld, LogLevel::Error);
+}
+
+TEST(HooksTest, NestedLevelChangesDoNotReenterOnLevelChange)
+{
+    vigil::test::ScopedRegistry registry({});
+    auto& logger = LogSystem::Create("Network");
+    size_t changeCount = 0;
+
+    LogSystem::SetOnLevelChange([&](const LevelChangeEvent&) {
+        ++changeCount;
+        if (changeCount == 1)
+        {
+            logger.SetLevel(LogLevel::Error);
+            LogSystem::SetLevel("Network", LogLevel::Critical);
+            LogSystem::SetGlobalLevel(LogLevel::Warn);
+        }
+    });
+
+    logger.SetLevel(LogLevel::Info);
+    EXPECT_EQ(changeCount, 1u);
+    EXPECT_EQ(logger.GetLevel(), LogLevel::Warn);
+    EXPECT_EQ(LogSystem::Main().GetLevel(), LogLevel::Warn);
+
+    LogSystem::SetLevel("Network", LogLevel::Error);
+    EXPECT_EQ(changeCount, 2u);
+}
+
+TEST(HooksTest, LevelChangeCallbackGuardIsRestoredAfterException)
+{
+    vigil::test::ScopedRegistry registry({});
+    size_t changeCount = 0;
+    LogSystem::SetOnLevelChange([&](const LevelChangeEvent&) {
+        if (++changeCount == 1)
+            throw std::runtime_error("callback failure");
+    });
+
+    EXPECT_THROW(LogSystem::Main().SetLevel(LogLevel::Warn), std::runtime_error);
+    EXPECT_EQ(LogSystem::Main().GetLevel(), LogLevel::Warn);
+    LogSystem::Main().SetLevel(LogLevel::Error);
+    EXPECT_EQ(changeCount, 2u);
+}
+
+TEST(HooksTest, SettingTheSameLevelStillFiresOnLevelChange)
+{
+    vigil::test::ScopedRegistry registry({});
+    size_t changeCount = 0;
+    LogSystem::SetOnLevelChange([&](const LevelChangeEvent&) { ++changeCount; });
+
+    LogSystem::Main().SetLevel(LogLevel::Warn);
+    LogSystem::Main().SetLevel(LogLevel::Warn);
+
+    EXPECT_EQ(changeCount, 2u);
+}
+
+TEST(HooksTest, SilentAndNotifiedLevelChangesCanRunConcurrently)
+{
+    LogSystemConfig config;
+    config.ConsoleLevel = LogLevel::Off;
+    vigil::test::ScopedRegistry registry(config);
+    auto& trigger = LogSystem::Main();
+    auto& target = LogSystem::Create("Network");
+    constexpr int iterations = 500;
+    std::atomic<bool> start{false};
+    int messageCount = 0;
+    int changeCount = 0;
+
+    LogSystem::SetOnMessage([&](const LogMessageEvent&) {
+        target.SetLevel(LogLevel::Error);
+        ++messageCount;
+    });
+    LogSystem::SetOnLevelChange([&](const LevelChangeEvent&) { ++changeCount; });
+
+    std::thread messages([&] {
+        while (!start.load()) std::this_thread::yield();
+        for (int i = 0; i < iterations; ++i)
+            trigger.Info("trigger");
+    });
+    std::thread changes([&] {
+        while (!start.load()) std::this_thread::yield();
+        for (int i = 0; i < iterations; ++i)
+            target.SetLevel(LogLevel::Warn);
+    });
+    start.store(true);
+    messages.join();
+    changes.join();
+
+    EXPECT_EQ(messageCount, iterations);
+    EXPECT_EQ(changeCount, iterations);
+}
+
 TEST(HooksTest, SetGlobalLevelFiresOnLevelChangeForEveryLogger)
 {
     vigil::test::ScopedRegistry registry({});
 
     size_t   changeCount = 0;
+    LogLevel capturedOld = LogLevel::Off;
     LogLevel capturedNew = LogLevel::Off;
 
     LogSystem::SetOnLevelChange([&](const LevelChangeEvent& e) {
         ++changeCount;
+        capturedOld = e.OldLevel;
         capturedNew = e.NewLevel;
     });
 
@@ -151,7 +304,13 @@ TEST(HooksTest, SetGlobalLevelFiresOnLevelChangeForEveryLogger)
     LogSystem::SetGlobalLevel(LogLevel::Warn);
 
     EXPECT_EQ(changeCount,  1u);
+    EXPECT_EQ(capturedOld,  LogLevel::Trace);
     EXPECT_EQ(capturedNew,  LogLevel::Warn);
+
+    LogSystem::SetGlobalLevel(LogLevel::Error);
+    EXPECT_EQ(changeCount,  2u);
+    EXPECT_EQ(capturedOld,  LogLevel::Warn);
+    EXPECT_EQ(capturedNew,  LogLevel::Error);
 }
 
 // =============================================================================

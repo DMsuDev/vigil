@@ -33,10 +33,10 @@ struct LogMessageEvent {
     std::string LoggerName;               ///< Name of the logger that emitted the message.
 };
 
-/// @brief Context passed when any logger's severity level changes.
+/// @brief Context passed when a logger's severity level changes outside OnMessage and OnLevelChange callbacks.
 struct LevelChangeEvent {
     std::string_view LoggerName;                  ///< Name of the affected logger. Empty when the change is global. Valid only during the callback.
-    LogLevel         OldLevel{ LogLevel::Trace }; ///< Severity level before the change.
+    LogLevel         OldLevel{ LogLevel::Trace }; ///< Severity level before the change. For global changes, the main logger's previous level.
     LogLevel         NewLevel{ LogLevel::Trace }; ///< Severity level after the change.
 };
 
@@ -54,7 +54,7 @@ struct FlushEvent {
 /// Invoked on every emitted log message. Called on the logging thread.
 using LogMessageCallback  = std::function<void(const LogMessageEvent&)>;
 
-/// Invoked whenever a logger's severity level changes.
+/// Invoked when a logger's severity level changes outside OnMessage and OnLevelChange callbacks.
 using LevelChangeCallback = std::function<void(const LevelChangeEvent&)>;
 
 /// Invoked after any flush operation.
@@ -78,8 +78,9 @@ struct LogHooks {
     /// @warning Called on the logging thread. Avoid blocking operations.
     LogMessageCallback  OnMessage;
 
-    /// @brief Fired by @ref LogSystem::SetLevel and @ref LogSystem::SetGlobalLevel.
-    /// @note @ref Logger::SetLevel called directly on a logger handle does not fire it.
+    /// @brief Fired when a logger's level changes outside OnMessage and OnLevelChange callbacks.
+    /// @note Changes made by @ref Logger::SetLevel inside OnMessage are silent.
+    /// Nested level changes inside this callback do not invoke it recursively.
     LevelChangeCallback OnLevelChange;
 
     /// @brief Fired after any flush operation completes.

@@ -50,6 +50,7 @@ public:
     [[nodiscard]] std::string_view GetName() const noexcept;
 
     /// @brief Sets the minimum severity level for this logger.
+    /// @note Does not fire OnLevelChange when called from an OnMessage or OnLevelChange callback.
     void SetLevel(LogLevel level);
 
     /// @brief Retrieves the current minimum severity level.
