@@ -29,6 +29,7 @@ set(VIGIL_SOURCES
   logging/log_limiter.cpp
 
   detail/symbol_utils.cpp
+  detail/debugger.cpp
 
   trace/stack_trace.cpp
 
