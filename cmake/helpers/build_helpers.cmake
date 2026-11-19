@@ -60,6 +60,8 @@ function(vigil_load_version version plain_version)
 
   if(_suffix)
     set(VIGIL_IS_PRERELEASE TRUE PARENT_SCOPE)
+  else()
+    set(VIGIL_IS_PRERELEASE FALSE PARENT_SCOPE)
   endif()
 endfunction()
 

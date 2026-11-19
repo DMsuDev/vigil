@@ -81,6 +81,9 @@
 #define VIGIL_VERSION_AT_LEAST(major, minor, patch) \
     (VIGIL_VERSION >= VIGIL_VERSION_ENCODE((major), (minor), (patch)))
 
+// Defined by CMake when VERSION carries the -WIP suffix.
+#cmakedefine VIGIL_IS_PRERELEASE
+
 // ============================================================================
 // Modern C++ API
 // ============================================================================
@@ -105,7 +108,7 @@ inline constexpr std::string_view string = VIGIL_VERSION_STRING;
 /// @brief Full version string including any prerelease suffix (e.g. "1.2.0-WIP").
 inline constexpr std::string_view full_string = VIGIL_VERSION_FULL;
 
-/// @brief True when this build carries a prerelease suffix (-WIP, -dev).
+/// @brief True when this build carries the -WIP prerelease suffix.
 inline constexpr bool is_prerelease =
 #ifdef VIGIL_IS_PRERELEASE
     true;
