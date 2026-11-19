@@ -28,6 +28,12 @@ bool LogOncePolicy::ShouldLog(const std::string& key)
 
 void LogOncePolicy::LogOnce(const std::string& key, LogLevel level, const std::string& msg)
 {
+    if (!LogSystem::IsInitialized())
+    {
+        LogSystem::WarnUninitializedOnce();
+        return;
+    }
+
     if (ShouldLog(key))
         LogSystem::Main().Log(level, "{}", msg);
 }
@@ -63,6 +69,12 @@ bool LogTTLPolicy::ShouldLog(const std::string& key, double ttlSeconds)
 
 void LogTTLPolicy::LogTTL(const std::string& key, double ttlSeconds, LogLevel level, const std::string& msg)
 {
+    if (!LogSystem::IsInitialized())
+    {
+        LogSystem::WarnUninitializedOnce();
+        return;
+    }
+
     if (ShouldLog(key, ttlSeconds))
         LogSystem::Main().Log(level, "{}", msg);
 }
