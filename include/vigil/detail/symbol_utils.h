@@ -12,22 +12,13 @@
 
 namespace vigil::detail {
 
-enum class FormatPathMode {
-    FullPath,   ///< Return the full path as-is (e.g., "C:\path\to\file.cpp").
-    TailPath,   ///< Return the last two components of the path (e.g., "to\file.cpp").
-    FileName,   ///< Extract and return only the file name component (e.g., "file.cpp").
-};
-
-/// @brief Formats a file path down to a configurable number of trailing
-///        directory components, always keeping the file name.
+/// @brief Returns a path containing only the requested trailing components.
 /// @param path   Source path (may use '/' or '\\' separators).
-/// @param levels Number of trailing path components to keep.
-///               0 = full path; 1 = filename; 2 = dir/file.cpp; values
-///               exceeding available separators are clamped to the full path.
-/// @return A view into @p path's storage - callers must ensure @p path
-///         outlives the returned view.
+/// @param components Number of trailing components to keep.
+///                   0 = full path; 1 = filename; 2 = parent/filename.
+/// @return A view into @p path. The source storage must outlive the returned view.
 [[nodiscard]] VIGIL_API
-std::string_view FormatFilePath(std::string_view path, unsigned levels = 1);
+std::string_view FormatFilePath(std::string_view path, unsigned components = 1);
 
 /// @brief Normalizes path separators to use '/' instead of '\\'.
 /// @param path Source path (may use '/' or '\\' separators).
@@ -35,9 +26,9 @@ std::string_view FormatFilePath(std::string_view path, unsigned levels = 1);
 [[nodiscard]] VIGIL_API
 std::string NormalizePathSeparators(std::string_view path);
 
-/// @brief Sanitizes a raw function signature by stripping qualifiers, calling conventions, and noise.
+/// @brief Removes compiler-specific noise from a function signature.
 /// @param signature Raw function signature to process.
-/// @return Cleaned, human-readable function signature string.
+/// @return A cleaned, human-readable function signature.
 [[nodiscard]] VIGIL_API
 std::string CleanFunctionSignature(std::string_view signature);
 

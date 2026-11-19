@@ -12,13 +12,13 @@ namespace vigil::detail {
 
 namespace {
 
-constexpr std::array<std::string_view, 6> kCallingConventions{
+// Calling conventions to remove from function signatures.
+constexpr std::array<std::string_view, 5> kCallingConventions{
     "__cdecl ",
     "__stdcall ",
     "__fastcall ",
     "__vectorcall ",
-    "__thiscall ",
-    "(void)"
+    "__thiscall "
 };
 
 } // Anonymous namespace
@@ -30,9 +30,9 @@ std::string NormalizePathSeparators(std::string_view path)
     return result;
 }
 
-std::string_view FormatFilePath(std::string_view path, unsigned levels)
+std::string_view FormatFilePath(std::string_view path, unsigned components)
 {
-    if (levels == 0 || path.empty())
+    if (components == 0 || path.empty())
         return path;
 
     std::size_t cursor = path.size();
@@ -43,7 +43,7 @@ std::string_view FormatFilePath(std::string_view path, unsigned levels)
         if (pos == std::string_view::npos)
             return path; // Fewer components than requested; return the whole thing.
 
-        if (++separatorsSeen == levels)
+        if (++separatorsSeen == components)
             return path.substr(pos + 1);
 
         cursor = pos;
@@ -61,6 +61,17 @@ std::string CleanFunctionSignature(std::string_view signature)
         std::size_t pos = 0;
         while ((pos = result.find(cc, pos)) != std::string::npos)
             result.erase(pos, cc.size());
+    }
+
+    // Replace "(void)" with "()" in function signatures.
+    constexpr std::string_view kVoidParams = "(void)";
+    constexpr std::string_view kEmptyParams = "()";
+
+    for (std::size_t pos = 0;
+         (pos = result.find(kVoidParams, pos)) != std::string::npos;)
+    {
+        result.replace(pos, kVoidParams.size(), kEmptyParams);
+        pos += kEmptyParams.size();
     }
 
     return result;
