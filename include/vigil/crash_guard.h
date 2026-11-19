@@ -41,8 +41,8 @@ using CrashCallback = std::function<void(const CrashInfo&)>;
 /**
  * @brief Cross-platform crash handler.
  *
- * Intercepts fatal system signals and unhandled exceptions, flushes the log,
- * writes a crash report file and invokes the user callback before process
+ * Intercepts fatal system signals and unhandled exceptions, writes a crash
+ * report file, flushes the log, and invokes the user callback before process
  * termination.
  *
  * @note Call InstallThreadAltStack() on every worker thread created by the application.

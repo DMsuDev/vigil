@@ -271,21 +271,27 @@ std::string WriteReport(const char* reason, const std::string& trace)
     return {};
 }
 
-// Log first (most reliable path), then the report file, then user code (least trusted).
+// Builds and delivers the crash report. Runs on the watchdog thread only.
 [[noreturn]] VIGIL_NOINLINE void Report()
 {
     const std::string trace  = CaptureTrace();
     const char*       reason = g_State.reason.load(std::memory_order_relaxed);
 
+    // 1. Report file: independent of Vigil's logging locks, so it persists the crash even
+    //    when the faulting thread died holding LogSystem or sink locks.
+    const std::string path = WriteReport(reason, trace);
+
+    // 2. Log: takes the registry and sink locks, which the faulting thread may still hold.
     std::string message = std::string("Fatal error:\n") + reason;
     if (!trace.empty())
         message += "\n\n" + trace + '\n';
     Emit(message);
 
-    const std::string path = WriteReport(reason, trace);
     Emit(path.empty() ? std::string("Crash report could not be written.")
                       : "Crash report written to " + path);
 
+    // 3. User callback: arbitrary code that may block, allocate, or crash. It runs last so
+    //    it can never prevent the steps above.
     if (g_State.callback)
     {
         const CrashInfo info{
