@@ -78,21 +78,26 @@ set_tests_properties(vigil_crash_consumer PROPERTIES
 # Run crash tests
 # ------------------------------------------------------------------------------
 
-foreach(trigger IN LISTS VIGIL_CRASH_TRIGGERS)
+set(vigil_crash_expect_sigsegv        "Segmentation fault|Access violation")
+set(vigil_crash_expect_sigabrt        "SIGABRT")
+set(vigil_crash_expect_sigfpe         "Floating-point exception|divide by zero")
+set(vigil_crash_expect_sigill         "Illegal instruction")
+set(vigil_crash_expect_terminate      "std::terminate")
+set(vigil_crash_expect_pure_virtual   "std::terminate|Pure virtual")
+set(vigil_crash_expect_bad_alloc      "bad_alloc")
+set(vigil_crash_expect_stack_overflow "Segmentation fault|Stack overflow")
+set(vigil_crash_expect_invalid_param  "invalid parameter")
 
+foreach(trigger IN LISTS VIGIL_CRASH_TRIGGERS)
   add_test(NAME "vigil_crash::${trigger}"
-    COMMAND
-      "${vigil_crash_binary_dir}/bin/vigil_crash_test"
-      "${trigger}"
-  )
+    COMMAND "${vigil_crash_binary_dir}/bin/vigil_crash_test" "${trigger}")
 
   set_tests_properties("vigil_crash::${trigger}" PROPERTIES
     FIXTURES_REQUIRED "vigil_crash_tests_fixture"
-    WILL_FAIL TRUE
+    PASS_REGULAR_EXPRESSION
+      "report=.*crash_[0-9_]+\\.txt reason=.*(${vigil_crash_expect_${trigger}})"
     TIMEOUT 10
-    LABELS "vigil;crash"
-  )
-
+    LABELS "vigil;crash")
 endforeach()
 
 # ------------------------------------------------------------------------------
@@ -100,15 +105,11 @@ endforeach()
 # ------------------------------------------------------------------------------
 
 if(VIGIL_INSTALL_TESTS_CLEANUP)
-
   add_test(NAME vigil_crash_consumer_cleanup
-    COMMAND "${CMAKE_COMMAND}" -E rm -rf
-      "${vigil_crash_binary_dir}"
-  )
+    COMMAND "${CMAKE_COMMAND}" -E rm -rf "${vigil_crash_binary_dir}")
 
   set_tests_properties(vigil_crash_consumer_cleanup PROPERTIES
     FIXTURES_CLEANUP "vigil_crash_tests_fixture"
     LABELS "vigil;crash"
   )
-
 endif()

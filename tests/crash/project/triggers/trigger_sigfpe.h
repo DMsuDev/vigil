@@ -11,17 +11,24 @@
 
 #pragma once
 
-#include "vigil/detail/preprocessor_utils.h"
+#include "vigil/detail/platform_detection.h"
+
+#include <csignal>
+#include <cstdlib>
 
 namespace vigil::crash_triggers {
 
 [[noreturn]] inline void TriggerSigFpe()
 {
+#if defined(VIGIL_PLATFORM_WINDOWS) || defined(VIGIL_ARCH_X64) || defined(VIGIL_ARCH_X86)
     volatile int numerator   = 1;
     volatile int denominator = 0;
     volatile int result      = numerator / denominator;
     (void)result;
-    VIGIL_UNREACHABLE();
+#else
+    std::raise(SIGFPE); // AArch64 does not trap on integer division by zero, so we raise SIGFPE manually.
+#endif
+    std::abort();
 }
 
 } // namespace vigil::crash_triggers

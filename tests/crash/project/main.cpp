@@ -60,8 +60,11 @@ int main(int argc, char* argv[])
     }
 
     // Install the crash handler before triggering any fault.
+    // The CTest harness matches this line (PASS_REGULAR_EXPRESSION) to verify that
+    // the handler ran, the report file was written, and the reason is the expected one.
     vigil::CrashHandler::Install([](const vigil::CrashInfo& info) {
-        std::fprintf(stderr, "[CrashConsumer] crash callback received\n");
+        std::fprintf(stderr, "[CrashConsumer] report=%s reason=%s\n",
+                     info.reportPath ? info.reportPath : "(none)", info.reason);
     });
 
     const char* trigger = argv[1];
