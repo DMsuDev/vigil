@@ -38,7 +38,7 @@
 // ============================================================================
 
 #if defined(VIGIL_ENABLE_ASSERTS)
-
+    #include <fmt/format.h>
 namespace vigil::detail {
 
 /**
@@ -54,7 +54,7 @@ namespace vigil::detail {
  * @param message   Optional pre-formatted, user-supplied context string.
  *                  Defaults to an empty view when called from the no-message branch.
  */
-[[noreturn]] VIGIL_API void ReportAssertFailure(
+[[noreturn]] VIGIL_NOINLINE VIGIL_API void ReportAssertFailure(
     std::string_view exprText,
     const ::vigil::SourceLocation& loc,
     std::string_view message = {}
