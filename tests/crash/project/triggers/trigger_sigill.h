@@ -12,7 +12,6 @@
 #pragma once
 
 #include "vigil/detail/preprocessor_utils.h"
-#include "vigil/detail/compiler_attributes.h"
 
 #include <csignal>
 #include <cstdlib>
@@ -27,6 +26,9 @@ namespace vigil::crash_triggers {
 {
 #if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
     __ud2();
+#elif defined(__APPLE__) && defined(__aarch64__)
+    // On ARM64, __builtin_trap() emits BRK, which raises SIGTRAP.
+    std::raise(SIGILL);
 #elif VIGIL_HAS_BUILTIN(__builtin_trap)
     __builtin_trap();
 #else
