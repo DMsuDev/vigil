@@ -173,20 +173,12 @@ public:
     // =========================================================== //
 
     /**
-     * @brief Registers all hooks at once, replacing any previously set hooks.
+     * @brief Registers all hooks at once, replacing any previously registered hooks.
      *
-     * Equivalent to calling each individual setter in sequence. Any hook field
-     * left as @c nullptr is treated as "not registered" and clears the previous
-     * value for that hook if one existed.
+     * Equivalent to calling each individual setter in sequence. Any field left
+     * as @c nullptr clears the corresponding previously registered hook.
      *
-     * Hooks:
-     * - OnMessage: Invoked on every emitted log message.
-     * - OnLevelChange: Invoked when a logger's level changes outside OnMessage and OnLevelChange callbacks.
-     * - OnFlush: Invoked after any flush operation.
-     * - OnShutdown: Invoked at the start of @ref Shutdown.
-     *
-     * @param hooks Aggregate of all hook callbacks to register.
-     *
+     * @param hooks Aggregate containing the hooks to register.
      * @see LogHooks
      */
     static void SetHooks(LogHooks hooks);
@@ -216,13 +208,21 @@ public:
     static void SetOnLevelChange(LevelChangeCallback callback);
 
     /**
-     * @brief Registers a callback invoked after any flush operation.
+     * @brief Registers a callback invoked after each flush operation.
+     *
+     * Reentrant flushes are performed without invoking the callback again
+     * on the same thread.
+     *
      * @param callback Function to invoke. Pass @c nullptr to clear.
      */
     static void SetOnFlush(FlushCallback callback);
 
     /**
-     * @brief Registers a callback invoked at the start of @ref Shutdown.
+     * @brief Registers a callback invoked before shutdown teardown begins.
+     *
+     * Reentrant calls to @ref Shutdown return immediately. If the callback
+     * throws, shutdown is aborted before teardown begins.
+     *
      * @param callback Function to invoke. Pass @c nullptr to clear.
      */
     static void SetOnShutdown(LifecycleCallback callback);

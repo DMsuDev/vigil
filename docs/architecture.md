@@ -4,38 +4,30 @@ This document explains how Vigil is put together and why. It is aimed at contrib
 
 - [Architecture](#architecture)
   - [Goals](#goals)
-  - [Source layout](#source-layout)
   - [Layers](#layers)
   - [Logging internals](#logging-internals)
     - [Registry state](#registry-state)
     - [Initialization](#initialization)
     - [Sinks](#sinks)
-    - [Names and spdlog](#names-and-spdlog)
     - [Async](#async)
   - [Threading model](#threading-model)
   - [Assertions internals](#assertions-internals)
   - [Stack trace internals](#stack-trace-internals)
   - [Crash pipeline](#crash-pipeline)
+    - [Execution flow](#execution-flow)
+    - [Platform handling](#platform-handling)
+    - [Safety constraints](#safety-constraints)
   - [Build system](#build-system)
-    - [Flow](#flow)
-    - [The `vigil` target (`src/CMakeLists.txt`)](#the-vigil-target-srccmakeliststxt)
-    - [libbacktrace](#libbacktrace)
+    - [Configuration flow](#configuration-flow)
+    - [Library target](#library-target)
+    - [Stack trace dependency](#stack-trace-dependency)
     - [Packaging](#packaging)
-    - [Tests](#tests)
   - [Public and internal headers](#public-and-internal-headers)
   - [Deliberate design decisions](#deliberate-design-decisions)
     - [Logging](#logging)
     - [Crash handling](#crash-handling)
     - [Assertions](#assertions)
-    - [Stack traces](#stack-traces)
     - [Build](#build)
-  - [Recipes](#recipes)
-    - [Add a source file](#add-a-source-file)
-    - [Add a public header](#add-a-public-header)
-    - [Add a dependency](#add-a-dependency)
-    - [Add a crash trigger](#add-a-crash-trigger)
-    - [Add an example](#add-an-example)
-    - [Add a platform backend](#add-a-platform-backend)
 
 ## Goals
 
@@ -43,29 +35,6 @@ This document explains how Vigil is put together and why. It is aimed at contrib
 - A stable public surface that does not leak implementation dependencies. `spdlog` never appears in a public header.
 - Identical behavior on Windows, Linux, and macOS, with platform differences hidden behind `VIGIL_*` macros and private backends.
 - Failure paths (assertions, crashes) that stay reliable even when the process is in a bad state.
-
-## Source layout
-
-```text
-include/vigil/            Public headers. vigil.h is the umbrella.
-  core/                   console, smart pointers, source location
-  logging/                logger, log_system, log_level, hooks, limiter, scoped logger
-  detail/                 compiler, platform, and export helpers (installed, internal)
-  assert.h, crash_guard.h
-src/                      Implementation and private headers. Never installed.
-  core/                   console.cpp
-  logging/                log_system.cpp, logger.cpp, log_limiter.cpp
-  logging/detail/         logger_impl, hooks_registry, callback_sink, lazy_file_sink, spd_convert
-  trace/                  stack_trace.{h,cpp}
-  trace/detail/           stack_trace_backend.h, stack_trace_posix.cpp, stack_trace_win.cpp
-  detail/                 symbol_utils.cpp
-  assert.cpp, crash_guard.cpp
-cmake/                    helpers/ (build_helpers.cmake), vendor/ (libbacktrace), templates/
-vendor/                   fmt, spdlog, libbacktrace (do not edit)
-tests/                    unit/, crash/, cmake_* consumer tests
-examples/                 One executable per example
-VERSION                   The only place the version is edited
-```
 
 ## Layers
 
@@ -105,10 +74,6 @@ flowchart TD
 
 `Create(name)` reuses the shared console and file sinks. `Create(LogConfig)` builds a dedicated file sink when a file name, a directory (explicit or inherited), or a file level is in effect.
 
-### Names and spdlog
-
-Every logger is registered with spdlog under its name. `Remove()` and `SetMain()` also call `spdlog::drop(name)`, otherwise that name could never be created again.
-
 ### Async
 
 spdlog has exactly one thread pool, created lazily (`EnsureAsyncThreadPool`) the first time any logger resolves to asynchronous. Async loggers use the `overrun_oldest` overflow policy. `Shutdown()` calls `spdlog::shutdown()`, whose pool teardown drains queued messages.
@@ -141,16 +106,31 @@ Change both paths or neither, and build under both standards.
 
 ## Stack trace internals
 
-`StackTrace` (private header `src/trace/stack_trace.h`) is the shared layer: it owns formatting, symbol simplification, and runtime-frame trimming. It delegates capture and resolution to a platform backend that exposes two functions declared in `stack_trace_backend.h`:
+`StackTrace` (`src/trace/stack_trace.h`) provides the shared stack trace
+implementation. It handles formatting, symbol simplification, and frame
+trimming, while delegating frame capture and address resolution to a
+platform-specific backend.
 
-- `CaptureFrames(skip, max)`: capture and resolve the current stack.
-- `ResolveAddresses(addresses, count)`: resolve raw addresses captured earlier (used by the crash pipeline).
+The backend exposes two operations:
 
-The `.cpp` is chosen by CMake: `stack_trace_win.cpp` (DbgHelp, inline frames via `SymAddrIncludeInlineTrace`) or `stack_trace_posix.cpp` (`backtrace()` plus libbacktrace, with `backtrace_symbols()` as a fallback when libbacktrace cannot initialize). With `VIGIL_ENABLE_STACK_TRACE` off the backend is not compiled and the API returns empty results.
+- `CaptureFrames(skip, max)` captures and resolves the current stack.
+- `ResolveAddresses(addresses, count)` resolves previously captured addresses,
+  as used by the crash pipeline.
 
-Resolution is serialized by a mutex because neither DbgHelp nor libbacktrace (configured with `threaded=0`) is thread-safe. On POSIX, libbacktrace reports inlined call sites first and the physical frame last, so every frame but the last for a given address is marked inlined. Vigil mirrors that ordering on Windows.
+CMake selects the Windows or POSIX implementation. Windows uses DbgHelp;
+POSIX uses `backtrace()` and libbacktrace, falling back to
+`backtrace_symbols()` if libbacktrace cannot initialize.
+
+Symbol resolution is serialized because DbgHelp and the configured
+libbacktrace implementation are not thread-safe. When
+`VIGIL_ENABLE_STACK_TRACE` is disabled, the backend is not compiled and
+the public API returns empty results.
 
 ## Crash pipeline
+
+The crash handling system separates failure detection from report generation.
+The faulting thread captures the minimum information needed to notify a
+dedicated watchdog thread, which performs the reporting work.
 
 ```mermaid
 sequenceDiagram
@@ -159,85 +139,83 @@ sequenceDiagram
     participant D as Deadline timer
     participant U as User callback
 
-    Note over T: signal handler or terminate handler
-    T->>T: claim first crash (atomic exchange)
-    T->>T: store reason, capture raw frames
-    T->>W: wake (semaphore or event)
-    T->>T: park forever
-    W->>D: arm 3 s deadline
-    W->>W: symbolize trace
-    W->>W: log Critical and flush (or stderr)
-    W->>W: write crash report file
-    W->>U: invoke callback (exceptions swallowed)
-    W->>W: flush, debugger break, hard exit
-    D-->>W: if still running at expiry, kill process
+    Note over T: Signal or terminate handler
+    T->>T: Claim first crash (atomic exchange)
+    T->>T: Store reason and capture raw frames when available
+    T->>W: Signal watchdog (semaphore or event)
+    T->>T: Park indefinitely
+    W->>D: Arm reporting deadline
+    W->>W: Symbolize stack trace
+    W->>W: Write crash report file
+    W->>W: Log Critical and flush (or stderr)
+    W->>U: Invoke callback (exceptions swallowed)
+    W->>W: Final C stdio flush, debugger break, hard exit
+    D-->>W: Force process termination if deadline expires
 ```
 
-The design splits work by safety:
+### Execution flow
 
-- **Faulting thread** (`SignalCrash`): async-signal-safe only. No allocation, no locks, no logging, no `std::string`. It stores a `const char*` reason and up to 64 raw return addresses in a leaked global, signals a semaphore (POSIX) or event (Windows), and parks.
-- **Watchdog thread** (started during `Install()`): does everything that is unsafe in a handler. Each step is bounded and exception-safe, and the order is deliberate: logging first (most reliable), the report file next, and user code last (least trusted).
-- **Deadline**: `ArmDeadline` starts a `SIGALRM` alarm (POSIX) or a time-critical thread (Windows) that terminates the process if the report pipeline hangs.
+- **Faulting thread:** Claims the first crash, records the reason and raw stack addresses when available, signals the watchdog, and then parks.
+- **Watchdog thread:** Symbolizes the captured stack, writes the crash report file, attempts to log the crash, invokes the user callback, and terminates the process.
+- **Deadline:** A watchdog deadline triggers forced process termination if the reporting pipeline does not finish within the configured time.
 
-Platform specifics:
+The crash report file is written before logging because the faulting thread may have crashed while holding a LogSystem or sink lock. This allows Vigil to preserve the report without depending on its logging infrastructure.
 
-- POSIX installs `sigaction` handlers with `SA_ONSTACK` for `SIGSEGV`, `SIGABRT`, `SIGFPE`, `SIGILL`, and `SIGBUS`. Each thread has a 64 KiB `thread_local` alternate stack installed by `InstallThreadAltStack`. `Install()` primes `backtrace()` once so its lazy library load never happens inside a handler.
-- Windows installs an unhandled-exception filter, `_set_purecall_handler`, `_set_invalid_parameter_handler`, a `new` handler, and a `SIGABRT` handler. Every path parks the thread instead of returning `EXCEPTION_EXECUTE_HANDLER`, which would let the OS kill the process before the watchdog finishes. Stack overflow skips frame capture. Each thread reserves a 64 KiB stack guarantee.
-- `std::terminate` is handled on all platforms by `OnTerminate`, which rethrows the current exception to extract its message.
+User callbacks run after the report and logging attempts because they are arbitrary user code and may block, throw, or crash.
 
-Rules for changing this code:
+### Platform handling
 
-- Everything reachable from `SignalCrash` and the signal handlers must stay async-signal-safe.
-- Every new step in `Report()` must be bounded and exception-safe.
-- Threads created by the application call `InstallThreadAltStack()`. Do the same in examples and tests that spawn threads.
+- **POSIX:** Uses `sigaction` with alternate signal stacks for fatal signals. Each application thread must call `InstallThreadAltStack()` to install its alternate signal stack.
+- **Windows:** Uses an unhandled exception filter and additional handlers for runtime failures. `InstallThreadAltStack()` configures the stack guarantee for the calling thread, so each application thread that needs this protection must call it. Stack overflow skips frame capture.
+- **Termination:** `std::terminate` is intercepted through `OnTerminate()` on both platforms to extract the active exception message when available.
+
+### Safety constraints
+
+- Keep `POSIX` signal handlers minimal and avoid operations that may allocate memory, acquire locks, or invoke non-signal-safe library functionality.
+- The current POSIX stack capture uses `backtrace()`. Although it is primed during installation to avoid its initial dynamic loading, this does not make it formally async-signal-safe.
+- Keep Windows exception handlers minimal and defer report generation to the watchdog thread.
+- Every reporting step must be bounded and exception-safe.
+- Preserve the watchdog's ability to terminate the process even if reporting or user callbacks fail.
 
 ## Build system
 
-### Flow
+### Configuration flow
 
-1. `CMakeLists.txt` adds `cmake/` and `cmake/vendor/` to the module path and includes `cmake/helpers/build_helpers.cmake`.
-2. `vigil_load_version()` reads `VERSION` **before** `project()`, validates it against `X.Y.Z` or `X.Y.Z-WIP`, and sets `VIGIL_IS_PRERELEASE` for `-WIP`.
-3. Options are declared and validated. `vigil_option_debug_default()` gives `VIGIL_ENABLE_ASSERTS` and `VIGIL_ENABLE_SCOPED_LOG` an `ON` default for Debug and RelWithDebInfo, unless the cache already holds a value.
-4. `version.h` is generated from `include/vigil/version.h.in`.
-5. `vendor/`, then `src/`, then optionally `examples/` and `tests/` are added.
+CMake configures Vigil in the following order:
 
-### The `vigil` target (`src/CMakeLists.txt`)
+1. Loads the version from `VERSION` before `project()`.
+2. Declares and validates build options.
+3. Generates `vigil/version.h`.
+4. Adds dependencies, the library target, and optionally examples and tests.
 
-- Sources are listed explicitly in `VIGIL_SOURCES`. A new `.cpp` must be added there.
-- Public headers are a `PUBLIC FILE_SET HEADERS`, which drives installation. Internal headers are a `PRIVATE` file set and are installed separately into `include/vigil/detail` because public headers include them.
-- The library is static or shared according to `VIGIL_BUILD_SHARED`. On GCC and Clang it uses hidden visibility by default, and `VIGIL_API` exports the public symbols.
-- Compile definitions: `VIGIL_ENABLE_STACK_TRACE`, `VIGIL_ENABLE_SCOPED_LOG`, `VIGIL_ENABLE_ASSERTS`, and `VIGIL_SHARED_LIBRARY` are `PUBLIC` (consumers see the same configuration). `VIGIL_EXPORT_SYMBOLS` and the debug/release markers are `PRIVATE`.
-- Dependencies: `fmt::fmt` is `PUBLIC`; `spdlog::spdlog` and `Threads::Threads` are `PRIVATE`. On Windows `dbghelp` is linked privately; on POSIX `vigil::libbacktrace` is.
-- `/Zc:preprocessor` is an `INTERFACE` option for MSVC so consumers get a conformant preprocessor for Vigil's variadic macros.
-- The helpers `vigil_configure_compiler`, `vigil_configure_warnings`, `vigil_enable_coverage`, and `vigil_strip_dead_code` apply per-target settings.
+### Library target
 
-### libbacktrace
+The `vigil` target is defined in `src/CMakeLists.txt`.
 
-`cmake/vendor/libbacktrace.cmake` builds the vendored sources with `ExternalProject_Add` (`configure`, `make`, `make install`) into `build/_deps/libbacktrace` and exposes the result as the imported static target `vigil::libbacktrace`. For installs, the archive is copied to the library directory and `VigilConfig.cmake.in` recreates the imported target for consumers.
+- Sources and headers are explicitly listed. Public and internal headers use separate file sets.
+- The library can be built as static or shared, with `VIGIL_API` controlling symbol exports.
+- Dependencies are separated according to whether they are required by consumers or only by the implementation.
+- Compiler settings and build features are applied through target-specific CMake helpers.
+
+### Stack trace dependency
+
+On POSIX platforms, Vigil uses the vendored `libbacktrace` dependency, built through `ExternalProject_Add` and exposed as `vigil::libbacktrace`.
+
+The dependency is included in installed packages so consumers do not need to provide it separately.
 
 ### Packaging
 
-With `VIGIL_INSTALL=ON`, the install rules export `vigil::vigil` (`vigil-targets.cmake`), generate `VigilConfig.cmake` and a `SameMajorVersion` version file, render `Vigil.pc`, and install the README, LICENSE, and `docs/` directory. `VigilConfig.cmake.in` is where consumer-side dependencies (`fmt`, `Threads`, `libbacktrace`) are declared.
+When `VIGIL_INSTALL` is enabled, CMake installs the library, public and required internal headers, and exports the `vigil::vigil` target.
 
-### Tests
-
-See [Development](development.md#testing). Unit tests are discovered automatically; crash and consumer suites run real CMake builds through `ctest --build-and-test`.
+It also generates `VigilConfig.cmake`, a `SameMajorVersion` version file, and `Vigil.pc` for CMake and pkg-config consumers.
 
 ## Public and internal headers
 
-| Location                                 | Installed | Audience     | Notes                                                                       |
-| :--------------------------------------- | :-------: | :----------- | :-------------------------------------------------------------------------- |
-| `include/vigil/*.h`, `core/`, `logging/` |    yes    | Consumers    | Public API. Mark exported symbols `VIGIL_API`.                              |
-| `include/vigil/detail/`                  |    yes    | Library only | Installed only because public headers include them. No stability guarantee. |
-| `src/`                                   |    no     | Library only | Private headers. May include `spdlog`.                                      |
-| `build/include/vigil/version.h`          |    yes    | Consumers    | Generated from `version.h.in`.                                              |
+Vigil's public headers are located in `include/vigil/` and define the supported API.
 
-Rules:
+Headers under `include/vigil/detail/` are internal dependencies of the public headers. They are installed because consumers need them to include the public API, but they are not part of the supported interface and carry no API stability guarantees.
 
-- A new public header goes into `VIGIL_HEADERS`, into `vigil.h` if it belongs in the umbrella, and must be installed.
-- Platform and compiler checks use `VIGIL_PLATFORM_*`, `VIGIL_COMPILER_*`, and the wrappers in `compiler_attributes.h`, never raw `_WIN32`, `__linux__`, or compiler attributes.
-- Public names live in `vigil`; internals live in `vigil::detail` or an anonymous namespace.
-- `Scope<T>` is the default ownership alias; use `Shared<T>` only when ownership is shared.
+Private implementation files and headers live in `src/` and are not installed. The generated `vigil/version.h` is also installed for use by consumers.
 
 ## Deliberate design decisions
 
@@ -246,61 +224,25 @@ Each of these looks wrong at first glance and has a reason. Please read it befor
 ### Logging
 
 - **`g_Mutex` is recursive.** The crash handler can re-enter logging on the same thread while a previous logging call still holds the lock. A plain mutex would deadlock.
-- **Callbacks run outside the lock** (`OnLevelChange`, `OnFlush`, `OnShutdown`). The pattern is: copy the callback while locked, unlock, then call it. Reentrant calls must not trigger the same hook recursively. `OnMessage` is the exception and runs inside the sink lock, which is why it must never call back into `LogSystem`. It may call `Logger::SetLevel`, but that change is applied silently to avoid taking the registry lock or dispatching another callback under the sink lock.
+- **Reentrant callbacks must not trigger the same hook recursively.** `OnMessage` may call `Logger::SetLevel`, but that change is applied silently to avoid taking the registry lock or dispatching another callback under the sink lock.
 - Level updates, including silent updates from `OnMessage`, use a separate non-recursive level mutex to serialize the old-level read and update. The lock order is registry mutex followed by level mutex; code holding the level mutex must not acquire any other lock. Non-silent updates hold the registry lock during the update, preventing `Shutdown()` from tearing down the logger mid-update. `OnLevelChange` callbacks run unlocked, may execute concurrently, and are not guaranteed to run in change order.
 - **Uninitialized use never throws from free functions and macros.** They assert in debug builds and print one warning in release. `Create`, `Main`, and `Get` do throw `std::logic_error` because they must return a reference.
-- **Removing or replacing a logger also drops its name in spdlog.** Otherwise the name cannot be reused.
+- **Removing or replacing a logger also drops its name in spdlog.** `Remove()` and `SetMain()` call `spdlog::drop(name)` so the name can be reused.
 - **File sinks are lazy and thread-safe.** A missing file never aborts logging, and unused loggers never leave empty `.log` files.
 - **`LevelChangeEvent` and `FlushEvent` hold `string_view`s.** Names are copied into locals while the lock is held so the view stays valid when the callback runs afterwards.
 
 ### Crash handling
 
-- **Everything reachable from a handler is async-signal-safe**, so there is no allocation, locking, logging, or `std::string`. Symbolization happens later on the watchdog thread because `StackTrace::Capture` and `Format` are not signal-safe.
+- **The crash handlers defer report generation to the watchdog thread.** However, POSIX raw frame capture currently uses `backtrace()`, which is not formally async-signal-safe. Priming it during installation does not change that guarantee. Symbolization and formatting happen later on the watchdog thread.
 - **`g_State` is leaked on purpose** so a crash during static destruction still finds it alive.
-- **The report order is deliberate**: log, then report file, then user callback. The deadline kills the process if any step hangs.
+- **The report order is deliberate**: write the report file, attempt logging, then invoke the user callback. The deadline triggers forced process termination if the reporting pipeline does not finish.
 - **Only the first crash is reported.** Later crashing threads park, and the deadline covers a crash inside the watchdog itself.
 
 ### Assertions
 
 - **`VIGIL_ASSERT*` does not evaluate its condition when assertions are off.** Anything with side effects belongs in `VIGIL_VERIFY*`.
-- **Two macro implementations** (C++17 and C++20) exist to avoid empty `fmt::format()` calls on C++17.
-
-### Stack traces
-
-- **With `VIGIL_ENABLE_STACK_TRACE` off the API still compiles** and returns empty results, so call sites need no `#if`.
-- **Resolution is serialized** because neither libbacktrace (as configured) nor DbgHelp is thread-safe.
 
 ### Build
 
-- **`vigil_load_version()` runs before `project()`** because `project(VERSION ...)` needs the value.
 - **Debug-dependent defaults are decided at configure time**, which is why multi-config generators apply them to every configuration.
 - **Windows crash/consumer tests need an explicit build type**: the harness forwards `CMAKE_BUILD_TYPE` to `ctest --build-and-test`, and multi-config generators leave it empty.
-
-## Recipes
-
-### Add a source file
-
-Add it to `VIGIL_SOURCES` in `src/CMakeLists.txt`. Private headers need nothing else.
-
-### Add a public header
-
-1. Put it in `include/vigil/<area>/`.
-2. Add it to `VIGIL_HEADERS` in `src/CMakeLists.txt` (and mark exported symbols with `VIGIL_API`).
-3. Include it from `vigil.h` if it belongs in the umbrella.
-4. Update the public API documentation and, if the signature of anything existing changed, the README and `examples/`.
-
-### Add a dependency
-
-Ask first: Vigil avoids new dependencies. If one is approved, add it under `vendor/` or as a find-able package, link it `PRIVATE` unless it appears in public headers, and for a public dependency add an entry to both `VigilConfig.cmake.in` and `Vigil.pc.in`.
-
-### Add a crash trigger
-
-Add a header under `tests/crash/project/triggers/`, a branch in `tests/crash/project/main.cpp`, and the name to `VIGIL_CRASH_TRIGGERS` in `tests/crash/CMakeLists.txt`. These tests are expected to die (`WILL_FAIL`).
-
-### Add an example
-
-Create the source under `examples/<category>/` and register it in `examples/CMakeLists.txt` with `vigil_add_example`.
-
-### Add a platform backend
-
-Implement `CaptureFrames` and `ResolveAddresses` from `stack_trace_backend.h`, select the file in `src/CMakeLists.txt`, extend `platform_detection.h` and `symbol_export.h`, and add the platform to CI.

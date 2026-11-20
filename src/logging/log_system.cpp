@@ -9,6 +9,7 @@
 #include "logging/detail/logger_impl.h"
 #include "logging/detail/spd_convert.h"
 #include "logging/detail/hooks_registry.h"
+#include "logging/detail/hook_scope.h"
 #include "logging/detail/lazy_file_sink.h"
 #include "logging/detail/callback_sink.h"
 #include "logging/detail/level_change.h"
@@ -48,7 +49,7 @@ std::recursive_mutex g_Mutex;
 // path cannot take the registry lock. Lock order: g_Mutex, then g_LevelMutex.
 // Never acquire the registry or sink locks while holding it.
 std::mutex g_LevelMutex;
-thread_local bool g_InLevelChangeCallback = false;
+
 bool g_Initialized   = false;
 bool g_Async         = false;
 
@@ -96,20 +97,6 @@ LogLevel UpdateLevel(detail::LoggerImpl& impl, LogLevel level)
     return oldLevel;
 }
 
-void FireLevelChange(const LevelChangeCallback& callback, const LevelChangeEvent& event)
-{
-    if (!callback || g_InLevelChangeCallback)
-        return;
-
-    struct CallbackScope
-    {
-        CallbackScope() noexcept { g_InLevelChangeCallback = true; }
-        ~CallbackScope() { g_InLevelChangeCallback = false; }
-    } scope;
-
-    callback(event);
-}
-
 } // namespace
 
 namespace detail {
@@ -138,7 +125,7 @@ void ChangeLevel(LoggerImpl& impl, LogLevel level)
             callback = g_Hooks.Hooks.OnLevelChange;
     }
 
-    FireLevelChange(callback, LevelChangeEvent{ loggerName, oldLevel, level });
+    detail::FireHook<detail::LevelChangeHook>(callback, LevelChangeEvent{ loggerName, oldLevel, level });
 }
 
 } // namespace detail
@@ -390,7 +377,12 @@ void LogSystem::Shutdown()
         shutdownCb = g_Hooks.Hooks.OnShutdown;
     }
 
-    if (shutdownCb) shutdownCb();
+    if (shutdownCb)
+    {
+        detail::HookScope<detail::ShutdownHook> scope;
+        if (!scope) return;   // Nested shutdown: the outer Shutdown will handle teardown
+        shutdownCb();
+    }
 
     {
         std::scoped_lock lock(g_Mutex);
@@ -616,7 +608,7 @@ void LogSystem::SetGlobalLevel(LogLevel level)
         cb = g_Hooks.Hooks.OnLevelChange;
     }
 
-    FireLevelChange(cb, LevelChangeEvent{ {}, old, level });
+    detail::FireHook<detail::LevelChangeHook>(cb, LevelChangeEvent{ {}, old, level });
 }
 
 void LogSystem::SetGlobalFileLevel(LogLevel level)
@@ -665,7 +657,7 @@ void LogSystem::SetLevel(std::string_view name, LogLevel level)
         cb = g_Hooks.Hooks.OnLevelChange;
     }
 
-    FireLevelChange(cb, LevelChangeEvent{ loggerName, old, level });
+    detail::FireHook<detail::LevelChangeHook>(cb, LevelChangeEvent{ loggerName, old, level });
 }
 
 //==============================================================================
@@ -694,7 +686,7 @@ void LogSystem::FlushAll()
 
     if (cb)
         for (const auto& name : flushedNames)
-            cb(FlushEvent{ name });
+            detail::FireHook<detail::FlushHook>(cb, FlushEvent{ name });
 }
 
 void LogSystem::Flush(std::string_view name)
@@ -713,7 +705,7 @@ void LogSystem::Flush(std::string_view name)
         cb = g_Hooks.Hooks.OnFlush;
     }
 
-    if (cb) cb(FlushEvent{ loggerName });
+    if (cb) detail::FireHook<detail::FlushHook>(cb, FlushEvent{ loggerName });
 }
 
 } // namespace vigil

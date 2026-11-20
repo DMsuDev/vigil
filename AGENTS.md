@@ -18,18 +18,18 @@ Short, practical rules for AI agents and new contributors changing **Vigil**, a 
 
 ## Repository map
 
-| Path                | What lives there                                                           |
-| :------------------ | :------------------------------------------------------------------------- |
-| `include/vigil/`    | Public headers. `detail/` is installed but internal.                       |
-| `src/`              | Implementation and private headers. The only place that includes `spdlog`. |
-| `cmake/`            | Build helpers, vendor modules (`libbacktrace`), package templates.         |
-| `vendor/`           | Third-party sources. Do not edit.                                          |
-| `tests/unit/`       | GoogleTest unit suite.                                                     |
-| `tests/crash/`      | Crash integration harness (processes that die on purpose).                 |
-| `tests/cmake_*`     | Consumer tests (`FetchContent`, `add_subdirectory`, `find_package`).       |
-| `examples/`         | One program per feature. Require C++20.                                    |
-| `docs/`             | Getting started, user guide, architecture, development.                    |
-| `CMakePresets.json` | Dev, CI, package, and consumer presets.                                    |
+| Path                | What lives there                                                                       |
+| :------------------ | :------------------------------------------------------------------------------------- |
+| `include/vigil/`    | Public headers. `detail/` is installed but internal.                                   |
+| `src/`              | Implementation and private headers. The only place where Vigil code includes `spdlog`. |
+| `cmake/`            | Build helpers, vendor modules (`libbacktrace`), package templates.                     |
+| `vendor/`           | Third-party sources. Do not edit.                                                      |
+| `tests/unit/`       | GoogleTest unit suite.                                                                 |
+| `tests/crash/`      | Crash integration harness (processes that die on purpose).                             |
+| `tests/cmake_*`     | Consumer tests (`FetchContent`, `add_subdirectory`, `find_package`).                   |
+| `examples/`         | One program per feature. Require C++20.                                                |
+| `docs/`             | Getting started, user guide, architecture, development.                                |
+| `CMakePresets.json` | Dev, CI, package, and consumer presets.                                                |
 
 When you add, move, or delete files, update this table.
 
@@ -59,8 +59,8 @@ Before you call a change done:
 - Public API goes in namespace `vigil`; internals in `vigil::detail` or an anonymous namespace.
 - Use `VIGIL_PLATFORM_*`, `VIGIL_COMPILER_*`, and `compiler_attributes.h`. Never raw `_WIN32`, `__linux__`, or compiler attributes.
 - Default ownership is `Scope<T>`. Use `Shared<T>` only when ownership really is shared.
-- Everything reachable from a crash or signal handler must be async-signal-safe: no allocation, no locks, no logging, no `std::string`.
-- Callbacks (`OnLevelChange`, `OnFlush`, `OnShutdown`) must be invoked outside Vigil's internal lock.
+- Keep crash and signal handlers minimal. POSIX raw frame capture currently uses `backtrace()`, which is not formally async-signal-safe; see [Crash handling](docs/architecture.md#crash-handling).
+- Invoke `OnLevelChange`, `OnFlush`, and `OnShutdown` callbacks through `detail::FireHook` (or `detail::HookScope` where a nested call must skip other work, as in `Shutdown()`). Never call them directly.
 - Reentrant callbacks must not trigger the same hook recursively.
 - Put anything with side effects in `VIGIL_VERIFY*`, never in `VIGIL_ASSERT*`.
 
@@ -88,20 +88,21 @@ Before you call a change done:
 
 Do not "fix" these without reading [Deliberate design decisions](docs/architecture.md#deliberate-design-decisions).
 
-| What you will see                                       | Why it is correct                                                                   |
-| :------------------------------------------------------ | :---------------------------------------------------------------------------------- |
-| `g_Mutex` is a recursive mutex                          | The crash handler can re-enter logging on the same thread.                          |
-| Callbacks copied under the lock, called after it        | Prevents deadlocks when callbacks call back into `LogSystem`.                       |
-| `OnMessage` runs _inside_ the sink lock                 | It is the one exception, so it must never call `LogSystem`.                         |
-| Logging before `Init()` asserts or warns, never throws  | Free functions and macros must be safe anywhere. `Create`, `Main`, `Get` do throw.  |
-| Removing a logger also calls `spdlog::drop(name)`       | Otherwise the name can never be reused.                                             |
-| Log files are created lazily                            | No empty `.log` files and no abort when a file cannot be opened.                    |
-| `g_State` in the crash handler is leaked                | A crash during static destruction must still find it alive.                         |
-| Report order is log, file, then user callback           | Most reliable first, least trusted last; a deadline kills hangs.                    |
-| Two `VIGIL_ASSERT` implementations (C++17 and C++20)    | Avoids calling `fmt::format()` with an empty argument pack on C++17.                |
-| `VIGIL_ASSERT` does not evaluate its condition when off | That is the contract. Side effects belong in `VIGIL_VERIFY`.                        |
-| Stack trace API compiles with traces disabled           | Call sites need no `#if`; the result is just empty.                                 |
-| Crash and consumer tests need an explicit build type    | The harness forwards `CMAKE_BUILD_TYPE`, which multi-config generators leave empty. |
+| What you will see                                       | Why it is correct                                                                                                                 |
+| :------------------------------------------------------ | :-------------------------------------------------------------------------------------------------------------------------------- |
+| `g_Mutex` is a recursive mutex                          | The crash handler can re-enter logging on the same thread.                                                                        |
+| Callbacks copied under the lock, called after it        | Prevents deadlocks when callbacks call back into `LogSystem`.                                                                     |
+| `OnMessage` runs _inside_ the sink lock                 | It is the one exception, so it must never call `LogSystem`.                                                                       |
+| Logging before `Init()` asserts or warns, never throws  | Free functions and macros must be safe anywhere. `Create`, `Main`, `Get` do throw.                                                |
+| Removing a logger also calls `spdlog::drop(name)`       | Otherwise the name can never be reused.                                                                                           |
+| Log files are created lazily                            | No empty `.log` files and no abort when a file cannot be opened.                                                                  |
+| `g_State` in the crash handler is leaked                | A crash during static destruction must still find it alive.                                                                       |
+| `Report order is file, log, then user callback`         | The file is written independently of the logging infrastructure; user code runs last. The deadline covers the reporting pipeline. |
+| Two `VIGIL_ASSERT` implementations (C++17 and C++20)    | Avoids calling `fmt::format()` with an empty argument pack on C++17.                                                              |
+| `VIGIL_ASSERT` does not evaluate its condition when off | That is the contract. Side effects belong in `VIGIL_VERIFY`.                                                                      |
+| Stack trace API compiles with traces disabled           | Call sites need no `#if`; the result is just empty.                                                                               |
+| Crash and consumer tests need an explicit build type    | The harness forwards `CMAKE_BUILD_TYPE`, which multi-config generators leave empty.                                               |
+| One `thread_local` flag per hook (`HookScope<Tag>`)     | A single global flag would silence unrelated hooks; per-hook flags prevent same-thread recursive hook cycles.                     |
 
 ## Where to read more
 

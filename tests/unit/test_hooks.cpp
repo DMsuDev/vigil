@@ -411,3 +411,162 @@ TEST(HooksTest, SetHooksRegistersAllCallbacksAtOnce)
     LogSystem::Shutdown();
     EXPECT_TRUE(shutdown);
 }
+
+// =============================================================================
+// Reentrancy: OnFlush
+// =============================================================================
+
+TEST(HooksTest, FlushAllInsideOnFlushDoesNotRecurse)
+{
+    vigil::test::ScopedRegistry registry({});
+    LogSystem::Create("A");
+
+    size_t flushCount = 0;
+    LogSystem::SetOnFlush([&](const FlushEvent&) {
+        ++flushCount;
+        LogSystem::FlushAll(); // nested: flushes, but must not re-fire OnFlush
+    });
+
+    LogSystem::FlushAll(); // main + A = 2 events
+
+    EXPECT_EQ(flushCount, 2u);
+}
+
+TEST(HooksTest, FlushByNameInsideOnFlushStillFlushesButDoesNotRecurse)
+{
+    vigil::test::ScopedRegistry registry({});
+
+    auto& named = LogSystem::Create("Network");
+    auto  sink  = vigil::test::AttachTestSink(named);
+
+    size_t flushCount = 0;
+    LogSystem::SetOnFlush([&](const FlushEvent&) {
+        ++flushCount;
+        LogSystem::Flush("Network");
+    });
+
+    LogSystem::Flush("Network");
+
+    EXPECT_EQ(flushCount, 1u);
+    EXPECT_EQ(sink->flush_counter(), 2u); // outer flush + nested flush both happened
+}
+
+TEST(HooksTest, FlushCallbackGuardIsRestoredAfterException)
+{
+    vigil::test::ScopedRegistry registry({});
+
+    size_t count = 0;
+    LogSystem::SetOnFlush([&](const FlushEvent&) {
+        if (++count == 1)
+            throw std::runtime_error("callback failure");
+    });
+
+    EXPECT_THROW(LogSystem::FlushAll(), std::runtime_error);
+    LogSystem::FlushAll(); // guard must have been released
+
+    EXPECT_EQ(count, 2u);
+}
+
+// =============================================================================
+// Reentrancy: OnShutdown
+// =============================================================================
+
+TEST(HooksTest, ShutdownInsideOnShutdownIsIgnoredAndOuterShutdownCompletes)
+{
+    vigil::test::ScopedRegistry registry({});
+
+    size_t count = 0;
+    LogSystem::SetOnShutdown([&] {
+        ++count;
+        LogSystem::Shutdown(); // nested: must return immediately
+        EXPECT_TRUE(LogSystem::IsInitialized()); // teardown has not run yet
+    });
+
+    LogSystem::Shutdown();
+
+    EXPECT_EQ(count, 1u);
+    EXPECT_FALSE(LogSystem::IsInitialized());
+}
+
+TEST(HooksTest, ShutdownCallbackGuardIsRestoredAfterException)
+{
+    vigil::test::ScopedRegistry registry({});
+
+    size_t count = 0;
+    LogSystem::SetOnShutdown([&] {
+        if (++count == 1)
+            throw std::runtime_error("callback failure");
+    });
+
+    EXPECT_THROW(LogSystem::Shutdown(), std::runtime_error);
+    EXPECT_TRUE(LogSystem::IsInitialized()); // teardown was aborted
+
+    LogSystem::Shutdown(); // guard released: callback runs again, teardown completes
+
+    EXPECT_EQ(count, 2u);
+    EXPECT_FALSE(LogSystem::IsInitialized());
+}
+
+// =============================================================================
+// Reentrancy: interaction between hooks
+// =============================================================================
+
+TEST(HooksTest, HookNestedInsideADifferentHookStillFires)
+{
+    vigil::test::ScopedRegistry registry({});
+
+    size_t levelChanges = 0;
+    LogSystem::SetOnLevelChange([&](const LevelChangeEvent&) { ++levelChanges; });
+    LogSystem::SetOnFlush([&](const FlushEvent&) {
+        LogSystem::SetGlobalLevel(LogLevel::Warn);
+    });
+
+    LogSystem::FlushAll();
+
+    EXPECT_EQ(levelChanges, 1u);
+}
+
+TEST(HooksTest, CrossHookCycleTerminates)
+{
+    vigil::test::ScopedRegistry registry({});
+
+    size_t levelChanges = 0;
+    size_t flushes      = 0;
+
+    LogSystem::SetGlobalLevel(LogLevel::Error);
+
+    LogSystem::SetOnLevelChange([&](const LevelChangeEvent&) {
+        ++levelChanges;
+        LogSystem::FlushAll();
+    });
+    LogSystem::SetOnFlush([&](const FlushEvent&) {
+        ++flushes;
+        LogSystem::SetGlobalLevel(LogLevel::Warn);
+    });
+
+    LogSystem::SetGlobalLevel(LogLevel::Info);
+
+    // LevelChange -> Flush -> (LevelChange is already active: suppressed).
+    EXPECT_EQ(levelChanges, 1u);
+    EXPECT_EQ(flushes, 1u);
+    EXPECT_EQ(LogSystem::Main().GetLevel(), LogLevel::Warn);
+}
+
+TEST(HooksTest, ReentrancyGuardIsPerThread)
+{
+    vigil::test::ScopedRegistry registry({});
+
+    size_t count = 0;
+    LogSystem::SetOnFlush([&](const FlushEvent&) {
+        if (++count == 1)
+        {
+            // A different thread is not "inside" the hook, so its flush fires it.
+            std::thread other([] { LogSystem::FlushAll(); });
+            other.join();
+        }
+    });
+
+    LogSystem::FlushAll();
+
+    EXPECT_EQ(count, 2u);
+}

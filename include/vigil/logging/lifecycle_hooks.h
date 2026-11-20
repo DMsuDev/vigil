@@ -57,36 +57,40 @@ using LogMessageCallback  = std::function<void(const LogMessageEvent&)>;
 /// Invoked when a logger's severity level changes outside OnMessage and OnLevelChange callbacks.
 using LevelChangeCallback = std::function<void(const LevelChangeEvent&)>;
 
-/// Invoked after any flush operation.
-using FlushCallback       = std::function<void(const FlushEvent&)>;
+/// Invoked after each flush. Reentrant flushes do not trigger another callback on the same thread.
+using FlushCallback = std::function<void(const FlushEvent&)>;
 
 /// Invoked with no arguments at lifecycle transitions (Shutdown).
-using LifecycleCallback   = std::function<void()>;
+/// A nested Shutdown() from inside the callback returns immediately on the same thread.
+using LifecycleCallback = std::function<void()>;
 
 // ============================================================================
 // Aggregate hook set
 // ============================================================================
 
 /**
- * @brief Aggregate of all optional LogSystem hook points.
+ * @brief Aggregate of all optional LogSystem hooks.
  *
  * Pass an instance to @ref LogSystem::SetHooks to register all hooks at once.
- * Any field left default-constructed (nullptr) is treated as "not registered".
+ * Any field left default-constructed (nullptr) is considered unregistered.
+ *
+ * OnLevelChange, OnFlush and OnShutdown prevent recursive invocation
+ * on the same thread. Hooks are independent of one another.
  */
 struct LogHooks {
     /// @brief Fired on every emitted log message.
     /// @warning Called on the logging thread. Avoid blocking operations.
     LogMessageCallback  OnMessage;
 
-    /// @brief Fired when a logger's level changes outside OnMessage and OnLevelChange callbacks.
-    /// @note Changes made by @ref Logger::SetLevel inside OnMessage are silent.
-    /// Nested level changes inside this callback do not invoke it recursively.
+    /// @brief Fired when a logger's level changes.
+    /// @note Changes made inside OnMessage or OnLevelChange are not reported.
     LevelChangeCallback OnLevelChange;
 
-    /// @brief Fired after any flush operation completes.
+    /// @brief Fired after each flush operation.
     FlushCallback       OnFlush;
 
-    /// @brief Fired at the start of @ref LogSystem::Shutdown, before teardown.
+    /// @brief Fired before LogSystem teardown begins.
+    /// @note Reentrant calls to Shutdown() return immediately.
     LifecycleCallback   OnShutdown;
 };
 
