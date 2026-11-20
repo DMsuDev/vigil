@@ -28,29 +28,7 @@ struct HooksRegistry {
     std::shared_ptr<CallbackSink> MessageSink;
 
     // ------------------------------------------------------------------ //
-    //  Dispatch helpers                                                   //
-    // ------------------------------------------------------------------ //
-
-    void FireLevelChange(const LevelChangeEvent& e) const
-    {
-        if (Hooks.OnLevelChange)
-            Hooks.OnLevelChange(e);
-    }
-
-    void FireFlush(const FlushEvent& e) const
-    {
-        if (Hooks.OnFlush)
-            Hooks.OnFlush(e);
-    }
-
-    void FireShutdown() const
-    {
-        if (Hooks.OnShutdown)
-            Hooks.OnShutdown();
-    }
-
-    // ------------------------------------------------------------------ //
-    //  Sink management                                                    //
+    //  Sink management                                                   //
     // ------------------------------------------------------------------ //
 
     /// @brief Attaches the message sink to @p spdLogger if a callback is active.
