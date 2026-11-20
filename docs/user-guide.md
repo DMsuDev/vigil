@@ -255,6 +255,10 @@ vigil::LogSystem::Init({ .Name = "App", .Async = true, .AsyncQueueSize = 16384 }
 
 Compile-time-disabled `VIGIL_LOG_*` macros do not evaluate their arguments, regardless of initialization. Because hook setters are no-ops before `Init()`, register hooks after initializing. Hooks are cleared by `Shutdown()`.
 
+**Threading and shutdown**
+
+`LogSystem::Shutdown()` must not run concurrently with logging operations or while logger references obtained through `Main()`, `Get()`, `Create()`, or `Find()` are still in use. Stop all logging threads and ensure outstanding logger references are no longer used before shutting down the logging system.
+
 ## Rate-limited logging
 
 Prevent log spam in hot code paths without keeping your own state:
