@@ -31,6 +31,7 @@
     #include <crtdbg.h>
 #else
     #include <execinfo.h>
+    #include <fcntl.h>
     #include <semaphore.h>
     #include <signal.h>
     #include <unistd.h>
@@ -77,6 +78,8 @@ struct CrashState
 
 #if defined(VIGIL_PLATFORM_WINDOWS)
     HANDLE wake{nullptr};
+#elif defined(VIGIL_PLATFORM_MACOS)
+    sem_t* wake{nullptr};
 #else
     sem_t  wake;
 #endif
@@ -138,6 +141,8 @@ void WakeWatchdog() noexcept
 {
 #if defined(VIGIL_PLATFORM_WINDOWS)
     if (!SetEvent(g_State.wake)) HardExit();
+#elif defined(VIGIL_PLATFORM_MACOS)
+    if (sem_post(g_State.wake) != 0) HardExit();
 #else
     if (sem_post(&g_State.wake) != 0) HardExit();
 #endif
@@ -147,6 +152,12 @@ void WaitForCrash() noexcept
 {
 #if defined(VIGIL_PLATFORM_WINDOWS)
     if (WaitForSingleObject(g_State.wake, INFINITE) != WAIT_OBJECT_0) HardExit();
+#elif defined(VIGIL_PLATFORM_MACOS)
+    int result;
+    do { result = sem_wait(g_State.wake); }
+    while (result == -1 && errno == EINTR);
+
+    if (result == -1) HardExit();
 #else
     int result;
     do { result = sem_wait(&g_State.wake); }
@@ -344,6 +355,19 @@ void StartWatchdog()
 #if defined(VIGIL_PLATFORM_WINDOWS)
     g_State.wake = CreateEventA(nullptr, /*bManualReset=*/TRUE, /*bInitialState=*/FALSE, nullptr);
     if (!g_State.wake) HardExit();
+#elif defined(VIGIL_PLATFORM_MACOS)
+    const std::string name = "/vigil_crash_" + std::to_string(ProcessId());
+
+    // macOS does not implement sem_init(). Unlink the name immediately after
+    // opening; the semaphore remains valid through its open descriptor.
+    if (sem_unlink(name.c_str()) != 0 && errno != ENOENT)
+        HardExit();
+
+    g_State.wake = sem_open(name.c_str(), O_CREAT | O_EXCL, 0600, 0);
+    if (g_State.wake == SEM_FAILED) HardExit();
+
+    if (sem_unlink(name.c_str()) != 0)
+        HardExit();
 #else
     if (sem_init(&g_State.wake, /*pshared=*/0, /*value=*/0) != 0) HardExit();
 #endif
@@ -411,8 +435,9 @@ void StartWatchdog()
         if (!w) return {};
         int n = WideCharToMultiByte(CP_UTF8, 0, w, -1, nullptr, 0, nullptr, nullptr);
         if (n <= 1) return {};
-        std::string s(static_cast<std::size_t>(n - 1), '\0');
+        std::string s(static_cast<std::size_t>(n), '\0');
         WideCharToMultiByte(CP_UTF8, 0, w, -1, s.data(), n, nullptr, nullptr);
+        s.resize(static_cast<std::size_t>(n - 1));
         return s;
     };
 
