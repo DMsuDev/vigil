@@ -42,7 +42,7 @@ jobs:
       fail-fast: false
 
       matrix:
-        platform: [Win32, x64]
+        platform: [x64]
         standard: [17, 20, 23]
         shared: ["", "-DBUILD_SHARED_LIBS=ON"]
         build_type: [Debug, Release]

@@ -43,7 +43,7 @@ jobs:
 
       matrix:
         arch: [arm64]
-        standard: [20, 23]
+        standard: [17]
         shared: ["", "-DBUILD_SHARED_LIBS=ON"]
         build_type: [Debug, Release]
 
